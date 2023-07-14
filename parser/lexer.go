@@ -1,11 +1,12 @@
 package main
 
+//go:generate goyacc -p main -o parser.y.go parser.y
+
 import (
 	"bufio"
 	"fmt"
 	"io"
 	"os"
-	"time"
 	"unicode"
 )
 
@@ -13,7 +14,6 @@ type Token int
 
 const (
 	EOF = iota
-	SKIP_LINE
 	ILLEGAL
 
 	// Infix ops
@@ -162,6 +162,10 @@ type Lexer struct {
 	reader *bufio.Reader
 }
 
+type yySymType struct {
+	value string
+}
+
 func NewLexer(reader io.Reader) *Lexer {
 	return &Lexer{
 		pos:    Position{line: 1, column: 0},
@@ -171,13 +175,13 @@ func NewLexer(reader io.Reader) *Lexer {
 
 // Lex scans the input for the next token. It returns the position of the token,
 // the token's type, and the literal value.
-func (l *Lexer) Lex() (Position, Token, string) {
+func (l *Lexer) Lex(lval *yySymType) Token {
 	// keep looping until we return a token
 	for {
 		r, _, err := l.reader.ReadRune()
 		if err != nil {
 			if err == io.EOF {
-				return l.pos, EOF, ""
+				return EOF
 			}
 
 			// at this point there isn't much we can do, and the compiler
@@ -192,47 +196,47 @@ func (l *Lexer) Lex() (Position, Token, string) {
 		case '\n':
 			l.resetPosition()
 		case ';':
-			return l.pos, SEQUENCE, ";"
+			return SEQUENCE
 		case '+':
-			return l.pos, ADD, "+"
+			return ADD
 		case '-':
-			return l.pos, SUB, "-"
+			return SUB
 		case '*':
-			return l.pos, MUL, "*"
+			return MUL
 		// case '/':
 		// 	return l.pos, DIV, "/"
 		case ':':
-			return l.pos, COLON, ":"
+			return COLON
 		case ',':
-			return l.pos, COMMA, ","
+			return COMMA
 		case '(':
-			return l.pos, LBRACK, "("
+			return LBRACK
 		case ')':
-			return l.pos, RBRACK, ")"
+			return RBRACK
 		case '[':
-			return l.pos, LSBRACK, "["
+			return LSBRACK
 		case ']':
-			return l.pos, RSBRACK, "]"
+			return RSBRACK
 		case '>':
-			return l.pos, RVBRACK, ">"
+			return RVBRACK
 		case '|':
-			return l.pos, PIPE, "|"
+			return PIPE
 		case '/':
 			// Potential comment, move to next line
 			r, _, err = l.reader.ReadRune()
 			if err != nil {
 				if err == io.EOF {
 					// at the end of the file
-					return l.pos, EOF, ""
+					return EOF
 				}
 			}
 
 			if r == '/' {
 				l.readUntilNextLine()
-				return l.Lex()
+				return l.Lex(lval)
 
 			} else {
-				return l.pos, ILLEGAL, string(r)
+				return ILLEGAL
 			}
 
 		default:
@@ -240,24 +244,27 @@ func (l *Lexer) Lex() (Position, Token, string) {
 				continue // nothing to do here, just move on
 			} else if r == '=' {
 				// backup and let lexInt rescan the beginning of the int
-				startPos := l.pos
+				// startPos := l.pos
 				l.backup()
 				label, lit := l.lexEquals()
-				return startPos, label, lit
+				lval.value = lit
+				return label
 			} else if r == '<' {
 				// backup and let lexInt rescan the beginning of the int
-				startPos := l.pos
+				// startPos := l.pos
 				l.backup()
 				label, lit := l.lexLVBrackets()
-				return startPos, label, lit
+				lval.value = lit
+				return label
 			} else if isAlphaNumeric(r) {
 				// backup and let lexInt rescan the beginning of the int
-				startPos := l.pos
+				// startPos := l.pos
 				l.backup()
 				label, lit := l.lexLabel()
-				return startPos, label, lit
+				lval.value = lit
+				return label
 			} else {
-				return l.pos, ILLEGAL, string(r)
+				return ILLEGAL
 			}
 		}
 	}
@@ -436,21 +443,14 @@ func main() {
 	}
 
 	lexer := NewLexer(file)
-L:
+	val := yySymType{}
 	for {
-		pos, tok, lit := lexer.Lex()
-		switch tok {
-		case EOF:
-			break L
-		case SKIP_LINE:
-			lexer.resetPosition()
-			lexer.pos.line++
-			fmt.Printf("Skip line\n")
-			continue
-		default:
-			fmt.Printf("%d:%d\t%s\t%s\n", pos.line, pos.column, tok, lit)
+
+		tok := lexer.Lex(&val)
+		if tok == EOF {
+			break
 		}
 
-		time.Sleep(50 * time.Millisecond)
+		fmt.Printf("\t%s\t%s\n", tok, val.value)
 	}
 }

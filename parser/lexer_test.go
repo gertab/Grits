@@ -34,7 +34,7 @@ func compareOutput(t *testing.T, got []Token, expected []Token) {
 
 func TestBasicTokens(t *testing.T) {
 	input := "+-*/="
-	expected := []Token{ADD, SUB, MUL, DIV, ASSIGN}
+	expected := []Token{ADD, SUB, MUL, DIV}
 
 	reader := strings.NewReader(input)
 	l := NewLexer(reader)
@@ -47,10 +47,10 @@ func TestIntToken(t *testing.T) {
 		input    string
 		expected []Token
 	}{
-		{"123+23", []Token{INT, ADD, INT}},
-		{"11111111010100-", []Token{INT, SUB}},
-		{"24593753790175972954 5439574375348", []Token{INT, INT}},
-		{"213one", []Token{INT, IDENT}},
+		{"123+23", []Token{LEFT_ARROW, ADD, LEFT_ARROW}},
+		{"11111111010100-", []Token{LEFT_ARROW, SUB}},
+		{"24593753790175972954 5439574375348", []Token{LEFT_ARROW, LEFT_ARROW}},
+		{"213one", []Token{LEFT_ARROW, RELEASE}},
 	}
 
 	for _, c := range cases {
@@ -66,10 +66,10 @@ func TestIdentToken(t *testing.T) {
 		input    string
 		expected []Token
 	}{
-		{"testIdent", []Token{IDENT}},
-		{"ill)egal", []Token{IDENT, ILLEGAL, IDENT}},
-		{"ill.egal", []Token{IDENT, ILLEGAL, IDENT}},
-		{"one two", []Token{IDENT, IDENT}},
+		{"testIdent", []Token{LABEL}},
+		{"ill)egal", []Token{LABEL, ILLEGAL, LABEL}},
+		{"ill.egal", []Token{LABEL, ILLEGAL, LABEL}},
+		{"one two", []Token{LABEL, LABEL}},
 	}
 
 	for _, c := range cases {

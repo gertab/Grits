@@ -12,4 +12,12 @@ c + 123;
 <
 absjd>_jjkew23
 |
-abc=def=>ghi<ijk<=lmn<
+abc=def=>ghi<ijk<=lmn<fwd<kk fwd rel release
+
+    let
+      D2(d) = <a, b> <- recv d; close self
+    in
+      prc[pid1]: y <- rel pid3; wait y; close self
+      prc[pid3]: x <- push D2(x); detach self<pid4>
+      prc[pid4]: close self
+    end

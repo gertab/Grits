@@ -13,8 +13,6 @@ type Token int
 const (
 	EOF = iota
 	ILLEGAL
-	IDENT
-	INT
 
 	// Infix ops
 	ADD // +
@@ -39,13 +37,35 @@ const (
 	LVBRACK  // <
 	RVBRACK  // >
 	PIPE     // |
+
+	// KEYWORDS
+	SEND
+	RECEIVE
+	CASE
+	CLOSE
+	WAIT
+	CAST
+	SHIFT
+	ACCEPT
+	ACQUIRE
+	DETACH
+	RELEASE
+	DROP
+	SPLIT
+	PUSH
+	NEW
+	SNEW
+	FWD
+	LET
+	IN
+	END
+	SPRC
+	PRC
 )
 
 var tokens = []string{
 	EOF:     "EOF",
 	ILLEGAL: "ILLEGAL",
-	IDENT:   "IDENT",
-	INT:     "INT",
 
 	// Infix ops
 	ADD: "+",
@@ -58,41 +78,72 @@ var tokens = []string{
 	// COMMENT       = /\*[\s\t\n\ra-zA-Z0-9_/]*\*/
 	LEFT_ARROW:  "<-",
 	RIGHT_ARROW: "=>",
-	// EQUALS        = \=
-	// SEND          = send
-	// RECEIVE       = recv|receive
-	// CASE          = case
-	// CLOSE         = close
-	// WAIT          = wait
-	// CAST          = cast
-	// SHIFT         = shift
-	// ACCEPT        = accept|acc
-	// ACQUIRE       = acquire|acq
-	// DETACH        = detach|det
-	// RELEASE       = release|rel
-	// DROP          = drop
-	// SPLIT         = split
-	// PUSH          = push
-	// NEW           = new
-	// SNEW          = snew
-	// FWD           = forward|fwd
-	// LET           = let
-	// IN            = in
-	// END           = end
-	// SPRC           = sprc
-	// PRC           = prc
-	DOT:      ".",
-	SEQUENCE: ";",
-	LABEL:    "LABEL",
-	COLON:    ":",
-	COMMA:    ",",
-	LBRACK:   "(",
-	RBRACK:   ")",
-	LSBRACK:  "[",
-	RSBRACK:  "]",
-	LVBRACK:  "<",
-	RVBRACK:  ">",
-	PIPE:     "|",
+	DOT:         ".",
+	SEQUENCE:    ";",
+	LABEL:       "LABEL",
+	COLON:       ":",
+	COMMA:       ",",
+	LBRACK:      "(",
+	RBRACK:      ")",
+	LSBRACK:     "[",
+	RSBRACK:     "]",
+	LVBRACK:     "<",
+	RVBRACK:     ">",
+	PIPE:        "|",
+
+	SEND:    "SEND",
+	RECEIVE: "RECEIVE",
+	CASE:    "CASE",
+	CLOSE:   "CLOSE",
+	WAIT:    "WAIT",
+	CAST:    "CAST",
+	SHIFT:   "SHIFT",
+	ACCEPT:  "ACCEPT",
+	ACQUIRE: "ACQUIRE",
+	DETACH:  "DETACH",
+	RELEASE: "RELEASE",
+	DROP:    "DROP",
+	SPLIT:   "SPLIT",
+	PUSH:    "PUSH",
+	NEW:     "NEW",
+	SNEW:    "SNEW",
+	FWD:     "FWD",
+	LET:     "LET",
+	IN:      "IN",
+	END:     "END",
+	SPRC:    "SPRC",
+	PRC:     "PRC",
+}
+
+var keywords = map[string]Token{
+	"send":    SEND,
+	"recv":    RECEIVE,
+	"receive": RECEIVE,
+	"case":    CASE,
+	"close":   CLOSE,
+	"wait":    WAIT,
+	"cast":    CAST,
+	"shift":   SHIFT,
+	"accept":  ACCEPT,
+	"acc":     ACCEPT,
+	"acquire": ACQUIRE,
+	"acq":     ACQUIRE,
+	"detach":  DETACH,
+	"det":     DETACH,
+	"release": RELEASE,
+	"rel":     RELEASE,
+	"drop":    DROP,
+	"split":   SPLIT,
+	"push":    PUSH,
+	"new":     NEW,
+	"snew":    SNEW,
+	"forward": FWD,
+	"fwd":     FWD,
+	"let":     LET,
+	"in":      IN,
+	"end":     END,
+	"sprc":    SPRC,
+	"prc":     PRC,
 }
 
 func (t Token) String() string {
@@ -184,24 +235,12 @@ func (l *Lexer) Lex() (Position, Token, string) {
 				l.backup()
 				label, lit := l.lexLVBrackets()
 				return startPos, label, lit
-			} else if isLabel(r) {
+			} else if isAlphaNumeric(r) {
 				// backup and let lexInt rescan the beginning of the int
 				startPos := l.pos
 				l.backup()
-				lit := l.lexLabel()
-				return startPos, LABEL, lit
-				// } else if unicode.IsDigit(r) {
-				// 	// backup and let lexInt rescan the beginning of the int
-				// 	startPos := l.pos
-				// 	l.backup()
-				// 	lit := l.lexInt()
-				// 	return startPos, INT, lit
-				// } else if unicode.IsLetter(r) {
-				// 	// backup and let lexIdent rescan the beginning of the ident
-				// 	startPos := l.pos
-				// 	l.backup()
-				// 	lit := l.lexIdent()
-				// 	return startPos, IDENT, lit
+				label, lit := l.lexLabel()
+				return startPos, label, lit
 			} else {
 				return l.pos, ILLEGAL, string(r)
 			}
@@ -310,42 +349,49 @@ func (l *Lexer) lexLVBrackets() (Token, string) {
 	}
 
 	l.pos.column++
-	if r == '=' {
-		// return lit + string(r)
-		return LEFT_ARROW, "<="
-
+	if r == '-' {
+		return LEFT_ARROW, "<-"
 	} else {
 		// scanned something not in the identifier
 		l.backup()
-		return EQUALS, lit
+		return LVBRACK, lit
 	}
 }
 
 // lexIdent scans the input until the end of an identifier and then returns the
 // literal.
-func (l *Lexer) lexLabel() string {
+func (l *Lexer) lexLabel() (Token, string) {
 	var lit string
 	for {
 		r, _, err := l.reader.ReadRune()
 		if err != nil {
 			if err == io.EOF {
 				// at the end of the identifier
-				return lit
+				return getLabelOrKeyword(lit)
 			}
 		}
 
 		l.pos.column++
-		if isLabel(r) {
+		if isAlphaNumeric(r) {
 			lit = lit + string(r)
 		} else {
 			// scanned something not in the identifier
 			l.backup()
-			return lit
+			return getLabelOrKeyword(lit)
 		}
 	}
 }
 
-func isLabel(r rune) bool {
+func getLabelOrKeyword(lit string) (Token, string) {
+	val, ok := keywords[lit]
+
+	if ok {
+		return val, lit
+	}
+	return LABEL, lit
+}
+
+func isAlphaNumeric(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
 }
 func main() {

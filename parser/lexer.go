@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 	"unicode"
 )
 
@@ -12,6 +13,7 @@ type Token int
 
 const (
 	EOF = iota
+	SKIP_LINE
 	ILLEGAL
 
 	// Infix ops
@@ -197,11 +199,8 @@ func (l *Lexer) Lex() (Position, Token, string) {
 			return l.pos, SUB, "-"
 		case '*':
 			return l.pos, MUL, "*"
-		case '/':
-			return l.pos, DIV, "/"
-		// case '=':
-		// 	return l.pos, EQUALS, "="
-
+		// case '/':
+		// 	return l.pos, DIV, "/"
 		case ':':
 			return l.pos, COLON, ":"
 		case ',':
@@ -214,12 +213,28 @@ func (l *Lexer) Lex() (Position, Token, string) {
 			return l.pos, LSBRACK, "["
 		case ']':
 			return l.pos, RSBRACK, "]"
-		// case '<':
-		// 	return l.pos, LVBRACK, "<"
 		case '>':
 			return l.pos, RVBRACK, ">"
 		case '|':
 			return l.pos, PIPE, "|"
+		case '/':
+			// Potential comment, move to next line
+			r, _, err = l.reader.ReadRune()
+			if err != nil {
+				if err == io.EOF {
+					// at the end of the file
+					return l.pos, EOF, ""
+				}
+			}
+
+			if r == '/' {
+				l.readUntilNextLine()
+				return l.Lex()
+
+			} else {
+				return l.pos, ILLEGAL, string(r)
+			}
+
 		default:
 			if unicode.IsSpace(r) {
 				continue // nothing to do here, just move on
@@ -259,6 +274,26 @@ func (l *Lexer) backup() {
 	}
 
 	l.pos.column--
+}
+
+func (l *Lexer) readUntilNextLine() {
+	for {
+		r, _, err := l.reader.ReadRune()
+
+		if err != nil {
+			if err == io.EOF {
+				// at the end of the int
+				l.backup()
+				return
+			}
+		}
+
+		if r == '\n' {
+			break
+		}
+	}
+
+	l.resetPosition()
 }
 
 // lexInt scans the input until the end of an integer and then returns the
@@ -401,12 +436,21 @@ func main() {
 	}
 
 	lexer := NewLexer(file)
+L:
 	for {
 		pos, tok, lit := lexer.Lex()
-		if tok == EOF {
-			break
+		switch tok {
+		case EOF:
+			break L
+		case SKIP_LINE:
+			lexer.resetPosition()
+			lexer.pos.line++
+			fmt.Printf("Skip line\n")
+			continue
+		default:
+			fmt.Printf("%d:%d\t%s\t%s\n", pos.line, pos.column, tok, lit)
 		}
 
-		fmt.Printf("%d:%d\t%s\t%s\n", pos.line, pos.column, tok, lit)
+		time.Sleep(50 * time.Millisecond)
 	}
 }

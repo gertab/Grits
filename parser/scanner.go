@@ -8,22 +8,53 @@ import (
 
 const (
 	EOF = iota
-	ILLEGAL
+	// ILLEGAL
 
 	kNIL
 	kNEW
 	kNAME
 
-	kLANGLE
-	kRANGLE
-	kLPAREN
-	kRPAREN
-	kPREFIX
-	kSEMICOLON
-	kCOLON
-	kPAR
-	kREPEAT
-	kCOMMA
+	EQUALS // =
+
+	// LABEL       // letters/digits/_
+	LEFT_ARROW  // <-
+	RIGHT_ARROW // =>
+
+	DOT      // .
+	SEQUENCE // ;
+	COLON    // :
+	COMMA    // ,
+	LPAREN   // (
+	RPAREN   // )
+	LSBRACK  // [
+	RSBRACK  // ]
+	LANGLE   // <
+	RANGLE   // >
+	PIPE     // |
+
+	// // KEYWORDS
+	// SEND
+	// RECEIVE
+	// CASE
+	// CLOSE
+	// WAIT
+	// CAST
+	// SHIFT
+	// ACCEPT
+	// ACQUIRE
+	// DETACH
+	// RELEASE
+	// DROP
+	// SPLIT
+	// PUSH
+	// NEW
+	// SNEW
+	// FWD
+	// LET
+	// IN
+	// END
+	// SPRC
+	// PRC
 )
 
 // scanner is a lexical scanner.
@@ -72,10 +103,6 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 		s.skipWhitespace()
 		ch = s.read()
 	}
-	if isAlphaNum(ch) {
-		s.unread()
-		return s.scanName()
-	}
 
 	// Track token positions.
 	startPos = s.pos
@@ -84,29 +111,40 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 	switch ch {
 	case eof:
 		return 0, "", startPos, endPos
-	case '<':
-		return kLANGLE, string(ch), startPos, endPos
 	case '>':
-		return kRANGLE, string(ch), startPos, endPos
+		return RANGLE, string(ch), startPos, endPos
 	case '(':
-		return kLPAREN, string(ch), startPos, endPos
+		return LPAREN, string(ch), startPos, endPos
 	case ')':
-		return kRPAREN, string(ch), startPos, endPos
+		return RPAREN, string(ch), startPos, endPos
+	case '[':
+		return LSBRACK, string(ch), startPos, endPos
+	case ']':
+		return RSBRACK, string(ch), startPos, endPos
 	case '.':
-		return kPREFIX, string(ch), startPos, endPos
+		return DOT, string(ch), startPos, endPos
 	case ';':
-		return kSEMICOLON, string(ch), startPos, endPos
+		return SEQUENCE, string(ch), startPos, endPos
 	case ':':
-		return kCOLON, string(ch), startPos, endPos
+		return COLON, string(ch), startPos, endPos
 	case '|':
-		return kPAR, string(ch), startPos, endPos
-	case '!':
-		return kREPEAT, string(ch), startPos, endPos
+		return PIPE, string(ch), startPos, endPos
 	case ',':
-		return kCOMMA, string(ch), startPos, endPos
-	case '#':
-		s.skipToEOL()
+		return COMMA, string(ch), startPos, endPos
+	}
+
+	if s.consumeIfComment(ch) {
 		return s.Scan()
+	}
+
+	if isSpecialSymbol(ch) {
+		s.unread()
+		return s.scanSpecialSymbol()
+	}
+
+	if isAlphaNum(ch) || isUnderscore(ch) {
+		s.unread()
+		return s.scanName()
 	}
 
 	return kILLEGAL, string(ch), startPos, endPos
@@ -149,10 +187,96 @@ func (s *scanner) skipWhitespace() {
 	}
 }
 
+func (s *scanner) consumeIfComment(ch rune) bool {
+	if ch == '/' {
+		if ch = s.read(); ch == '/' {
+			s.skipToEOL()
+			return true
+		} else if ch == '*' {
+			// todo implement /* ... */
+			s.skipToEndOfComment()
+			return true
+		}
+		s.unread()
+	}
+	// Not a comment, so undo changes
+	s.unread()
+	return false
+}
+
+func (s *scanner) skipToEndOfComment() {
+	for {
+		if ch := s.read(); ch == '*' {
+			for {
+				if ch := s.read(); ch == '/' {
+					return
+				}
+			}
+		}
+	}
+}
+
 func (s *scanner) skipToEOL() {
 	for {
 		if ch := s.read(); ch == '\n' || ch == eof {
 			break
 		}
 	}
+}
+
+// Some commands are multi-character. So, they have to be check explicitly
+func isSpecialSymbol(ch rune) bool {
+	return ch == '=' || ch == '<'
+}
+
+func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos TokenPos) {
+	startPos = s.pos
+	defer func() { endPos = s.pos }()
+	ch := s.read()
+
+	// for {
+	// 	if ch := s.read(); ch == eof {
+	// 		break
+	// 	} else if !isAlphaNum(ch) && !isNameSymbols(ch) {
+	// 		s.unread()
+	// 		break
+	// 	} else {
+	// 		_, _ = buf.WriteRune(ch)
+	// 	}
+	// }
+
+	// switch buf.String() {
+	// case "0":
+	// 	return kNIL, buf.String(), startPos, endPos
+	// case "new":
+	// 	return kNEW, buf.String(), startPos, endPos
+	// }
+	// return kNAME, buf.String(), startPos, endPos
+
+	switch ch {
+	case '=':
+		// Can be = or =>
+
+		if ch2 := s.read(); ch2 == '>' {
+			// is =>
+			return RIGHT_ARROW, "=>", startPos, endPos
+		} else {
+			// is just =
+			s.unread()
+			return EQUALS, "=", startPos, endPos
+		}
+	case '<':
+		// Can be < or <-
+
+		if ch2 := s.read(); ch2 == '-' {
+			// is <-
+			return LEFT_ARROW, "<-", startPos, endPos
+		} else {
+			// is just =
+			s.unread()
+			return LANGLE, "<", startPos, endPos
+		}
+	}
+	// Not one of the special commands
+	return kILLEGAL, string(ch), startPos, endPos
 }

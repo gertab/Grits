@@ -1,12 +1,11 @@
 package main
 
-//go:generate goyacc -p main -o parser.y.go parser.y
+//go:generate goyacc -p main -o parser/parser.y.go parser/parser.y
 
 import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"unicode"
 )
 
@@ -117,7 +116,7 @@ var tokens = []string{
 	PRC:     "PRC",
 }
 
-var keywords = map[string]Token{
+var keywords = map[string]int{
 	"send":    SEND,
 	"recv":    RECEIVE,
 	"receive": RECEIVE,
@@ -148,9 +147,9 @@ var keywords = map[string]Token{
 	"prc":     PRC,
 }
 
-func (t Token) String() string {
-	return tokens[t]
-}
+// func (t int) String() string {
+// 	return tokens[t]
+// }
 
 type Position struct {
 	line   int
@@ -162,7 +161,12 @@ type Lexer struct {
 	reader *bufio.Reader
 }
 
-type yySymType struct {
+// type mainSymType struct {
+// 	yys   int
+// 	value string
+// }
+
+type mainSymType struct {
 	value string
 }
 
@@ -175,7 +179,7 @@ func NewLexer(reader io.Reader) *Lexer {
 
 // Lex scans the input for the next token. It returns the position of the token,
 // the token's type, and the literal value.
-func (l *Lexer) Lex(lval *yySymType) Token {
+func (l *Lexer) Lex(lval *mainSymType) int {
 	// keep looping until we return a token
 	for {
 		r, _, err := l.reader.ReadRune()
@@ -270,6 +274,10 @@ func (l *Lexer) Lex(lval *yySymType) Token {
 	}
 }
 
+func (l *Lexer) Error(s string) {
+	fmt.Printf("syntax error: %s\n", s)
+}
+
 func (l *Lexer) resetPosition() {
 	l.pos.line++
 	l.pos.column = 0
@@ -353,7 +361,7 @@ func (l *Lexer) lexIdent() string {
 
 // lexIdent scans the input until the end of an identifier and then returns the
 // literal.
-func (l *Lexer) lexEquals() (Token, string) {
+func (l *Lexer) lexEquals() (int, string) {
 	r, _, err := l.reader.ReadRune()
 	var lit = string(r)
 
@@ -378,7 +386,7 @@ func (l *Lexer) lexEquals() (Token, string) {
 	}
 }
 
-func (l *Lexer) lexLVBrackets() (Token, string) {
+func (l *Lexer) lexLVBrackets() (int, string) {
 	r, _, err := l.reader.ReadRune()
 	var lit = string(r)
 
@@ -402,7 +410,7 @@ func (l *Lexer) lexLVBrackets() (Token, string) {
 
 // lexIdent scans the input until the end of an identifier and then returns the
 // literal.
-func (l *Lexer) lexLabel() (Token, string) {
+func (l *Lexer) lexLabel() (int, string) {
 	var lit string
 	for {
 		r, _, err := l.reader.ReadRune()
@@ -424,7 +432,7 @@ func (l *Lexer) lexLabel() (Token, string) {
 	}
 }
 
-func getLabelOrKeyword(lit string) (Token, string) {
+func getLabelOrKeyword(lit string) (int, string) {
 	val, ok := keywords[lit]
 
 	if ok {
@@ -436,21 +444,35 @@ func getLabelOrKeyword(lit string) (Token, string) {
 func isAlphaNumeric(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
 }
+
+// func main() {
+// 	file, err := os.Open("parser/input.test")
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	lexer := NewLexer(file)
+// 	val := mainSymType{}
+// 	for {
+
+// 		tok := lexer.Lex(&val)
+// 		if tok == EOF {
+// 			break
+// 		}
+
+// 		fmt.Printf("\t%s\t%s\n", tok, val.value)
+// 	}
+// }
+
 func main() {
-	file, err := os.Open("parser/input.test")
-	if err != nil {
-		panic(err)
-	}
+	// file, err := os.Open("parser/input.test")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	lexer := NewLexer(file)
-	val := yySymType{}
-	for {
+	// lexer := NewLexer(file)
+	// e := mainParse(lexer)
+	// fmt.Println("Return code: ", e)
 
-		tok := lexer.Lex(&val)
-		if tok == EOF {
-			break
-		}
-
-		fmt.Printf("\t%s\t%s\n", tok, val.value)
-	}
+	fmt.Println("ok")
 }

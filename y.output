@@ -1,0 +1,36 @@
+
+state 0
+	$accept: .list $end 
+	list: .    (1)
+
+	.  reduce 1 (src line 14)
+
+	list  goto 1
+
+state 1
+	$accept:  list.$end 
+	list:  list.'\n' 
+
+	$end  accept
+	'\n'  shift 2
+	.  error
+
+
+state 2
+	list:  list '\n'.    (2)
+
+	.  reduce 2 (src line 15)
+
+
+9 terminals, 2 nonterminals
+3 grammar rules, 3/16000 states
+0 shift/reduce, 0 reduce/reduce conflicts reported
+51 working sets used
+memory: parser 0/240000
+0 extra closures
+1 shift entries, 1 exceptions
+1 goto entries
+0 entries saved by goto default
+Optimizer space used: output 2/240000
+2 table entries, 0 zero
+maximum spread: 9, maximum offset: 9

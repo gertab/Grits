@@ -50,6 +50,6 @@ func main() {
 			break
 		}
 
-		fmt.Printf("\t%s\t%s\n", tok, val.strval)
+		fmt.Printf("\t%d\t%s\n", tok, val.strval)
 	}
 }

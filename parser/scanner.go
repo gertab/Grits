@@ -8,15 +8,15 @@ import (
 
 const (
 	EOF = iota
-	// ILLEGAL
+	// kILLEGAL
 
-	kNIL
-	kNEW
-	kNAME
+	kNIL // todo remove
+	kNEW // todo remove
+
+	LABEL // letters/digits/_
 
 	EQUALS // =
 
-	// LABEL       // letters/digits/_
 	LEFT_ARROW  // <-
 	RIGHT_ARROW // =>
 
@@ -32,29 +32,29 @@ const (
 	RANGLE   // >
 	PIPE     // |
 
-	// // KEYWORDS
-	// SEND
-	// RECEIVE
-	// CASE
-	// CLOSE
-	// WAIT
-	// CAST
-	// SHIFT
-	// ACCEPT
-	// ACQUIRE
-	// DETACH
-	// RELEASE
-	// DROP
-	// SPLIT
-	// PUSH
-	// NEW
-	// SNEW
-	// FWD
-	// LET
-	// IN
-	// END
-	// SPRC
-	// PRC
+	// KEYWORDS
+	SEND
+	RECEIVE
+	CASE
+	CLOSE
+	WAIT
+	CAST
+	SHIFT
+	ACCEPT
+	ACQUIRE
+	DETACH
+	RELEASE
+	DROP
+	SPLIT
+	PUSH
+	NEW
+	SNEW
+	LET
+	IN
+	END
+	SPRC
+	PRC
+	FORWARD
 )
 
 // scanner is a lexical scanner.
@@ -138,23 +138,24 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 	}
 
 	if isSpecialSymbol(ch) {
-		s.unread()
+		// s.unread()
 		return s.scanSpecialSymbol()
 	}
 
 	if isAlphaNum(ch) || isUnderscore(ch) {
-		s.unread()
-		return s.scanName()
+		// s.unread()
+		return s.scanLabel()
 	}
 
 	return kILLEGAL, string(ch), startPos, endPos
 }
 
-func (s *scanner) scanName() (token tok, value string, startPos, endPos TokenPos) {
+// Scan label or keyword
+func (s *scanner) scanLabel() (token tok, value string, startPos, endPos TokenPos) {
 	var buf bytes.Buffer
 	startPos = s.pos
 	defer func() { endPos = s.pos }()
-	buf.WriteRune(s.read())
+	// buf.WriteRune(ch)
 
 	for {
 		if ch := s.read(); ch == eof {
@@ -168,12 +169,64 @@ func (s *scanner) scanName() (token tok, value string, startPos, endPos TokenPos
 	}
 
 	switch buf.String() {
-	case "0":
-		return kNIL, buf.String(), startPos, endPos
+	case "send":
+		return SEND, buf.String(), startPos, endPos
+	case "recv":
+		return RECEIVE, buf.String(), startPos, endPos
+	case "receive":
+		return RECEIVE, buf.String(), startPos, endPos
+	case "case":
+		return CASE, buf.String(), startPos, endPos
+	case "close":
+		return CLOSE, buf.String(), startPos, endPos
+	case "wait":
+		return WAIT, buf.String(), startPos, endPos
+	case "cast":
+		return CAST, buf.String(), startPos, endPos
+	case "shift":
+		return SHIFT, buf.String(), startPos, endPos
+	case "accept":
+		return ACCEPT, buf.String(), startPos, endPos
+	case "acc":
+		return ACCEPT, buf.String(), startPos, endPos
+	case "acquire":
+		return ACQUIRE, buf.String(), startPos, endPos
+	case "acq":
+		return ACQUIRE, buf.String(), startPos, endPos
+	case "detach":
+		return DETACH, buf.String(), startPos, endPos
+	case "det":
+		return DETACH, buf.String(), startPos, endPos
+	case "release":
+		return RELEASE, buf.String(), startPos, endPos
+	case "rel":
+		return RELEASE, buf.String(), startPos, endPos
+	case "drop":
+		return DROP, buf.String(), startPos, endPos
+	case "split":
+		return SPLIT, buf.String(), startPos, endPos
+	case "push":
+		return PUSH, buf.String(), startPos, endPos
 	case "new":
-		return kNEW, buf.String(), startPos, endPos
+		return NEW, buf.String(), startPos, endPos
+	case "snew":
+		return SNEW, buf.String(), startPos, endPos
+	case "forward":
+		return FORWARD, buf.String(), startPos, endPos
+	case "fwd":
+		return FORWARD, buf.String(), startPos, endPos
+	case "let":
+		return LET, buf.String(), startPos, endPos
+	case "in":
+		return IN, buf.String(), startPos, endPos
+	case "end":
+		return END, buf.String(), startPos, endPos
+	case "sprc":
+		return SPRC, buf.String(), startPos, endPos
+	case "prc":
+		return PRC, buf.String(), startPos, endPos
 	}
-	return kNAME, buf.String(), startPos, endPos
+	return LABEL, buf.String(), startPos, endPos
 }
 
 func (s *scanner) skipWhitespace() {
@@ -187,13 +240,13 @@ func (s *scanner) skipWhitespace() {
 	}
 }
 
+// Consumes line comments (//...) or multiline comments (/*...*/)
 func (s *scanner) consumeIfComment(ch rune) bool {
 	if ch == '/' {
 		if ch = s.read(); ch == '/' {
 			s.skipToEOL()
 			return true
 		} else if ch == '*' {
-			// todo implement /* ... */
 			s.skipToEndOfComment()
 			return true
 		}
@@ -233,31 +286,12 @@ func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos
 	startPos = s.pos
 	defer func() { endPos = s.pos }()
 	ch := s.read()
-
-	// for {
-	// 	if ch := s.read(); ch == eof {
-	// 		break
-	// 	} else if !isAlphaNum(ch) && !isNameSymbols(ch) {
-	// 		s.unread()
-	// 		break
-	// 	} else {
-	// 		_, _ = buf.WriteRune(ch)
-	// 	}
-	// }
-
-	// switch buf.String() {
-	// case "0":
-	// 	return kNIL, buf.String(), startPos, endPos
-	// case "new":
-	// 	return kNEW, buf.String(), startPos, endPos
-	// }
-	// return kNAME, buf.String(), startPos, endPos
+	ch2 := s.read()
 
 	switch ch {
 	case '=':
 		// Can be = or =>
-
-		if ch2 := s.read(); ch2 == '>' {
+		if ch2 == '>' {
 			// is =>
 			return RIGHT_ARROW, "=>", startPos, endPos
 		} else {
@@ -267,12 +301,11 @@ func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos
 		}
 	case '<':
 		// Can be < or <-
-
-		if ch2 := s.read(); ch2 == '-' {
+		if ch2 == '-' {
 			// is <-
 			return LEFT_ARROW, "<-", startPos, endPos
 		} else {
-			// is just =
+			// is just <
 			s.unread()
 			return LANGLE, "<", startPos, endPos
 		}

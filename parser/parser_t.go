@@ -11,18 +11,9 @@ func Check() {
 		panic(err)
 	}
 
-	// prc, err := parser.Parse(file)
+	prc, _ := Parse(file)
 
-	// fmt.Println(prc)
-	lexer := newLexer(file)
-	val := phiSymType{}
-	for {
+	fmt.Println(prc)
 
-		tok := lexer.Lex(&val)
-		if tok == EOF {
-			break
-		}
-
-		fmt.Printf("\t%d\t%s\n", tok, val.strval)
-	}
+	LexAndPrintTokens(file)
 }

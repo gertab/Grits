@@ -12,48 +12,96 @@ import (
 	"phi/process"
 )
 
-var proc process.Process
+var processes []process.Process
 
-//line parser/parser.y:12
+// funcDefinitions type
+
+//line parser/parser.y:14
 type phiSymType struct {
 	yys    int
 	strval string
 	proc   process.Process
 }
 
-const kLANGLE = 57346
-const kRANGLE = 57347
-const kLPAREN = 57348
-const kRPAREN = 57349
-const kPREFIX = 57350
-const kSEMICOLON = 57351
-const kCOLON = 57352
-const kNIL = 57353
-const kNAME = 57354
-const kREPEAT = 57355
-const kNEW = 57356
-const kCOMMA = 57357
-const kPAR = 57358
-const kREP = 57359
+const LABEL = 57346
+const LEFT_ARROW = 57347
+const RIGHT_ARROW = 57348
+const EQUALS = 57349
+const DOT = 57350
+const SEQUENCE = 57351
+const COLON = 57352
+const COMMA = 57353
+const LPAREN = 57354
+const RPAREN = 57355
+const LSBRACK = 57356
+const RSBRACK = 57357
+const LANGLE = 57358
+const RANGLE = 57359
+const PIPE = 57360
+const SEND = 57361
+const RECEIVE = 57362
+const CASE = 57363
+const CLOSE = 57364
+const WAIT = 57365
+const CAST = 57366
+const SHIFT = 57367
+const ACCEPT = 57368
+const ACQUIRE = 57369
+const DETACH = 57370
+const RELEASE = 57371
+const DROP = 57372
+const SPLIT = 57373
+const PUSH = 57374
+const NEW = 57375
+const SNEW = 57376
+const LET = 57377
+const IN = 57378
+const END = 57379
+const SPRC = 57380
+const PRC = 57381
+const FORWARD = 57382
 
 var phiToknames = [...]string{
 	"$end",
 	"error",
 	"$unk",
-	"kLANGLE",
-	"kRANGLE",
-	"kLPAREN",
-	"kRPAREN",
-	"kPREFIX",
-	"kSEMICOLON",
-	"kCOLON",
-	"kNIL",
-	"kNAME",
-	"kREPEAT",
-	"kNEW",
-	"kCOMMA",
-	"kPAR",
-	"kREP",
+	"LABEL",
+	"LEFT_ARROW",
+	"RIGHT_ARROW",
+	"EQUALS",
+	"DOT",
+	"SEQUENCE",
+	"COLON",
+	"COMMA",
+	"LPAREN",
+	"RPAREN",
+	"LSBRACK",
+	"RSBRACK",
+	"LANGLE",
+	"RANGLE",
+	"PIPE",
+	"SEND",
+	"RECEIVE",
+	"CASE",
+	"CLOSE",
+	"WAIT",
+	"CAST",
+	"SHIFT",
+	"ACCEPT",
+	"ACQUIRE",
+	"DETACH",
+	"RELEASE",
+	"DROP",
+	"SPLIT",
+	"PUSH",
+	"NEW",
+	"SNEW",
+	"LET",
+	"IN",
+	"END",
+	"SPRC",
+	"PRC",
+	"FORWARD",
 }
 
 var phiStatenames = [...]string{}
@@ -62,17 +110,17 @@ const phiEofCode = 1
 const phiErrCode = 2
 const phiInitialStackSize = 16
 
-//line parser/parser.y:67
-
 // Parse is the entry point to the parser.
-func Parse(r io.Reader) (process.Process, error) {
+//
+//line parser/parser.y:44
+func Parse(r io.Reader) ([]process.Process, error) {
 	l := newLexer(r)
 	phiParse(l)
 	select {
 	case err := <-l.Errors:
 		return nil, err
 	default:
-		return proc, nil
+		return processes, nil
 	}
 }
 
@@ -85,56 +133,37 @@ var phiExca = [...]int8{
 
 const phiPrivate = 57344
 
-const phiLast = 66
+const phiLast = 10
 
 var phiAct = [...]int8{
-	3, 17, 34, 2, 8, 11, 18, 6, 19, 14,
-	45, 12, 4, 5, 7, 11, 43, 21, 20, 8,
-	29, 26, 33, 22, 30, 8, 41, 16, 35, 8,
-	37, 36, 32, 23, 25, 38, 4, 5, 7, 31,
-	40, 39, 35, 42, 44, 27, 4, 5, 7, 24,
-	9, 1, 10, 28, 6, 15, 0, 25, 13, 4,
-	5, 7, 0, 4, 5, 7,
+	3, 10, 6, 4, 8, 9, 7, 5, 1, 2,
 }
 
 var phiPact = [...]int16{
-	48, -1000, -12, -1000, -1000, 46, -9, 52, 48, 15,
-	-4, -4, -1000, 1, -1000, 18, -1000, 42, -1000, 11,
-	38, 13, -1000, 12, 31, -4, 10, 25, -4, -1000,
-	-1000, 35, -1000, -1000, -1000, -1000, 1, 19, -1000, 1,
-	9, 25, 3, -1000, -1000, -1000,
+	-19, -1000, -13, 3, -1000, -14, 2, -7, 1, -16,
+	-1000,
 }
 
 var phiPgo = [...]int8{
-	0, 3, 0, 2, 6, 1, 55, 51,
+	0, 9, 8,
 }
 
 var phiR1 = [...]int8{
-	0, 7, 1, 1, 2, 2, 2, 2, 2, 2,
-	2, 2, 4, 4, 3, 3, 5, 5, 5, 6,
-	6, 6,
+	0, 2, 1, 1,
 }
 
 var phiR2 = [...]int8{
-	0, 1, 1, 3, 1, 4, 6, 8, 5, 7,
-	2, 4, 1, 3, 1, 3, 0, 1, 3, 0,
-	1, 3,
+	0, 1, 7, 2,
 }
 
 var phiChk = [...]int16{
-	-1000, -7, -1, -2, 11, 12, 6, 13, 16, 4,
-	6, 14, -1, 6, -2, -6, 12, -5, -4, 12,
-	-4, -1, 5, 15, 7, 15, 10, 7, 15, 7,
-	12, 8, -4, 12, -3, -2, 6, -5, -1, 6,
-	-1, 7, -1, 7, -3, 7,
+	-1000, -2, -1, 19, 16, 4, 16, 4, 11, 4,
+	17,
 }
 
 var phiDef = [...]int8{
-	0, -2, 1, 2, 4, 0, 0, 0, 0, 19,
-	16, 0, 10, 0, 3, 0, 20, 0, 17, 12,
-	0, 0, 5, 0, 0, 0, 0, 0, 16, 11,
-	21, 0, 18, 13, 8, 14, 0, 0, 6, 0,
-	0, 0, 0, 15, 9, 7,
+	0, -2, 1, 0, 3, 0, 0, 0, 0, 0,
+	2,
 }
 
 var phiTok1 = [...]int8{
@@ -143,7 +172,9 @@ var phiTok1 = [...]int8{
 
 var phiTok2 = [...]int8{
 	2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-	12, 13, 14, 15, 16, 17,
+	12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+	22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+	32, 33, 34, 35, 36, 37, 38, 39, 40,
 }
 
 var phiTok3 = [...]int8{
@@ -489,15 +520,28 @@ phidefault:
 
 	case 1:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:32
+//line parser/parser.y:25
 		{
-			proc = phiDollar[1].proc
+			__yyfmt__.Println(phiDollar[1].proc)
+			// processes = $1
 		}
 	case 2:
-		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:35
+		phiDollar = phiS[phipt-7 : phipt+1]
+//line parser/parser.y:31
 		{
-			phiVAL.proc = phiDollar[1].proc
+			__yyfmt__.Println("send")
+			__yyfmt__.Println(phiDollar[2].strval)
+			__yyfmt__.Println("<")
+			__yyfmt__.Println(phiDollar[4].strval)
+			__yyfmt__.Println(",")
+			__yyfmt__.Println(phiDollar[6].strval)
+			__yyfmt__.Println(">")
+
+		}
+	case 3:
+		phiDollar = phiS[phipt-2 : phipt+1]
+//line parser/parser.y:41
+		{
 		}
 	}
 	goto phistack /* stack new state and value */

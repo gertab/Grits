@@ -3,6 +3,7 @@ package parser
 //go:generate goyacc -p phi -o parser/parser.y.go parser/parser.y
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -32,6 +33,29 @@ func (l *lexer) Lex(yylval *phiSymType) int {
 // Error handles error.
 func (l *lexer) Error(err string) {
 	l.Errors <- &ParseError{Err: err, Pos: l.scanner.pos}
+}
+
+func LexAndPrintTokens(file io.Reader) {
+
+	// file, err := os.Open("parser/input.test")
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// prc, err := parser.Parse(file)
+
+	// fmt.Println(prc)
+	lexer := newLexer(file)
+	val := phiSymType{}
+	for {
+
+		tok := lexer.Lex(&val)
+		if tok == EOF {
+			break
+		}
+
+		fmt.Printf("\t%d\t%s\n", tok, val.strval)
+	}
 }
 
 // func main() {

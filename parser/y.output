@@ -24,19 +24,19 @@ state 2
 	proc:  proc.kPAR simpleproc 
 
 	kPAR  shift 8
-	.  reduce 1 (src line 32)
+	.  reduce 1 (src line 29)
 
 
 state 3
 	proc:  simpleproc.    (2)
 
-	.  reduce 2 (src line 35)
+	.  reduce 2 (src line 32)
 
 
 state 4
 	simpleproc:  kNIL.    (4)
 
-	.  reduce 4 (src line 39)
+	.  reduce 4 (src line 36)
 
 
 state 5
@@ -86,7 +86,7 @@ state 9
 	values: .    (19)
 
 	kNAME  shift 16
-	.  reduce 19 (src line 62)
+	.  reduce 19 (src line 59)
 
 	values  goto 15
 
@@ -96,7 +96,7 @@ state 10
 	names: .    (16)
 
 	kNAME  shift 19
-	.  reduce 16 (src line 57)
+	.  reduce 16 (src line 54)
 
 	scopename  goto 18
 	names  goto 17
@@ -114,7 +114,7 @@ state 12
 	proc:  proc.kPAR simpleproc 
 	simpleproc:  kREPEAT proc.    (10)
 
-	.  reduce 10 (src line 45)
+	.  reduce 10 (src line 42)
 
 
 state 13
@@ -135,7 +135,7 @@ state 13
 state 14
 	proc:  proc kPAR simpleproc.    (3)
 
-	.  reduce 3 (src line 36)
+	.  reduce 3 (src line 33)
 
 
 state 15
@@ -150,7 +150,7 @@ state 15
 state 16
 	values:  kNAME.    (20)
 
-	.  reduce 20 (src line 63)
+	.  reduce 20 (src line 60)
 
 
 state 17
@@ -166,7 +166,7 @@ state 17
 state 18
 	names:  scopename.    (17)
 
-	.  reduce 17 (src line 58)
+	.  reduce 17 (src line 55)
 
 
 state 19
@@ -174,7 +174,7 @@ state 19
 	scopename:  kNAME.kCOLON kNAME 
 
 	kCOLON  shift 26
-	.  reduce 12 (src line 49)
+	.  reduce 12 (src line 46)
 
 
 state 20
@@ -198,7 +198,7 @@ state 21
 state 22
 	simpleproc:  kNAME kLANGLE values kRANGLE.    (5)
 
-	.  reduce 5 (src line 40)
+	.  reduce 5 (src line 37)
 
 
 state 23
@@ -248,7 +248,7 @@ state 28
 	names: .    (16)
 
 	kNAME  shift 19
-	.  reduce 16 (src line 57)
+	.  reduce 16 (src line 54)
 
 	scopename  goto 18
 	names  goto 37
@@ -256,13 +256,13 @@ state 28
 state 29
 	simpleproc:  kREPEAT kLPAREN proc kRPAREN.    (11)
 
-	.  reduce 11 (src line 46)
+	.  reduce 11 (src line 43)
 
 
 state 30
 	values:  values kCOMMA kNAME.    (21)
 
-	.  reduce 21 (src line 64)
+	.  reduce 21 (src line 61)
 
 
 state 31
@@ -281,25 +281,25 @@ state 31
 state 32
 	names:  names kCOMMA scopename.    (18)
 
-	.  reduce 18 (src line 59)
+	.  reduce 18 (src line 56)
 
 
 state 33
 	scopename:  kNAME kCOLON kNAME.    (13)
 
-	.  reduce 13 (src line 50)
+	.  reduce 13 (src line 47)
 
 
 state 34
 	simpleproc:  kLPAREN kNEW scopename kRPAREN scope.    (8)
 
-	.  reduce 8 (src line 43)
+	.  reduce 8 (src line 40)
 
 
 state 35
 	scope:  simpleproc.    (14)
 
-	.  reduce 14 (src line 53)
+	.  reduce 14 (src line 50)
 
 
 state 36
@@ -330,7 +330,7 @@ state 38
 	proc:  proc.kPAR simpleproc 
 	simpleproc:  kNAME kLPAREN names kRPAREN kPREFIX proc.    (6)
 
-	.  reduce 6 (src line 41)
+	.  reduce 6 (src line 38)
 
 
 state 39
@@ -381,19 +381,19 @@ state 42
 state 43
 	scope:  kLPAREN proc kRPAREN.    (15)
 
-	.  reduce 15 (src line 54)
+	.  reduce 15 (src line 51)
 
 
 state 44
 	simpleproc:  kLPAREN kNEW scopename kCOMMA names kRPAREN scope.    (9)
 
-	.  reduce 9 (src line 44)
+	.  reduce 9 (src line 41)
 
 
 state 45
 	simpleproc:  kNAME kLPAREN names kRPAREN kPREFIX kLPAREN proc kRPAREN.    (7)
 
-	.  reduce 7 (src line 42)
+	.  reduce 7 (src line 39)
 
 
 17 terminals, 8 nonterminals

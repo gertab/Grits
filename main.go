@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import "phi/parser"
+
+//	func main() {
+//		fmt.Println("ok")
+//	}
 
 func main() {
-	fmt.Println("ok")
+	parser.Check()
 }

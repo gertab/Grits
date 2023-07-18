@@ -1,9 +1,13 @@
-package main
+package parser
 
 import (
 	"strings"
 	"testing"
 )
+
+// type phiSymType struct {
+// 	strval string
+// }
 
 func getTokens(l *lexer) []int {
 	tokens := make([]int, 0)

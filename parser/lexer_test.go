@@ -72,9 +72,24 @@ func TestIdentToken(t *testing.T) {
 		expected []int
 	}{
 		{"testIdent", []int{LABEL}},
-		{"ill\\egal", []int{LABEL, 0, LABEL}},
-		// {"illegal", []int{LABEL, 0, LABEL}},
-		{"one two", []int{LABEL, LABEL}},
+		{"ill\\egal", []int{LABEL}}, // kILLEGAL
+	}
+
+	for _, c := range cases {
+		reader := strings.NewReader(c.input)
+		l := newLexer(reader)
+		tokens := getTokens(l)
+		compareOutput(t, tokens, c.expected)
+	}
+}
+
+func TestCommentToken(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected []int
+	}{
+		{"test/*abc*/Ident", []int{LABEL, LABEL}},
+		{"il//egal", []int{LABEL}}, // kILLEGAL
 	}
 
 	for _, c := range cases {

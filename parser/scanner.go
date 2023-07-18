@@ -10,27 +10,22 @@ const (
 	EOF = iota
 	// kILLEGAL
 
-	kNIL // todo remove
-	kNEW // todo remove
-
 	LABEL // letters/digits/_
-
-	EQUALS // =
 
 	LEFT_ARROW  // <-
 	RIGHT_ARROW // =>
-
-	DOT      // .
-	SEQUENCE // ;
-	COLON    // :
-	COMMA    // ,
-	LPAREN   // (
-	RPAREN   // )
-	LSBRACK  // [
-	RSBRACK  // ]
-	LANGLE   // <
-	RANGLE   // >
-	PIPE     // |
+	EQUALS      // =
+	DOT         // .
+	SEQUENCE    // ;
+	COLON       // :
+	COMMA       // ,
+	LPAREN      // (
+	RPAREN      // )
+	LSBRACK     // [
+	RSBRACK     // ]
+	LANGLE      // <
+	RANGLE      // >
+	PIPE        // |
 
 	// KEYWORDS
 	SEND

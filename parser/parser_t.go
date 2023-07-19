@@ -10,10 +10,20 @@ func Check() {
 	if err != nil {
 		panic(err)
 	}
+	// LexAndPrintTokens(file)
 
-	prc, _ := Parse(file)
+	prc, err := Parse(file)
 
-	fmt.Println(prc)
+	switch {
+	case err != nil:
+		fmt.Println("Parsing error: ")
+		fmt.Println(err)
+	default:
+		processes = expandUnexpandedProcesses(prc)
 
-	LexAndPrintTokens(file)
+		for _, p := range processes {
+			fmt.Println(p.Body.String())
+			fmt.Println(len(p.FunctionDefinitions))
+		}
+	}
 }

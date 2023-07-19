@@ -1,91 +1,276 @@
 
 state 0
-	$accept: .top $end 
+	$accept: .root $end 
 
-	SEND  shift 3
+	LANGLE  shift 6
+	SEND  shift 5
+	LET  shift 4
 	.  error
 
-	proc  goto 2
-	top  goto 1
+	expression  goto 3
+	root  goto 1
+	program  goto 2
 
 state 1
-	$accept:  top.$end 
+	$accept:  root.$end 
 
 	$end  accept
 	.  error
 
 
 state 2
-	top:  proc.    (1)
-	proc:  proc.LANGLE 
+	root:  program.    (1)
 
-	LANGLE  shift 4
-	.  reduce 1 (src line 25)
+	.  reduce 1 (src line 33)
 
 
 state 3
-	proc:  SEND.LABEL LANGLE LABEL COMMA LABEL RANGLE 
+	program:  expression.    (2)
 
-	LABEL  shift 5
-	.  error
+	.  reduce 2 (src line 36)
 
 
 state 4
-	proc:  proc LANGLE.    (3)
+	program:  LET.functions IN processes END 
+	functions: .    (8)
 
-	.  reduce 3 (src line 41)
+	SPRC  shift 8
+	.  reduce 8 (src line 49)
 
+	functions  goto 7
 
 state 5
-	proc:  SEND LABEL.LANGLE LABEL COMMA LABEL RANGLE 
+	expression:  SEND.name LANGLE name COMMA name RANGLE 
 
-	LANGLE  shift 6
+	LABEL  shift 10
 	.  error
 
+	name  goto 9
 
 state 6
-	proc:  SEND LABEL LANGLE.LABEL COMMA LABEL RANGLE 
+	expression:  LANGLE.name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
 
-	LABEL  shift 7
+	LABEL  shift 10
 	.  error
 
+	name  goto 11
 
 state 7
-	proc:  SEND LABEL LANGLE LABEL.COMMA LABEL RANGLE 
+	program:  LET functions.IN processes END 
 
-	COMMA  shift 8
+	IN  shift 12
 	.  error
 
 
 state 8
-	proc:  SEND LABEL LANGLE LABEL COMMA.LABEL RANGLE 
+	functions:  SPRC.expression 
 
-	LABEL  shift 9
+	LANGLE  shift 6
+	SEND  shift 5
 	.  error
 
+	expression  goto 13
 
 state 9
-	proc:  SEND LABEL LANGLE LABEL COMMA LABEL.RANGLE 
+	expression:  SEND name.LANGLE name COMMA name RANGLE 
 
-	RANGLE  shift 10
+	LANGLE  shift 14
 	.  error
 
 
 state 10
-	proc:  SEND LABEL LANGLE LABEL COMMA LABEL RANGLE.    (2)
+	name:  LABEL.    (12)
 
-	.  reduce 2 (src line 31)
+	.  reduce 12 (src line 55)
 
 
-40 terminals, 3 nonterminals
-4 grammar rules, 11/16000 states
+state 11
+	expression:  LANGLE name.COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
+
+	COMMA  shift 15
+	.  error
+
+
+state 12
+	program:  LET functions IN.processes END 
+
+	SPRC  shift 19
+	PRC  shift 18
+	.  error
+
+	processes  goto 16
+	process  goto 17
+
+state 13
+	functions:  SPRC expression.    (9)
+
+	.  reduce 9 (src line 50)
+
+
+state 14
+	expression:  SEND name LANGLE.name COMMA name RANGLE 
+
+	LABEL  shift 10
+	.  error
+
+	name  goto 20
+
+state 15
+	expression:  LANGLE name COMMA.name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
+
+	LABEL  shift 10
+	.  error
+
+	name  goto 21
+
+state 16
+	program:  LET functions IN processes.END 
+
+	END  shift 22
+	.  error
+
+
+state 17
+	processes:  process.processes 
+	processes:  process.    (5)
+
+	SPRC  shift 19
+	PRC  shift 18
+	.  reduce 5 (src line 44)
+
+	processes  goto 23
+	process  goto 17
+
+state 18
+	process:  PRC.expression 
+
+	LANGLE  shift 6
+	SEND  shift 5
+	.  error
+
+	expression  goto 24
+
+state 19
+	process:  SPRC.expression 
+
+	LANGLE  shift 6
+	SEND  shift 5
+	.  error
+
+	expression  goto 25
+
+state 20
+	expression:  SEND name LANGLE name.COMMA name RANGLE 
+
+	COMMA  shift 26
+	.  error
+
+
+state 21
+	expression:  LANGLE name COMMA name.RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
+
+	RANGLE  shift 27
+	.  error
+
+
+state 22
+	program:  LET functions IN processes END.    (3)
+
+	.  reduce 3 (src line 38)
+
+
+state 23
+	processes:  process processes.    (4)
+
+	.  reduce 4 (src line 43)
+
+
+state 24
+	process:  PRC expression.    (6)
+
+	.  reduce 6 (src line 46)
+
+
+state 25
+	process:  SPRC expression.    (7)
+
+	.  reduce 7 (src line 47)
+
+
+state 26
+	expression:  SEND name LANGLE name COMMA.name RANGLE 
+
+	LABEL  shift 10
+	.  error
+
+	name  goto 28
+
+state 27
+	expression:  LANGLE name COMMA name RANGLE.LEFT_ARROW RECEIVE name SEQUENCE expression 
+
+	LEFT_ARROW  shift 29
+	.  error
+
+
+state 28
+	expression:  SEND name LANGLE name COMMA name.RANGLE 
+
+	RANGLE  shift 30
+	.  error
+
+
+state 29
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW.RECEIVE name SEQUENCE expression 
+
+	RECEIVE  shift 31
+	.  error
+
+
+state 30
+	expression:  SEND name LANGLE name COMMA name RANGLE.    (10)
+
+	.  reduce 10 (src line 52)
+
+
+state 31
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE.name SEQUENCE expression 
+
+	LABEL  shift 10
+	.  error
+
+	name  goto 32
+
+state 32
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name.SEQUENCE expression 
+
+	SEQUENCE  shift 33
+	.  error
+
+
+state 33
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE.expression 
+
+	LANGLE  shift 6
+	SEND  shift 5
+	.  error
+
+	expression  goto 34
+
+state 34
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression.    (11)
+
+	.  reduce 11 (src line 53)
+
+
+40 terminals, 8 nonterminals
+13 grammar rules, 35/16000 states
 0 shift/reduce, 0 reduce/reduce conflicts reported
-52 working sets used
-memory: parser 1/240000
-0 extra closures
-8 shift entries, 1 exceptions
-2 goto entries
-0 entries saved by goto default
-Optimizer space used: output 10/240000
-10 table entries, 0 zero
-maximum spread: 19, maximum offset: 19
+57 working sets used
+memory: parser 17/240000
+18 extra closures
+32 shift entries, 1 exceptions
+17 goto entries
+1 entries saved by goto default
+Optimizer space used: output 44/240000
+44 table entries, 8 zero
+maximum spread: 39, maximum offset: 38

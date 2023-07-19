@@ -1,1 +1,9 @@
-send self<pid3, self>
+let
+in
+    prc send self<pid3, self>
+    prc send self<pid3, self>
+    prc < x , y > <- recv r ; send self < pid3 , self >
+    prc send self<pid3, self>
+    prc <x,y> <- recv r; send self<pid3, self>
+    prc send self<pid3, self>
+end

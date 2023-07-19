@@ -10,4 +10,5 @@ in
               label1<payloadc> => send self<pid3, self>
             | label2<payloadc> => self.labbbel<pid3>
         )
+    prc x <- new send self<pid3, self>; < x , y > <- recv r ; send self < pid3 , self >
 end

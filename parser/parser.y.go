@@ -116,7 +116,7 @@ const phiInitialStackSize = 16
 
 // Parse is the entry point to the parser.
 //
-//line parser/parser.y:70
+//line parser/parser.y:81
 func Parse(r io.Reader) (unexpandedProcesses, error) {
 	l := newLexer(r)
 	phiParse(l)
@@ -137,57 +137,61 @@ var phiExca = [...]int8{
 
 const phiPrivate = 57344
 
-const phiLast = 63
+const phiLast = 77
 
 var phiAct = [...]int8{
-	3, 7, 25, 24, 11, 31, 16, 12, 13, 47,
-	15, 22, 17, 38, 54, 49, 9, 9, 39, 46,
-	26, 27, 43, 36, 48, 33, 34, 40, 6, 6,
-	37, 5, 5, 8, 8, 32, 28, 41, 18, 21,
-	35, 19, 45, 53, 14, 57, 52, 4, 42, 50,
-	51, 9, 44, 55, 56, 30, 20, 2, 58, 1,
-	29, 23, 10,
+	3, 27, 26, 11, 35, 9, 17, 22, 24, 7,
+	55, 64, 18, 58, 54, 12, 13, 6, 16, 44,
+	5, 49, 8, 32, 45, 40, 57, 37, 38, 28,
+	29, 9, 42, 46, 36, 9, 4, 30, 19, 31,
+	41, 50, 23, 6, 51, 39, 5, 6, 8, 47,
+	5, 20, 8, 63, 56, 43, 53, 60, 15, 9,
+	67, 14, 62, 65, 66, 59, 48, 61, 68, 52,
+	34, 21, 2, 1, 33, 25, 10,
 }
 
 var phiPact = [...]int16{
-	12, -1000, -1000, -1000, -34, 47, 47, 36, 47, -1000,
-	-30, 13, 22, 30, 52, 27, -36, -1000, 47, 47,
-	20, 51, -32, -36, 13, 13, 29, 6, 47, 0,
-	11, -1000, -1000, -1000, -1000, 47, 43, 5, -1000, 48,
-	47, 2, -11, -1000, 8, -2, -1000, 47, 47, 40,
-	34, -3, 13, 13, 39, -1000, -1000, 13, -1000,
+	1, -1000, -1000, -1000, -35, 55, 55, 53, 55, -1000,
+	-30, 31, 22, 40, 67, -26, 30, -37, -1000, 55,
+	55, 21, 27, 66, -33, -37, 31, 31, 34, 8,
+	55, 31, 46, 6, 17, -1000, -1000, -1000, -1000, 55,
+	61, 4, 28, 31, -1000, 65, 55, -3, -10, -1000,
+	45, -1000, 10, -4, -1000, 55, 31, 55, 56, 44,
+	-1000, -6, 31, 31, 54, -1000, -1000, 31, -1000,
 }
 
 var phiPgo = [...]int8{
-	0, 11, 0, 62, 1, 61, 60, 59, 57,
+	0, 8, 0, 76, 9, 75, 74, 73, 72,
 }
 
 var phiR1 = [...]int8{
 	0, 7, 8, 8, 1, 1, 5, 5, 3, 3,
-	2, 2, 2, 2, 6, 6, 6, 4,
+	2, 2, 2, 2, 2, 2, 6, 6, 6, 4,
 }
 
 var phiR2 = [...]int8{
 	0, 1, 1, 5, 2, 1, 2, 2, 0, 2,
-	7, 10, 6, 5, 0, 6, 8, 1,
+	7, 10, 6, 5, 8, 6, 0, 6, 8, 1,
 }
 
 var phiChk = [...]int16{
 	-1000, -7, -8, -2, 35, 19, 16, -4, 21, 4,
-	-3, 38, -4, -4, 8, -4, 36, -2, 16, 11,
-	4, 12, -1, -5, 39, 38, -4, -4, 16, -6,
-	4, 37, -1, -2, -2, 11, 17, -4, 13, 18,
-	16, -4, 5, 17, 4, -4, 17, 20, 16, 17,
-	-4, -4, 6, 9, 17, -2, -2, 6, -2,
+	-3, 38, -4, -4, 8, 5, -4, 36, -2, 16,
+	11, 4, 33, 12, -1, -5, 39, 38, -4, -4,
+	16, 12, -2, -6, 4, 37, -1, -2, -2, 11,
+	17, -4, -2, 9, 13, 18, 16, -4, 5, 17,
+	13, -2, 4, -4, 17, 20, 9, 16, 17, -4,
+	-2, -4, 6, 9, 17, -2, -2, 6, -2,
 }
 
 var phiDef = [...]int8{
-	0, -2, 1, 2, 8, 0, 0, 0, 0, 17,
-	0, 0, 0, 0, 0, 0, 0, 9, 0, 0,
-	0, 14, 0, 5, 0, 0, 0, 0, 0, 0,
-	0, 3, 4, 6, 7, 0, 0, 0, 13, 0,
-	0, 0, 0, 12, 0, 0, 10, 0, 0, 0,
-	0, 0, 0, 0, 0, 15, 11, 0, 16,
+	0, -2, 1, 2, 8, 0, 0, 0, 0, 19,
+	0, 0, 0, 0, 0, 0, 0, 0, 9, 0,
+	0, 0, 0, 16, 0, 5, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 3, 4, 6, 7, 0,
+	0, 0, 0, 0, 13, 0, 0, 0, 0, 12,
+	0, 15, 0, 0, 10, 0, 0, 0, 0, 0,
+	14, 0, 0, 0, 0, 17, 11, 0, 18,
 }
 
 var phiTok1 = [...]int8{
@@ -621,26 +625,38 @@ phidefault:
 			phiVAL.form = process.NewCase(phiDollar[2].name, phiDollar[4].branches)
 		}
 	case 14:
-		phiDollar = phiS[phipt-0 : phipt+1]
+		phiDollar = phiS[phipt-8 : phipt+1]
 //line parser/parser.y:63
 		{
-			phiVAL.branches = nil
+			phiVAL.form = process.NewNew(phiDollar[1].name, phiDollar[5].form, phiDollar[8].form)
 		}
 	case 15:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:64
+//line parser/parser.y:65
+		{
+			phiVAL.form = process.NewNew(phiDollar[1].name, phiDollar[4].form, phiDollar[6].form)
+		}
+	case 16:
+		phiDollar = phiS[phipt-0 : phipt+1]
+//line parser/parser.y:74
+		{
+			phiVAL.branches = nil
+		}
+	case 17:
+		phiDollar = phiS[phipt-6 : phipt+1]
+//line parser/parser.y:75
 		{
 			phiVAL.branches = []*process.BranchForm{process.NewBranch(process.Label{L: phiDollar[1].strval}, phiDollar[3].name, phiDollar[6].form)}
 		}
-	case 16:
+	case 18:
 		phiDollar = phiS[phipt-8 : phipt+1]
-//line parser/parser.y:65
+//line parser/parser.y:76
 		{
 			phiVAL.branches = append(phiDollar[1].branches, process.NewBranch(process.Label{L: phiDollar[3].strval}, phiDollar[5].name, phiDollar[8].form))
 		}
-	case 17:
+	case 19:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:68
+//line parser/parser.y:79
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval}
 		}

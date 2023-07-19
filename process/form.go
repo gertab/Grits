@@ -138,3 +138,25 @@ func (p *CaseForm) String() string {
 	buf.WriteString("\n)")
 	return buf.String()
 }
+
+type NewForm struct {
+	continuation_c Name
+	body           Form
+	continuation_e Form
+}
+
+func NewNew(continuation_c Name, body Form, continuation_e Form) *NewForm {
+	return &NewForm{
+		continuation_c: continuation_c,
+		body:           body,
+		continuation_e: continuation_e}
+}
+func (p *NewForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(" <- new (")
+	buf.WriteString(p.body.String())
+	buf.WriteString("); ")
+	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}

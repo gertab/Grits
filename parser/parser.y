@@ -58,7 +58,17 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   | /* select */ name DOT LABEL LANGLE name RANGLE 
 		   			{ $$ = process.NewSelect($1, process.Label{L: $3}, $5) }
 		   | /* case */ CASE name LPAREN branches RPAREN 
-		   			{ $$ = process.NewCase($2, $4) };
+		   			{ $$ = process.NewCase($2, $4) }
+		   | /* new */ name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression 
+		   			{ $$ = process.NewNew($1, $5, $8) }
+		   | /* new */ name LEFT_ARROW NEW expression SEQUENCE expression 
+		   			{ $$ = process.NewNew($1, $4, $6) };
+
+/* remaining expressions:
+Call, Split, Forward, Drop, Snew
+Wait, Close, Cast, Shift
+Acquire, Accept, Push, Detach, Release
+*/
 
 branches :   /* empty */         										 { $$ = nil }
          |               LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = []*process.BranchForm{process.NewBranch(process.Label{L: $1}, $3, $6)} }

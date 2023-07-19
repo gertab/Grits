@@ -6,17 +6,18 @@ import (
 	"phi/process"
 )
 
-var processes []process.Process
+var processes []earlyProcess
 var functionDefinitions []process.FunctionDefinition
 
 %}
 
 %union {
 	strval string
-	proc   process.Process
-	procs []process.Process
+	proc   earlyProcess
+	procs []earlyProcess
 	functions []process.FunctionDefinition
 	name process.Name
+	names []process.Name
 	form process.Form
 	branches []*process.BranchForm
 }
@@ -27,6 +28,7 @@ var functionDefinitions []process.FunctionDefinition
 %type <form> expression 
 %type <functions> functions
 %type <name> name
+%type <names> names
 %type <proc> process
 %type <branches> branches
 
@@ -36,17 +38,17 @@ root : program { }
     ;
 
 program : 
-	expression { processes = append(processes, process.Process{Body:$1}) }
+	expression { processes = append(processes, earlyProcess{Body:$1, Names: []process.Name{process.Name{Ident: "root"}}}) }
 	 | LET functions IN processes END { 
 		processes = $4
 		functionDefinitions = $2
 	 };
 
 processes : process processes { $$ = append($2, $1) }
-		  | process           { $$ = []process.Process{$1} }; 
+		  | process           { $$ = []earlyProcess{$1} }; 
 
-process : PRC expression  { $$ = process.Process{Body:$2} }
-		| SPRC expression { $$ = process.Process{Body:$2} };
+process : PRC LSBRACK names RSBRACK COLON expression  { $$ = earlyProcess{Body:$6, Names: $3} }
+		| SPRC LSBRACK names RSBRACK COLON expression { $$ = earlyProcess{Body:$6, Names: $3} };
 
 functions : { $$ = nil }
 		  | SPRC expression { $$ = []process.FunctionDefinition{process.FunctionDefinition{Body: $2}} };
@@ -74,6 +76,9 @@ branches :   /* empty */         										 { $$ = nil }
          |               LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = []*process.BranchForm{process.NewBranch(process.Label{L: $1}, $3, $6)} }
          | branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = append($1, process.NewBranch(process.Label{L: $3}, $5, $8)) }
          ;
+
+names : name { $$ = []process.Name{$1} }
+ 	  | name COMMA names { $$ = append($3, $1) }
 
 name : LABEL { $$ = process.Name{Ident: $1} };
 

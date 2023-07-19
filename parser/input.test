@@ -1,9 +1,13 @@
 let
 in
     prc send self<pid3, self>
-    prc send self<pid3, self>
+    prc self.labbbel<pid3>
     prc < x , y > <- recv r ; send self < pid3 , self >
     prc send self<pid3, self>
     prc <x,y> <- recv r; send self<pid3, self>
     prc send self<pid3, self>
+    prc case casename (
+              label1<payloadc> => send self<pid3, self>
+            | label2<payloadc> => self.labbbel<pid3>
+        )
 end

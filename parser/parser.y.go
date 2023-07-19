@@ -24,6 +24,7 @@ type phiSymType struct {
 	functions []process.FunctionDefinition
 	name      process.Name
 	form      process.Form
+	branches  []*process.BranchForm
 }
 
 const LABEL = 57346
@@ -115,7 +116,7 @@ const phiInitialStackSize = 16
 
 // Parse is the entry point to the parser.
 //
-//line parser/parser.y:57
+//line parser/parser.y:70
 func Parse(r io.Reader) (unexpandedProcesses, error) {
 	l := newLexer(r)
 	phiParse(l)
@@ -136,49 +137,57 @@ var phiExca = [...]int8{
 
 const phiPrivate = 57344
 
-const phiLast = 44
+const phiLast = 63
 
 var phiAct = [...]int8{
-	19, 18, 8, 22, 6, 3, 12, 5, 30, 6,
-	31, 9, 5, 16, 13, 27, 14, 26, 11, 15,
-	33, 29, 10, 4, 24, 25, 20, 21, 2, 1,
-	17, 23, 7, 0, 0, 0, 0, 0, 28, 34,
-	0, 0, 0, 32,
+	3, 7, 25, 24, 11, 31, 16, 12, 13, 47,
+	15, 22, 17, 38, 54, 49, 9, 9, 39, 46,
+	26, 27, 43, 36, 48, 33, 34, 40, 6, 6,
+	37, 5, 5, 8, 8, 32, 28, 41, 18, 21,
+	35, 19, 45, 53, 14, 57, 52, 4, 42, 50,
+	51, 9, 44, 55, 56, 30, 20, 2, 58, 1,
+	29, 23, 10,
 }
 
 var phiPact = [...]int16{
-	-12, -1000, -1000, -1000, -36, 18, 18, -30, -7, 0,
-	-1000, 8, -38, -1000, 18, 18, -34, -38, -7, -7,
-	6, -2, -1000, -1000, -1000, -1000, 18, 16, -9, -10,
-	-1000, 18, 11, -7, -1000,
+	12, -1000, -1000, -1000, -34, 47, 47, 36, 47, -1000,
+	-30, 13, 22, 30, 52, 27, -36, -1000, 47, 47,
+	20, 51, -32, -36, 13, 13, 29, 6, 47, 0,
+	11, -1000, -1000, -1000, -1000, 47, 43, 5, -1000, 48,
+	47, 2, -11, -1000, 8, -2, -1000, 47, 47, 40,
+	34, -3, 13, 13, 39, -1000, -1000, 13, -1000,
 }
 
 var phiPgo = [...]int8{
-	0, 13, 5, 32, 11, 30, 29, 28,
+	0, 11, 0, 62, 1, 61, 60, 59, 57,
 }
 
 var phiR1 = [...]int8{
-	0, 6, 7, 7, 1, 1, 5, 5, 3, 3,
-	2, 2, 4,
+	0, 7, 8, 8, 1, 1, 5, 5, 3, 3,
+	2, 2, 2, 2, 6, 6, 6, 4,
 }
 
 var phiR2 = [...]int8{
 	0, 1, 1, 5, 2, 1, 2, 2, 0, 2,
-	7, 10, 1,
+	7, 10, 6, 5, 0, 6, 8, 1,
 }
 
 var phiChk = [...]int16{
-	-1000, -6, -7, -2, 35, 19, 16, -3, 38, -4,
-	4, -4, 36, -2, 16, 11, -1, -5, 39, 38,
-	-4, -4, 37, -1, -2, -2, 11, 17, -4, 5,
-	17, 20, -4, 9, -2,
+	-1000, -7, -8, -2, 35, 19, 16, -4, 21, 4,
+	-3, 38, -4, -4, 8, -4, 36, -2, 16, 11,
+	4, 12, -1, -5, 39, 38, -4, -4, 16, -6,
+	4, 37, -1, -2, -2, 11, 17, -4, 13, 18,
+	16, -4, 5, 17, 4, -4, 17, 20, 16, 17,
+	-4, -4, 6, 9, 17, -2, -2, 6, -2,
 }
 
 var phiDef = [...]int8{
-	0, -2, 1, 2, 8, 0, 0, 0, 0, 0,
-	12, 0, 0, 9, 0, 0, 0, 5, 0, 0,
-	0, 0, 3, 4, 6, 7, 0, 0, 0, 0,
-	10, 0, 0, 0, 11,
+	0, -2, 1, 2, 8, 0, 0, 0, 0, 17,
+	0, 0, 0, 0, 0, 0, 0, 9, 0, 0,
+	0, 14, 0, 5, 0, 0, 0, 0, 0, 0,
+	0, 3, 4, 6, 7, 0, 0, 0, 13, 0,
+	0, 0, 0, 12, 0, 0, 10, 0, 0, 0,
+	0, 0, 0, 0, 0, 15, 11, 0, 16,
 }
 
 var phiTok1 = [...]int8{
@@ -535,73 +544,103 @@ phidefault:
 
 	case 1:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:33
+//line parser/parser.y:35
 		{
 		}
 	case 2:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:37
+//line parser/parser.y:39
 		{
 			processes = append(processes, process.Process{Body: phiDollar[1].form})
 		}
 	case 3:
 		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:38
+//line parser/parser.y:40
 		{
 			processes = phiDollar[4].procs
 			functionDefinitions = phiDollar[2].functions
 		}
 	case 4:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:43
+//line parser/parser.y:45
 		{
 			phiVAL.procs = append(phiDollar[2].procs, phiDollar[1].proc)
 		}
 	case 5:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:44
+//line parser/parser.y:46
 		{
 			phiVAL.procs = []process.Process{phiDollar[1].proc}
 		}
 	case 6:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:46
+//line parser/parser.y:48
 		{
 			phiVAL.proc = process.Process{Body: phiDollar[2].form}
 		}
 	case 7:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:47
+//line parser/parser.y:49
 		{
 			phiVAL.proc = process.Process{Body: phiDollar[2].form}
 		}
 	case 8:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:49
+//line parser/parser.y:51
 		{
 			phiVAL.functions = nil
 		}
 	case 9:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:50
+//line parser/parser.y:52
 		{
 			phiVAL.functions = []process.FunctionDefinition{process.FunctionDefinition{Body: phiDollar[2].form}}
 		}
 	case 10:
 		phiDollar = phiS[phipt-7 : phipt+1]
-//line parser/parser.y:52
+//line parser/parser.y:55
 		{
 			phiVAL.form = process.NewSend(phiDollar[2].name, phiDollar[4].name, phiDollar[6].name)
 		}
 	case 11:
 		phiDollar = phiS[phipt-10 : phipt+1]
-//line parser/parser.y:53
+//line parser/parser.y:57
 		{
 			phiVAL.form = process.NewReceive(phiDollar[2].name, phiDollar[4].name, phiDollar[8].name, phiDollar[10].form)
 		}
 	case 12:
+		phiDollar = phiS[phipt-6 : phipt+1]
+//line parser/parser.y:59
+		{
+			phiVAL.form = process.NewSelect(phiDollar[1].name, process.Label{L: phiDollar[3].strval}, phiDollar[5].name)
+		}
+	case 13:
+		phiDollar = phiS[phipt-5 : phipt+1]
+//line parser/parser.y:61
+		{
+			phiVAL.form = process.NewCase(phiDollar[2].name, phiDollar[4].branches)
+		}
+	case 14:
+		phiDollar = phiS[phipt-0 : phipt+1]
+//line parser/parser.y:63
+		{
+			phiVAL.branches = nil
+		}
+	case 15:
+		phiDollar = phiS[phipt-6 : phipt+1]
+//line parser/parser.y:64
+		{
+			phiVAL.branches = []*process.BranchForm{process.NewBranch(process.Label{L: phiDollar[1].strval}, phiDollar[3].name, phiDollar[6].form)}
+		}
+	case 16:
+		phiDollar = phiS[phipt-8 : phipt+1]
+//line parser/parser.y:65
+		{
+			phiVAL.branches = append(phiDollar[1].branches, process.NewBranch(process.Label{L: phiDollar[3].strval}, phiDollar[5].name, phiDollar[8].form))
+		}
+	case 17:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:55
+//line parser/parser.y:68
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval}
 		}

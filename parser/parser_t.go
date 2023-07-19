@@ -23,7 +23,9 @@ func Check() {
 
 		for _, p := range processes {
 			fmt.Println(p.Body.String())
-			fmt.Println(len(p.FunctionDefinitions))
+			if p.FunctionDefinitions != nil {
+				fmt.Println(len(*p.FunctionDefinitions))
+			}
 		}
 	}
 }

@@ -45,6 +45,10 @@ func (p *Name) String() string {
 	return p.Ident
 }
 
+func (name1 *Name) Equal(name2 Name) bool {
+	return name1.String() == name2.String()
+}
+
 // Name is channel or value.
 type Label struct {
 	L string
@@ -52,4 +56,8 @@ type Label struct {
 
 func (p *Label) String() string {
 	return p.L
+}
+
+func (label1 *Label) Equal(label2 Label) bool {
+	return label1.String() == label2.String()
 }

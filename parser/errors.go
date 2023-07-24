@@ -23,8 +23,8 @@ type ImmutableNameError struct {
 }
 
 func (e ImmutableNameError) Error() string {
-	// return fmt.Sprintf("cannot set Name: %s is an immutable Name implementation", e.Name.Ident())
-	return fmt.Sprintf("cannot set Name: ?? is an immutable Name implementation")
+	return fmt.Sprintf("cannot set Name: %s is an immutable Name implementation", e.Name)
+	// return fmt.Sprintf("cannot set Name: ?? is an immutable Name implementation")
 }
 
 var ErrInvalid = errors.New("invalid argument")
@@ -40,5 +40,5 @@ type UnknownProcessError struct {
 }
 
 func (e UnknownProcessError) Error() string {
-	return fmt.Sprintf("unknown process: %s (type: %T)", e.Proc, e.Proc)
+	return fmt.Sprintf("unknown process: %s (type: %T)", e.Proc.String(), e.Proc.String())
 }

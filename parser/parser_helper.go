@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"phi/process"
+	"strings"
 )
 
 type unexpandedProcesses struct {
@@ -41,7 +42,23 @@ func ParseFile(fileName string) []process.Process {
 
 	switch {
 	case err != nil:
-		fmt.Println("Parsing error: ")
+		// fmt.Println("Parsing error: ")
+		fmt.Println(err)
+		panic("Parsing error!")
+	default:
+		return expandUnexpandedProcesses(prc)
+	}
+}
+
+func ParseString(program string) []process.Process {
+
+	r := strings.NewReader(program)
+
+	prc, err := Parse(r)
+
+	switch {
+	case err != nil:
+		// fmt.Println("Parsing error: ")
 		fmt.Println(err)
 		panic("Parsing error!")
 	default:

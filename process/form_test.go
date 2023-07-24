@@ -40,15 +40,30 @@ func TestBasicTokens(t *testing.T) {
 	output = append(output, input2.String())
 	expected = append(expected, "<pay_c,cont_c> <- recv from_c; close self")
 
-	// Select
+	// Case
 	input4 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "label1"}, pay_c, end)})
 	output = append(output, input4.String())
 	expected = append(expected, "case from_c ( \n   label1<pay_c> => close self\n)")
 
-	// Select (multiple cases)
+	// Case (multiple cases)
 	input5 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "label1"}, pay_c, end), NewBranch(Label{L: "label2"}, pay_c, end)})
 	output = append(output, input5.String())
 	expected = append(expected, "case from_c ( \n   label1<pay_c> => close self\n | label2<pay_c> => close self\n)")
+
+	// Select
+	input6 := NewSelect(to_c, Label{L: "label1"}, cont_c)
+	output = append(output, input6.String())
+	expected = append(expected, "to_c.label1<cont_c>")
+
+	// New
+	input7 := NewNew(cont_c, end, end)
+	output = append(output, input7.String())
+	expected = append(expected, "cont_c <- new (close self); close self")
+
+	// Close
+	input8 := NewClose(from_c)
+	output = append(output, input8.String())
+	expected = append(expected, "close from_c")
 
 	compareOutput(t, output, expected)
 }

@@ -65,6 +65,9 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewNew($1, $5, $8) }
 		   | /* new */ name LEFT_ARROW NEW expression SEQUENCE expression 
 		   			{ $$ = process.NewNew($1, $4, $6) };
+		   | /* close */ CLOSE name
+		   			{ $$ = process.NewClose($2) };
+
 
 /* remaining expressions:
 Call, Split, Forward, Drop, Snew

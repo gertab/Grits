@@ -2,7 +2,7 @@ package process
 
 import "bytes"
 
-// All process bodies have to follow the Form interface
+// All process' bodies have to follow the Form interface
 type Form interface {
 	String() string
 	// FreeNames()
@@ -21,6 +21,7 @@ func NewSend(to_c, payload_c, continuation_c Name) *SendForm {
 		payload_c:      payload_c,
 		continuation_c: continuation_c}
 }
+
 func (p *SendForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("send ")
@@ -158,5 +159,20 @@ func (p *NewForm) String() string {
 	buf.WriteString(p.body.String())
 	buf.WriteString("); ")
 	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+type CloseForm struct {
+	from_c Name
+}
+
+func NewClose(from_c Name) *CloseForm {
+	return &CloseForm{from_c: from_c}
+}
+
+func (p *CloseForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("close ")
+	buf.WriteString(p.from_c.String())
 	return buf.String()
 }

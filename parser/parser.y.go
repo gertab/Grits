@@ -562,7 +562,7 @@ phidefault:
 		phiDollar = phiS[phipt-1 : phipt+1]
 //line parser/parser.y:41
 		{
-			processes = append(processes, earlyProcess{Body: phiDollar[1].form, Names: []process.Name{process.Name{Ident: "root"}}})
+			processes = append(processes, earlyProcess{Body: phiDollar[1].form, Names: []process.Name{{Ident: "root"}}})
 		}
 	case 3:
 		phiDollar = phiS[phipt-5 : phipt+1]
@@ -605,7 +605,7 @@ phidefault:
 		phiDollar = phiS[phipt-2 : phipt+1]
 //line parser/parser.y:54
 		{
-			phiVAL.functions = []process.FunctionDefinition{process.FunctionDefinition{Body: phiDollar[2].form}}
+			phiVAL.functions = []process.FunctionDefinition{{Body: phiDollar[2].form}}
 		}
 	case 10:
 		phiDollar = phiS[phipt-7 : phipt+1]

@@ -38,7 +38,7 @@ root : program { }
     ;
 
 program : 
-	expression { processes = append(processes, earlyProcess{Body:$1, Names: []process.Name{process.Name{Ident: "root"}}}) }
+	expression { processes = append(processes, earlyProcess{Body:$1, Names: []process.Name{{Ident: "root"}}}) }
 	 | LET functions IN processes END { 
 		processes = $4
 		functionDefinitions = $2
@@ -51,7 +51,7 @@ process : PRC LSBRACK names RSBRACK COLON expression  { $$ = earlyProcess{Body:$
 		| SPRC LSBRACK names RSBRACK COLON expression { $$ = earlyProcess{Body:$6, Names: $3} };
 
 functions : { $$ = nil }
-		  | SPRC expression { $$ = []process.FunctionDefinition{process.FunctionDefinition{Body: $2}} };
+		  | SPRC expression { $$ = []process.FunctionDefinition{{Body: $2}} };
 
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }

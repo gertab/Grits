@@ -57,26 +57,3 @@ func LexAndPrintTokens(file io.Reader) {
 		fmt.Printf("\t%d\t%s\n", tok, val.strval)
 	}
 }
-
-// func main() {
-// 	file, err := os.Open("input.test")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	// prc, err := Parse(file)
-
-// 	// fmt.Println(prc)
-
-// 	lexer := newLexer(file)
-// 	val := phiSymType{}
-// 	for {
-
-// 		tok := lexer.Lex(&val)
-// 		if tok == EOF {
-// 			break
-// 		}
-
-// 		fmt.Printf("\t%d\t%s\n", tok, val.strval)
-// 	}
-// }

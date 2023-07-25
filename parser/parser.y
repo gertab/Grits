@@ -6,15 +6,15 @@ import (
 	"phi/process"
 )
 
-var processes []earlyProcess
+var processes []incompleteProcess
 var functionDefinitions []process.FunctionDefinition
 
 %}
 
 %union {
 	strval string
-	proc   earlyProcess
-	procs []earlyProcess
+	proc   incompleteProcess
+	procs []incompleteProcess
 	functions []process.FunctionDefinition
 	name process.Name
 	names []process.Name
@@ -38,17 +38,17 @@ root : program { }
     ;
 
 program : 
-	expression { processes = append(processes, earlyProcess{Body:$1, Names: []process.Name{{Ident: "root"}}}) }
+	expression { processes = append(processes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root"}}}) }
 	 | LET functions IN processes END { 
 		processes = $4
 		functionDefinitions = $2
 	 };
 
 processes : process processes { $$ = append($2, $1) }
-		  | process           { $$ = []earlyProcess{$1} }; 
+		  | process           { $$ = []incompleteProcess{$1} }; 
 
-process : PRC LSBRACK names RSBRACK COLON expression  { $$ = earlyProcess{Body:$6, Names: $3} }
-		| SPRC LSBRACK names RSBRACK COLON expression { $$ = earlyProcess{Body:$6, Names: $3} };
+process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{Body:$6, Names: $3} }
+		| SPRC LSBRACK names RSBRACK COLON expression { $$ = incompleteProcess{Body:$6, Names: $3} };
 
 functions : { $$ = nil }
 		  | SPRC expression { $$ = []process.FunctionDefinition{{Body: $2}} };

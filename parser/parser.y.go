@@ -12,15 +12,15 @@ import (
 	"phi/process"
 )
 
-var processes []earlyProcess
+var processes []incompleteProcess
 var functionDefinitions []process.FunctionDefinition
 
 //line parser/parser.y:14
 type phiSymType struct {
 	yys       int
 	strval    string
-	proc      earlyProcess
-	procs     []earlyProcess
+	proc      incompleteProcess
+	procs     []incompleteProcess
 	functions []process.FunctionDefinition
 	name      process.Name
 	names     []process.Name
@@ -570,7 +570,7 @@ phidefault:
 		phiDollar = phiS[phipt-1 : phipt+1]
 //line parser/parser.y:41
 		{
-			processes = append(processes, earlyProcess{Body: phiDollar[1].form, Names: []process.Name{{Ident: "root"}}})
+			processes = append(processes, incompleteProcess{Body: phiDollar[1].form, Names: []process.Name{{Ident: "root"}}})
 		}
 	case 3:
 		phiDollar = phiS[phipt-5 : phipt+1]
@@ -589,19 +589,19 @@ phidefault:
 		phiDollar = phiS[phipt-1 : phipt+1]
 //line parser/parser.y:48
 		{
-			phiVAL.procs = []earlyProcess{phiDollar[1].proc}
+			phiVAL.procs = []incompleteProcess{phiDollar[1].proc}
 		}
 	case 6:
 		phiDollar = phiS[phipt-6 : phipt+1]
 //line parser/parser.y:50
 		{
-			phiVAL.proc = earlyProcess{Body: phiDollar[6].form, Names: phiDollar[3].names}
+			phiVAL.proc = incompleteProcess{Body: phiDollar[6].form, Names: phiDollar[3].names}
 		}
 	case 7:
 		phiDollar = phiS[phipt-6 : phipt+1]
 //line parser/parser.y:51
 		{
-			phiVAL.proc = earlyProcess{Body: phiDollar[6].form, Names: phiDollar[3].names}
+			phiVAL.proc = incompleteProcess{Body: phiDollar[6].form, Names: phiDollar[3].names}
 		}
 	case 8:
 		phiDollar = phiS[phipt-0 : phipt+1]

@@ -1,1 +1,5 @@
+For parser: 
 go install golang.org/x/tools/cmd/goimports@latest
+
+To generate parser.y.go from parser.y (usig goyacc):
+goyacc -p phi -o parser/parser.y.go parser/parser.y

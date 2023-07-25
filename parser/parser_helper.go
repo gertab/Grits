@@ -8,12 +8,12 @@ import (
 )
 
 type unexpandedProcesses struct {
-	procs     []earlyProcess
+	procs     []incompleteProcess
 	functions []process.FunctionDefinition
 }
 
 // Process that is currently being parses and yet to become a process.Process
-type earlyProcess struct {
+type incompleteProcess struct {
 	Body                process.Form
 	Names               []process.Name
 	FunctionDefinitions *[]process.FunctionDefinition

@@ -1,12 +1,6 @@
 package process
 
-import (
-	"testing"
-)
-
-// type phiSymType struct {
-// 	strval string
-// }
+import "testing"
 
 func compareOutput(t *testing.T, got []string, expected []string) {
 	if len(got) != len(expected) {
@@ -56,12 +50,12 @@ func TestBasicTokens(t *testing.T) {
 	// Case
 	input4 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "label1"}, pay_c, end)})
 	output = append(output, input4.String())
-	expected = append(expected, "case from_c ( \n   label1<pay_c> => close self\n)")
+	expected = append(expected, "case from_c (label1<pay_c> => close self)")
 
 	// Case (multiple cases)
 	input5 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "label1"}, pay_c, end), NewBranch(Label{L: "label2"}, pay_c, end)})
 	output = append(output, input5.String())
-	expected = append(expected, "case from_c ( \n   label1<pay_c> => close self\n | label2<pay_c> => close self\n)")
+	expected = append(expected, "case from_c (label1<pay_c> => close self | label2<pay_c> => close self)")
 
 	// Select
 	input6 := NewSelect(to_c, Label{L: "label1"}, cont_c)
@@ -163,40 +157,6 @@ func TestSubstitutions(t *testing.T) {
 // 		{"cast shift accept acc acquire acq detach det", []int{CAST, SHIFT, ACCEPT, ACCEPT, ACQUIRE, ACQUIRE, DETACH, DETACH}},
 // 		{"release rel drop split push new", []int{RELEASE, RELEASE, DROP, SPLIT, PUSH, NEW}},
 // 		{"snew forward fwd let in end sprc prc", []int{SNEW, FORWARD, FORWARD, LET, IN, END, SPRC, PRC}},
-// 	}
-
-// 	for _, c := range cases {
-// 		reader := strings.NewReader(c.input)
-// 		l := newLexer(reader)
-// 		tokens := getTokens(l)
-// 		compareOutput(t, tokens, c.expected)
-// 	}
-// }
-
-// func TestIdentToken(t *testing.T) {
-// 	cases := []struct {
-// 		input    string
-// 		expected []int
-// 	}{
-// 		{"testIdent", []int{LABEL}},
-// 		{"ill\\egal", []int{LABEL}}, // kILLEGAL
-// 	}
-
-// 	for _, c := range cases {
-// 		reader := strings.NewReader(c.input)
-// 		l := newLexer(reader)
-// 		tokens := getTokens(l)
-// 		compareOutput(t, tokens, c.expected)
-// 	}
-// }
-
-// func TestCommentToken(t *testing.T) {
-// 	cases := []struct {
-// 		input    string
-// 		expected []int
-// 	}{
-// 		{"test/*abc*/Ident", []int{LABEL, LABEL}},
-// 		{"il//egal", []int{LABEL}}, // kILLEGAL
 // 	}
 
 // 	for _, c := range cases {

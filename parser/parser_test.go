@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-// type phiSymType struct {
-// 	strval string
-// }
-
 func compareOutputProgram(t *testing.T, got []process.Form, expected []process.Form) {
 	if len(got) != len(expected) {
 		t.Errorf("len of got %d, does not match len of expected %d\n", len(got), len(expected))
@@ -21,19 +17,6 @@ func compareOutputProgram(t *testing.T, got []process.Form, expected []process.F
 		}
 	}
 }
-
-// func compareOutputString(t *testing.T, got []string, expected []string) {
-// 	if len(got) != len(expected) {
-// 		t.Errorf("len of got %d, does not match len of expected %d\n", len(got), len(expected))
-// 		return
-// 	}
-
-// 	for index := range got {
-// 		if got[index] != expected[index] {
-// 			t.Errorf("got %s, expected %s\n", got[index], expected[index])
-// 		}
-// 	}
-// }
 
 func TestBasicForms(t *testing.T) {
 	var output, expected []process.Form

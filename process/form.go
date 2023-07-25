@@ -217,13 +217,12 @@ func (p *BranchForm) Substitute(old, new Name) {
 
 func StringifyBranches(branches []*BranchForm) string {
 	var buf bytes.Buffer
-	buf.WriteString("   ")
 
 	for i, j := range branches {
 		buf.WriteString(j.String())
 
 		if i < len(branches)-1 {
-			buf.WriteString("\n | ")
+			buf.WriteString(" | ")
 		}
 	}
 	return buf.String()
@@ -243,9 +242,9 @@ func (p *CaseForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("case ")
 	buf.WriteString(p.from_c.String())
-	buf.WriteString(" ( \n")
+	buf.WriteString(" (")
 	buf.WriteString(StringifyBranches(p.branches))
-	buf.WriteString("\n)")
+	buf.WriteString(")")
 	return buf.String()
 }
 

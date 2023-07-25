@@ -48,28 +48,28 @@ func TestBasicForms(t *testing.T) {
 	expected = append(expected, process.NewSend(to_c, pay_c, cont_c))
 
 	input = "<pay_c,cont_c> <- recv from_c; close self"
-	output = append(output, ParseString(input)[1].Body)
+	output = append(output, ParseString(input)[0].Body)
 	expected = append(expected, process.NewReceive(pay_c, cont_c, from_c, end))
 
-	// input = "case from_c ( \n   label1<pay_c> => close self\n)"
-	// output = append(output, ParseString(input)[0].Body)
-	// expected = append(expected, process.NewBranch(process.Label{L: "label1"}, pay_c, end))
+	input = "case from_c ( \n   label1<pay_c> => close self\n)"
+	output = append(output, ParseString(input)[0].Body)
+	expected = append(expected, process.NewCase(from_c, []*process.BranchForm{process.NewBranch(process.Label{L: "label1"}, pay_c, end)}))
 
-	// input = "case from_c ( \n   label1<pay_c> => close self\n | label2<pay_c> => close self\n)"
-	// output = append(output, ParseString(input)[0].Body)
-	// expected = append(expected, process.NewCase(from_c, []*process.BranchForm{process.NewBranch(process.Label{L: "label1"}, pay_c, end), process.NewBranch(process.Label{L: "label2"}, pay_c, end)}))
+	input = "case from_c ( \n   label1<pay_c> => close self\n | label2<pay_c> => close self\n)"
+	output = append(output, ParseString(input)[0].Body)
+	expected = append(expected, process.NewCase(from_c, []*process.BranchForm{process.NewBranch(process.Label{L: "label1"}, pay_c, end), process.NewBranch(process.Label{L: "label2"}, pay_c, end)}))
 
-	// input = "to_c.label1<cont_c>"
-	// output = append(output, ParseString(input)[0].Body)
-	// expected = append(expected, process.NewSelect(to_c, process.Label{L: "label1"}, cont_c))
+	input = "to_c.label1<cont_c>"
+	output = append(output, ParseString(input)[0].Body)
+	expected = append(expected, process.NewSelect(to_c, process.Label{L: "label1"}, cont_c))
 
-	// input = "cont_c <- new (close self); close self"
-	// output = append(output, ParseString(input)[0].Body)
-	// expected = append(expected, process.NewNew(cont_c, end, end))
+	input = "cont_c <- new (close self); close self"
+	output = append(output, ParseString(input)[0].Body)
+	expected = append(expected, process.NewNew(cont_c, end, end))
 
-	// input = "close from_c"
-	// output = append(output, ParseString(input)[0].Body)
-	// expected = append(expected, process.NewClose(from_c))
+	input = "close from_c"
+	output = append(output, ParseString(input)[0].Body)
+	expected = append(expected, process.NewClose(from_c))
 
 	compareOutputProgram(t, output, expected)
 }

@@ -95,6 +95,9 @@ func Parse(r io.Reader) (unexpandedProcesses, error) {
 	case err := <-l.Errors:
 		return unexpandedProcesses{}, err
 	default:
-		return unexpandedProcesses{procs: processes, functions: functionDefinitions}, nil
-	}
+		unexpandedProcesses := unexpandedProcesses{procs: processes, functions: functionDefinitions}
+		// todo: not sure if copy is needed
+		processes = nil
+		functionDefinitions = nil
+		return unexpandedProcesses, nil	}
 }

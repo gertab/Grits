@@ -7,13 +7,14 @@ import (
 )
 
 // All process' bodies have to follow the Form interface
+// Form refers to AST types
 type Form interface {
 	String() string
-	// FreeNames()
-	// Substitute()
+	// FreeNames() []Name
+	Substitute(Name, Name)
 }
 
-// Check equality between to bodies
+// Check equality between different forms
 func EqualForm(form1, form2 Form) bool {
 	a := reflect.TypeOf(form1)
 	b := reflect.TypeOf(form2)
@@ -83,6 +84,11 @@ func EqualForm(form1, form2 Form) bool {
 	return false
 }
 
+///////////////////////////////
+////// Different Forms ////////
+///////////////////////////////
+
+// Send: send to_c<payload_c, continuation_c>
 type SendForm struct {
 	to_c           Name
 	payload_c      Name
@@ -108,6 +114,13 @@ func (p *SendForm) String() string {
 	return buf.String()
 }
 
+func (p *SendForm) Substitute(old, new Name) {
+	p.to_c.Substitute(old, new)
+	p.payload_c.Substitute(old, new)
+	p.continuation_c.Substitute(old, new)
+}
+
+// Receive: <payload_c, continuation_c> <- recv from_c; P
 type ReceiveForm struct {
 	payload_c      Name
 	continuation_c Name
@@ -135,6 +148,15 @@ func (p *ReceiveForm) String() string {
 	return buf.String()
 }
 
+func (p *ReceiveForm) Substitute(old, new Name) {
+	if old != p.payload_c && old != p.continuation_c {
+		// payload_c: payload_c,
+		// continuation_c: continuation_c,
+		p.from_c.Substitute(old, new)
+		p.continuation_e.Substitute(old, new)
+	}
+}
+
 type SelectForm struct {
 	to_c           Name
 	label          Label
@@ -158,6 +180,12 @@ func (p *SelectForm) String() string {
 	return buf.String()
 }
 
+func (p *SelectForm) Substitute(old, new Name) {
+	p.to_c.Substitute(old, new)
+	p.continuation_c.Substitute(old, new)
+	// p.continuation_e.Substitute(old, new)
+}
+
 type BranchForm struct {
 	label          Label
 	payload_c      Name
@@ -178,6 +206,13 @@ func (p *BranchForm) String() string {
 	buf.WriteString("> => ")
 	buf.WriteString(p.continuation_e.String())
 	return buf.String()
+}
+
+func (p *BranchForm) Substitute(old, new Name) {
+	// payload_c is a bound variable
+	if old != p.payload_c {
+		p.continuation_e.Substitute(old, new)
+	}
 }
 
 func StringifyBranches(branches []*BranchForm) string {
@@ -214,6 +249,14 @@ func (p *CaseForm) String() string {
 	return buf.String()
 }
 
+func (p *CaseForm) Substitute(old, new Name) {
+	p.from_c.Substitute(old, new)
+
+	for i := range p.branches {
+		p.branches[i].Substitute(old, new)
+	}
+}
+
 type NewForm struct {
 	continuation_c Name
 	body           Form
@@ -236,6 +279,14 @@ func (p *NewForm) String() string {
 	return buf.String()
 }
 
+func (p *NewForm) Substitute(old, new Name) {
+	// continuation_c is a bound variable
+	if old != p.continuation_c {
+		p.body.Substitute(old, new)
+		p.continuation_e.Substitute(old, new)
+	}
+}
+
 type CloseForm struct {
 	from_c Name
 }
@@ -249,4 +300,8 @@ func (p *CloseForm) String() string {
 	buf.WriteString("close ")
 	buf.WriteString(p.from_c.String())
 	return buf.String()
+}
+
+func (p *CloseForm) Substitute(old, new Name) {
+	p.from_c.Substitute(old, new)
 }

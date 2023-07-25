@@ -41,12 +41,19 @@ type Name struct {
 	// channel
 }
 
-func (p *Name) String() string {
-	return p.Ident
+func (n *Name) String() string {
+	return n.Ident
 }
 
 func (name1 *Name) Equal(name2 Name) bool {
 	return name1.String() == name2.String()
+}
+
+func (n *Name) Substitute(old, new Name) {
+	// todo add channel substitution, not just name
+	if n.Ident == old.Ident {
+		n.Ident = new.Ident
+	}
 }
 
 // Name is channel or value.

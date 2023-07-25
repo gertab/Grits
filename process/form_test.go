@@ -22,6 +22,19 @@ func compareOutput(t *testing.T, got []string, expected []string) {
 	}
 }
 
+func compareOutputProgram(t *testing.T, got []Form, expected []Form) {
+	if len(got) != len(expected) {
+		t.Errorf("len of got %d, does not match len of expected %d\n", len(got), len(expected))
+		return
+	}
+
+	for index := range got {
+		if !EqualForm(got[index], expected[index]) {
+			t.Errorf("[%d] got %s, expected %s\n", index, got[index].String(), expected[index].String())
+		}
+	}
+}
+
 func TestBasicTokens(t *testing.T) {
 	expected, output := []string{}, []string{}
 	to_c := Name{Ident: "to_c"}
@@ -66,6 +79,77 @@ func TestBasicTokens(t *testing.T) {
 	expected = append(expected, "close from_c")
 
 	compareOutput(t, output, expected)
+}
+
+func TestSubstitutions(t *testing.T) {
+	expected, output := []Form{}, []Form{}
+	to_c := Name{Ident: "to_c"}
+	new_to_c := Name{Ident: "new_to_c"}
+	pay_c := Name{Ident: "pay_c"}
+	new_pay_c := Name{Ident: "new_pay_c"}
+	cont_c := Name{Ident: "cont_c"}
+	new_cont_c := Name{Ident: "new_cont_c"}
+	from_c := Name{Ident: "from_c"}
+	new_from_c := Name{Ident: "new_from_c"}
+	self := Name{Ident: "from_c"}
+	new_self := Name{Ident: "new_from_c"}
+	end := NewClose(self)
+	new_end := NewClose(new_self)
+
+	// Send
+	input := NewSend(to_c, pay_c, cont_c)
+	input.Substitute(to_c, new_to_c)
+	input.Substitute(pay_c, new_pay_c)
+	input.Substitute(cont_c, new_cont_c)
+	output = append(output, input)
+	result := NewSend(new_to_c, new_pay_c, new_cont_c)
+	expected = append(expected, result)
+
+	// Receive
+	input2 := NewReceive(pay_c, cont_c, from_c, end)
+	input2.Substitute(cont_c, new_cont_c)
+	input2.Substitute(pay_c, new_pay_c)
+	input2.Substitute(cont_c, new_cont_c)
+	input2.Substitute(self, new_self)
+	result2 := NewReceive(pay_c, cont_c, new_from_c, new_end)
+	output = append(output, input2)
+	expected = append(expected, result2)
+
+	// Case
+	input3 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "from_c"}, pay_c, end)})
+	input3.Substitute(from_c, new_from_c)
+	input3.Substitute(pay_c, new_pay_c)
+	input3.Substitute(cont_c, new_cont_c)
+	input3.Substitute(self, new_self)
+	result3 := NewCase(new_from_c, []*BranchForm{NewBranch(Label{L: "from_c"}, pay_c, new_end)})
+	output = append(output, input3)
+	expected = append(expected, result3)
+
+	// Select
+	input4 := NewSelect(to_c, Label{L: "label1"}, cont_c)
+	input4.Substitute(to_c, new_to_c)
+	input4.Substitute(cont_c, new_cont_c)
+	result4 := NewSelect(new_to_c, Label{L: "label1"}, new_cont_c)
+	output = append(output, input4)
+	expected = append(expected, result4)
+
+	// New
+	input5 := NewNew(cont_c, end, end)
+	input5.Substitute(cont_c, new_cont_c)
+	input5.Substitute(self, new_self)
+	result5 := NewNew(cont_c, end, end)
+	output = append(output, input5)
+	expected = append(expected, result5)
+
+	// Close
+	input6 := NewClose(from_c)
+	input6.Substitute(from_c, new_from_c)
+	input6.Substitute(self, new_self)
+	result6 := NewClose(new_from_c)
+	output = append(output, input6)
+	expected = append(expected, result6)
+
+	compareOutputProgram(t, output, expected)
 }
 
 // func TestSimpleToken(t *testing.T) {

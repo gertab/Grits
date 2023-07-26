@@ -23,7 +23,7 @@ type ImmutableNameError struct {
 }
 
 func (e ImmutableNameError) Error() string {
-	return fmt.Sprintf("cannot set Name: %s is an immutable Name implementation", e.Name)
+	return fmt.Sprintf("cannot set Name: %s is an immutable Name implementation", e.Name.String())
 	// return fmt.Sprintf("cannot set Name: ?? is an immutable Name implementation")
 }
 

@@ -1,6 +1,8 @@
 package process
 
-import "bytes"
+import (
+	"bytes"
+)
 
 // Stores the states of each running process.
 // May also reference a controller & a monitor to observe the running state.
@@ -12,7 +14,7 @@ type ProcessConfiguration struct {
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
 	Body                Form
-	Channel             Name
+	Provider            Name
 	FunctionDefinitions *[]FunctionDefinition
 }
 
@@ -23,7 +25,7 @@ func (p *Process) InsertFunctionDefinitions(all *[]FunctionDefinition) {
 func (p *Process) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("prc [")
-	buf.WriteString(p.Channel.String())
+	buf.WriteString(p.Provider.String())
 	buf.WriteString("]: ")
 	buf.WriteString(p.Body.String())
 	return buf.String()
@@ -36,23 +38,50 @@ type FunctionDefinition struct {
 
 // Name is channel or value.
 type Name struct {
-	Ident string
-	// String() string
-	// channel
+	// Ident refers to the original name of the channel (used for pretty printing)
+	Ident   string
+	Channel chan Message
+	// One a channel is initialized, the Channel becomes more important than Ident
+	// Initialized bool
+}
+
+func (n *Name) Initialized() bool {
+	return n.Channel != nil
 }
 
 func (n *Name) String() string {
-	return n.Ident
+	if n.Initialized() {
+		return n.Ident + "[i]"
+	} else {
+		return n.Ident + "[]"
+	}
 }
 
 func (name1 *Name) Equal(name2 Name) bool {
-	return name1.String() == name2.String()
+	if name1.Initialized() && name2.Initialized() {
+		// If the channel is initialized, then only compare the actual channel reference
+		return name1.Channel == name2.Channel
+	}
+	return name1.String() == name2.String() && name1.Initialized() == name2.Initialized()
 }
 
 func (n *Name) Substitute(old, new Name) {
-	// todo add channel substitution, not just name
-	if n.Ident == old.Ident {
-		n.Ident = new.Ident
+	if n.Initialized() && n.Channel == old.Channel {
+		// If a channel is initialized, then compare using the channel value
+		n.Channel = new.Channel
+		if new.Ident != "" {
+			// not sure if this works
+			n.Ident = new.Ident
+		}
+	} else {
+		if n.Ident == old.Ident {
+			// fmt.Print("\t")
+			// fmt.Print(n.String())
+			// fmt.Println("match")
+			n.Ident = new.Ident
+			n.Channel = new.Channel
+			// n.Initialized = new.Initialized
+		}
 	}
 }
 

@@ -21,8 +21,6 @@ type incompleteProcess struct {
 
 func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {
 
-	// var processes []process.Process
-
 	processes := make([]process.Process, len(u.procs))
 
 	fmt.Print("len(u.procs): ")
@@ -31,7 +29,7 @@ func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {
 	counter := 0
 	for _, p := range u.procs {
 		for _, n := range p.Names {
-			new_p := process.Process{Body: p.Body, FunctionDefinitions: p.FunctionDefinitions, Channel: n}
+			new_p := process.Process{Body: p.Body, FunctionDefinitions: p.FunctionDefinitions, Provider: n}
 			processes[counter] = new_p
 			counter++
 		}
@@ -59,14 +57,9 @@ func ParseFile(fileName string) []process.Process {
 }
 
 func ParseString(program string) []process.Process {
-
-	fmt.Print("program: ")
-	fmt.Println(program)
 	r := strings.NewReader(program)
 
 	prc, err := Parse(r)
-
-	fmt.Print(len(prc.procs))
 
 	switch {
 	case err != nil:

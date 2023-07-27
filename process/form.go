@@ -12,6 +12,7 @@ type Form interface {
 	String() string
 	// FreeNames() []Name
 	Substitute(Name, Name)
+	Transition(*Process)
 }
 
 // Check equality between different forms

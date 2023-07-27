@@ -57,6 +57,10 @@ func (n *Name) String() string {
 	}
 }
 
+func (n *Name) IsSelf() bool {
+	return n.Ident == "self"
+}
+
 func (name1 *Name) Equal(name2 Name) bool {
 	if name1.Initialized() && name2.Initialized() {
 		// If the channel is initialized, then only compare the actual channel reference
@@ -82,6 +86,15 @@ func (n *Name) Substitute(old, new Name) {
 			n.Channel = new.Channel
 			// n.Initialized = new.Initialized
 		}
+	}
+}
+
+// Returns channel directly or the provider channel in case of channel called self
+func (n *Name) GetChannel(p *Process) chan Message {
+	if n.Ident == "self" {
+		return p.Provider.Channel
+	} else {
+		return n.Channel
 	}
 }
 

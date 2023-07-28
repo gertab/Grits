@@ -12,7 +12,7 @@ type Form interface {
 	String() string
 	// FreeNames() []Name
 	Substitute(Name, Name)
-	Transition(*Process)
+	Transition(*Process, *RuntimeEnvironment)
 }
 
 // Check equality between different forms

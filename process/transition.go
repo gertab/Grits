@@ -4,14 +4,21 @@ import (
 	"fmt"
 )
 
-func (process *Process) Transition() {
-	runtimeEnvironment.processCount++
+// Initiates new processes
+func (process *Process) Transition(re *RuntimeEnvironment) {
+	re.ProcessCount++
 
-	go process.Body.Transition(process)
-
+	go TransitionLoop(process, re)
 }
 
-func (f *SendForm) Transition(process *Process) {
+// Entry point before a process transitions
+func TransitionLoop(process *Process, re *RuntimeEnvironment) {
+	fmt.Printf("Process transitioning: %s\n", process.String())
+	process.Body.Transition(process, re)
+}
+
+// Transition according to the present body form (e.g. send, receive, ...)
+func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of send: ")
 	fmt.Println(f.String())
 
@@ -28,7 +35,7 @@ func (f *SendForm) Transition(process *Process) {
 		fmt.Println("[send, client] proceeding with RCV ")
 	}
 }
-func (f *ReceiveForm) Transition(process *Process) {
+func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of receive: ")
 	fmt.Println(f.String())
 
@@ -51,26 +58,26 @@ func (f *ReceiveForm) Transition(process *Process) {
 		new_body.Substitute(f.continuation_c, message.Channel2)
 
 		process.Body = new_body
-		new_body.Transition(process)
+		TransitionLoop(process, re)
 	}
 }
-func (f *SelectForm) Transition(process *Process) {
+func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of select: ")
 	fmt.Println(f.String())
 }
-func (f *BranchForm) Transition(process *Process) {
+func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of branch: ")
 	fmt.Println(f.String())
 }
-func (f *CaseForm) Transition(process *Process) {
+func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of case: ")
 	fmt.Println(f.String())
 }
-func (f *NewForm) Transition(process *Process) {
+func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of new: ")
 	fmt.Println(f.String())
 }
-func (f *CloseForm) Transition(process *Process) {
+func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of close: ")
 	fmt.Println(f.String())
 }

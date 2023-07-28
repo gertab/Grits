@@ -46,10 +46,10 @@ func LexAndPrintTokens(file io.Reader) {
 
 	// fmt.Println(prc)
 	lexer := newLexer(file)
-	val := phiSymType{}
+	val := &phiSymType{}
 	for {
 
-		tok := lexer.Lex(&val)
+		tok := lexer.Lex(val)
 		if tok == EOF {
 			break
 		}

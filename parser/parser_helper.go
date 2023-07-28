@@ -23,9 +23,6 @@ func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {
 
 	processes := make([]process.Process, len(u.procs))
 
-	fmt.Print("len(u.procs): ")
-	fmt.Println(len(u.procs))
-
 	counter := 0
 	for _, p := range u.procs {
 		for _, n := range p.Names {

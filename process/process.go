@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"strconv"
 )
 
 // Stores the states of each running process.
@@ -39,10 +40,12 @@ type FunctionDefinition struct {
 // Name is channel or value.
 type Name struct {
 	// Ident refers to the original name of the channel (used for pretty printing)
-	Ident   string
+	Ident string
+	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
 	Channel chan Message
-	// One a channel is initialized, the Channel becomes more important than Ident
-	// Initialized bool
+	// Channel ID is a unique id for each channel
+	// Used only for debugging, since setting the ChannelID is a slow (& synchronous) operation
+	ChannelID uint64
 }
 
 func (n *Name) Initialized() bool {
@@ -51,9 +54,9 @@ func (n *Name) Initialized() bool {
 
 func (n *Name) String() string {
 	if n.Initialized() {
-		return n.Ident + "[i]"
+		return n.Ident + "[" + strconv.FormatUint(n.ChannelID, 10) + "]"
 	} else {
-		return n.Ident + "[]"
+		return n.Ident
 	}
 }
 
@@ -76,6 +79,7 @@ func (n *Name) Substitute(old, new Name) {
 		if new.Ident != "" {
 			// not sure if this works
 			n.Ident = new.Ident
+			n.ChannelID = new.ChannelID
 		}
 	} else {
 		if n.Ident == old.Ident {
@@ -84,7 +88,7 @@ func (n *Name) Substitute(old, new Name) {
 			// fmt.Println("match")
 			n.Ident = new.Ident
 			n.Channel = new.Channel
-			// n.Initialized = new.Initialized
+			n.ChannelID = new.ChannelID
 		}
 	}
 }

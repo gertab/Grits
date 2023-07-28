@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 // A RuntimeEnvironmentOption sets an option on a RuntimeEnvironment.
@@ -13,6 +15,8 @@ type RuntimeEnvironmentOption func(*RuntimeEnvironment)
 type RuntimeEnvironment struct {
 	ProcessCount int
 
+	// Logging levels
+	logLevels []LogLevel
 	// Debugging info
 	debug bool
 	// Keeps counter of the number of channels created
@@ -23,25 +27,38 @@ type RuntimeEnvironment struct {
 	controller *Controller
 }
 
+// Entry point for execution
 func InitializeProcesses(processes []Process) {
-	fmt.Printf("Initializing %d processes\n", len(processes))
+	l := []LogLevel{
+		LOGINFO,
+		LOGRULE,
+		// LOGRULEDETAILS,
+		LOGPROCESSING,
+	}
 
-	re := &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true}
+	re := &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, logLevels: l}
+
+	re.logf(LOGINFO, "Initializing %d processes\n", len(processes))
 
 	channels := re.CreateChannelForEachProcess(processes)
 
-	// fmt.Println(len(channels))
-
 	re.SubstituteNameInitialization(processes, channels)
 
-	fmt.Println("After Substitutions")
-	for _, p := range processes {
-		fmt.Print(p.String())
-		fmt.Println(": ")
-	}
+	// re.log(LOGINFO, "After Substitutions")
+	// for _, p := range processes {
+	// 	re.log(LOGINFO, p.String())
+	// }
 
-	re.InitializeMonitor()
-	re.InitializeController()
+	if re.debug {
+		started := make(chan bool)
+
+		re.InitializeMonitor(started)
+		re.InitializeController(started)
+
+		// Ensure that both servers are running
+		<-started
+		<-started
+	}
 
 	re.StartTransitions(processes)
 }
@@ -73,20 +90,20 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	return Name{Ident: ident, Channel: c, ChannelID: re.debugChannelCounter}
 }
 
-func (re *RuntimeEnvironment) InitializeMonitor() {
+func (re *RuntimeEnvironment) InitializeMonitor(started chan bool) {
 	// Declare new monitor
-	re.monitor = NewMonitor()
+	re.monitor = NewMonitor(re)
 
 	// Start monitor on new thread
-	go re.monitor.StartMonitor()
+	go re.monitor.StartMonitor(started)
 }
 
-func (re *RuntimeEnvironment) InitializeController() {
+func (re *RuntimeEnvironment) InitializeController(started chan bool) {
 	// Declare new controller
-	re.controller = NewController()
+	re.controller = NewController(re)
 
 	// Start controller on new thread
-	go re.controller.StartController()
+	go re.controller.StartController(started)
 }
 
 // Used after initialization to substitute known names to the actual channel
@@ -106,8 +123,7 @@ func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 	}
 	time.Sleep(1 * time.Second)
 
-	fmt.Print("End process count: ")
-	fmt.Println(re.ProcessCount)
+	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
 }
 
 type Message struct {
@@ -129,4 +145,46 @@ const (
 type NameInitialization struct {
 	old Name
 	new Name
+}
+
+////// Logger details
+
+type LogLevel int
+
+const (
+	LOGRULE        LogLevel = iota // rule started/finished
+	LOGINFO                        // information
+	LOGRULEDETAILS                 // rule while processing
+	LOGPROCESSING                  // process info
+	LOGERROR
+)
+
+// Similar to Println
+func (re *RuntimeEnvironment) log(level LogLevel, message string) {
+	if slices.Contains(re.logLevels, level) {
+		fmt.Println(message)
+	}
+}
+
+// Similar to Printf
+func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...interface{}) {
+	if slices.Contains(re.logLevels, level) {
+		fmt.Printf(message, args...)
+	}
+}
+
+// Similar to Println
+func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, message string) {
+	if slices.Contains(re.logLevels, level) {
+		fmt.Printf("%s: "+message+"\n", process.OutlineString())
+	}
+}
+
+// Similar to Printf
+func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, message string, args ...interface{}) {
+	if slices.Contains(re.logLevels, level) {
+		data := append([]interface{}{process.OutlineString()}, args...)
+
+		fmt.Printf("%s: "+message, data...)
+	}
 }

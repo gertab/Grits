@@ -12,10 +12,23 @@ type ProcessConfiguration struct {
 	// ref to controller/monitor
 }
 
+type Shape int
+
+const (
+	LINEAR Shape = iota
+	SHARED
+)
+
+var shapeMap = map[Shape]string{
+	LINEAR: "prc",
+	SHARED: "sprc",
+}
+
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
 	Body                Form
 	Provider            Name
+	Shape               Shape
 	FunctionDefinitions *[]FunctionDefinition
 }
 
@@ -23,11 +36,20 @@ func (p *Process) InsertFunctionDefinitions(all *[]FunctionDefinition) {
 	p.FunctionDefinitions = all
 }
 
+func (p *Process) OutlineString() string {
+	var buf bytes.Buffer
+	buf.WriteString(shapeMap[p.Shape])
+	buf.WriteString("[")
+	buf.WriteString(p.Provider.String())
+	buf.WriteString("]")
+	return buf.String()
+
+}
+
 func (p *Process) String() string {
 	var buf bytes.Buffer
-	buf.WriteString("prc [")
-	buf.WriteString(p.Provider.String())
-	buf.WriteString("]: ")
+	buf.WriteString(p.OutlineString())
+	buf.WriteString(": ")
 	buf.WriteString(p.Body.String())
 	return buf.String()
 }

@@ -13,49 +13,53 @@ func (process *Process) Transition(re *RuntimeEnvironment) {
 
 // Entry point before a process transitions
 func TransitionLoop(process *Process, re *RuntimeEnvironment) {
-	fmt.Printf("Process transitioning: %s\n", process.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 	process.Body.Transition(process, re)
 }
 
 // Transition according to the present body form (e.g. send, receive, ...)
 func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of send: ")
-	fmt.Println(f.String())
+	re.logProcessf(LOGRULEDETAILS, process, "transition of send: %s\n", f.String())
 
 	if f.to_c.IsSelf() {
 		// SND rule (provider)
-		fmt.Println("[send, provider] Send to self, proceeding with SND")
-		fmt.Println(process.Provider.String())
+		re.logProcess(LOGRULE, process, "[send, provider] starting SND rule")
+		re.logProcessf(LOGRULEDETAILS, process, "[send, provider] Send to self (%s), proceeding with SND\n", process.Provider.String())
 
 		process.Provider.Channel <- Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}
-		fmt.Println("[send, provider] finished sending ")
+		re.logProcess(LOGRULEDETAILS, process, "[send, provider] finished sending on self")
+
+		re.logProcess(LOGRULE, process, "[send, provider] finished SND rule")
 		// todo terminate goroutine. inform monitor
+
+		process.Terminate(re)
 	} else {
 		// RCV rule (client)
-		fmt.Println("[send, client] proceeding with RCV ")
+		re.logProcess(LOGRULEDETAILS, process, "[send, client] proceeding with RCV ")
 	}
 }
+
 func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of receive: ")
-	fmt.Println(f.String())
+	re.logProcessf(LOGRULEDETAILS, process, "transition of receive: %s\n", f.String())
 
 	if f.from_c.IsSelf() {
 		// RCV rule (provider)
-		fmt.Println("[receive, provider] receive on self, proceeding with RCV ")
+		re.logProcess(LOGRULEDETAILS, process, "[receive, provider] receive on self, proceeding with RCV ")
 	} else {
 		// SND rule (client)
-		fmt.Println("[receive, client] proceeding with SND ")
-		fmt.Println(f.from_c.String())
+		re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")
+		re.logProcessf(LOGRULEDETAILS, process, "[receive, client] proceeding with SND, will receive from %s\n", f.from_c.String())
 
 		message := <-f.from_c.Channel
 		close(f.from_c.Channel)
 
-		fmt.Print("Received: message.Rule")
-		fmt.Println(message.Rule)
+		re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %d, containing message.Rule %d\n", f.from_c.ChannelID, message.Rule)
 
 		new_body := f.continuation_e
 		new_body.Substitute(f.payload_c, message.Channel1)
 		new_body.Substitute(f.continuation_c, message.Channel2)
+
+		re.logProcess(LOGRULE, process, "[send, client] finished SND rule")
 
 		process.Body = new_body
 		TransitionLoop(process, re)
@@ -80,4 +84,8 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of close: ")
 	fmt.Println(f.String())
+}
+
+func (process *Process) Terminate(re *RuntimeEnvironment) {
+	re.logProcess(LOGRULEDETAILS, process, "process terminated succesfully")
 }

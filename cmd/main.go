@@ -5,10 +5,18 @@ import (
 	"phi/process"
 )
 
-const program = ` 	let
+// const program = ` 	/* SND rule */
+//
+//	let
+//	in
+//		prc[pid1]: send self<pid3, self>
+//		prc[pid2]: <a, b> <- recv pid1; close self
+//	end`
+const program = ` 	/* RCV rule */
+					let
 					in 
-						prc[pid1]: send self<pid3, self>
-						prc[pid2]: <a, b> <- recv pid1; close self
+						prc[pid1]: <a, b> <- recv self; close self
+						prc[pid2]: send pid1<pid3, self>
 					end`
 
 // const program2 = `let

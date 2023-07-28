@@ -32,7 +32,7 @@ func InitializeProcesses(processes []Process) {
 	l := []LogLevel{
 		LOGINFO,
 		LOGRULE,
-		// LOGRULEDETAILS,
+		LOGRULEDETAILS,
 		LOGPROCESSING,
 	}
 

@@ -72,6 +72,11 @@ func TestBasicTokens(t *testing.T) {
 	output = append(output, input8.String())
 	expected = append(expected, "close from_c")
 
+	// Forward
+	input9 := NewForward(to_c, from_c)
+	output = append(output, input9.String())
+	expected = append(expected, "fwd to_c from_c")
+
 	compareOutput(t, output, expected)
 }
 
@@ -142,6 +147,14 @@ func TestSubstitutions(t *testing.T) {
 	result6 := NewClose(new_from_c)
 	output = append(output, input6)
 	expected = append(expected, result6)
+
+	// Forward
+	input7 := NewForward(to_c, from_c)
+	input7.Substitute(from_c, new_from_c)
+	input7.Substitute(to_c, new_to_c)
+	result7 := NewForward(new_to_c, new_from_c)
+	output = append(output, input7)
+	expected = append(expected, result7)
 
 	compareOutputProgram(t, output, expected)
 }

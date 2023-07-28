@@ -54,6 +54,10 @@ func TestBasicForms(t *testing.T) {
 	output = append(output, ParseString(input)[0].Body)
 	expected = append(expected, process.NewClose(from_c))
 
+	input = "fwd to_c from_c"
+	output = append(output, ParseString(input)[0].Body)
+	expected = append(expected, process.NewForward(to_c, from_c))
+
 	compareOutputProgram(t, output, expected)
 }
 

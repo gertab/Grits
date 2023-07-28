@@ -140,6 +140,7 @@ type Rule int
 const (
 	SND Rule = iota // Channel1 and Channel2
 	RCV             // ContinuationBody, Channel1 and Channel2
+	FWD             // Channel1
 )
 
 type NameInitialization struct {

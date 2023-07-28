@@ -79,6 +79,13 @@ func EqualForm(form1, form2 Form) bool {
 		if ok1 && ok2 {
 			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
+	case *ForwardForm:
+		f1, ok1 := form1.(*ForwardForm)
+		f2, ok2 := form2.(*ForwardForm)
+
+		if ok1 && ok2 {
+			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c)
+		}
 	}
 
 	fmt.Printf("todo implement EqualForm for type %s\n", a)
@@ -303,5 +310,28 @@ func (p *CloseForm) String() string {
 }
 
 func (p *CloseForm) Substitute(old, new Name) {
+	p.from_c.Substitute(old, new)
+}
+
+type ForwardForm struct {
+	to_c   Name
+	from_c Name
+}
+
+func NewForward(to_c, from_c Name) *ForwardForm {
+	return &ForwardForm{to_c: to_c, from_c: from_c}
+}
+
+func (p *ForwardForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("fwd ")
+	buf.WriteString(p.to_c.String())
+	buf.WriteString(" ")
+	buf.WriteString(p.from_c.String())
+	return buf.String()
+}
+
+func (p *ForwardForm) Substitute(old, new Name) {
+	p.to_c.Substitute(old, new)
 	p.from_c.Substitute(old, new)
 }

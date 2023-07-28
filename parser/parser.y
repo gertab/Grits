@@ -67,10 +67,11 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewNew($1, $4, $6) };
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) };
-
+		   | /* forward */ FORWARD name name
+		   			{ $$ = process.NewForward($2, $3) };
 
 /* remaining expressions:
-Call, Split, Forward, Drop, Snew
+Call, Split, Drop, Snew
 Wait, Close, Cast, Shift
 Acquire, Accept, Push, Detach, Release
 */

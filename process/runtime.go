@@ -35,9 +35,9 @@ type RuntimeEnvironment struct {
 func InitializeProcesses(processes []Process) {
 	l := []LogLevel{
 		LOGINFO,
+		LOGPROCESSING,
 		LOGRULE,
 		LOGRULEDETAILS,
-		LOGPROCESSING,
 	}
 
 	re := &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l}

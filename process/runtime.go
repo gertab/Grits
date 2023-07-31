@@ -14,7 +14,8 @@ type RuntimeEnvironmentOption func(*RuntimeEnvironment)
 
 // RuntimeEnvironment provides the instance instance for processes to be initialized and executed
 type RuntimeEnvironment struct {
-	ProcessCount int
+	// Keeps count of how many processes were spawned (only for debug info)
+	ProcessCount uint64
 
 	// Logging levels
 	logLevels []LogLevel

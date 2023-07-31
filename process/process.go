@@ -82,7 +82,12 @@ func (n *Name) String() string {
 	if n.IsSelf {
 		m = "self"
 	} else {
-		m = n.Ident
+		if n.Ident == "" {
+			// Set anonymous process names to *
+			m = "*"
+		} else {
+			m = n.Ident
+		}
 	}
 
 	if n.Initialized() {
@@ -104,6 +109,7 @@ func (n *Name) Substitute(old, new Name) {
 	if n.Initialized() && n.Channel == old.Channel {
 		// If a channel is initialized, then compare using the channel value
 		n.Channel = new.Channel
+		n.IsSelf = new.IsSelf
 		if new.Ident != "" {
 			// not sure if this works
 			n.Ident = new.Ident
@@ -117,6 +123,7 @@ func (n *Name) Substitute(old, new Name) {
 			n.Ident = new.Ident
 			n.Channel = new.Channel
 			n.ChannelID = new.ChannelID
+			n.IsSelf = new.IsSelf
 		}
 	}
 }

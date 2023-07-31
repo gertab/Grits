@@ -2,12 +2,13 @@ package process
 
 import (
 	"fmt"
+	"sync/atomic"
 )
 
 // Initiates new processes
 func (process *Process) Transition(re *RuntimeEnvironment) {
 	// todo make this atomic
-	re.ProcessCount++
+	atomic.AddUint64(&re.ProcessCount, 1)
 
 	go TransitionLoop(process, re)
 }
@@ -53,10 +54,11 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// RCV rule (client)
 		re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
 
+		re.logProcessf(LOGRULEDETAILS, process, "Should message on channel %s, containing message.Rule RCV\n", f.to_c.String())
 		message := <-f.to_c.Channel
 		close(f.to_c.Channel)
 
-		re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message.Rule %d\n", f.to_c.String(), message.Rule)
+		// todo check that rule matches
 
 		new_body := message.ContinuationBody
 		new_body.Substitute(message.Channel1, f.payload_c)
@@ -160,14 +162,34 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of new: %s\n", f.String())
 
+	// This name is indicative only (for debugging), since there shouldn't be more than one process with the same channel name
+	// Although channels may have an ID, processes (i.e. goroutines) are anonymous
+	// newChannelIdent := "*"
+	newChannelIdent := ""
+
 	// First create fresh channel (with fake identity of the continuation_c name) to link both processes
-	// newChannel := re.CreateFreshChannel(f.continuation_c.String())
+	newChannel := re.CreateFreshChannel(newChannelIdent)
 
-	// Substitute reference to this new channel by the actual channel
+	// Substitute reference to this new channel by the actual channel in the current process and new process
+	currentProcessBody := f.continuation_e
+	currentProcessBody.Substitute(f.continuation_c, newChannel)
+	process.Body = currentProcessBody
 
-	// newprocess.Transition(re()
+	// Create structure of new process
+	newProcessBody := f.body
+	newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
+	newProcess := Process{Body: newProcessBody, Provider: newChannel, FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
+
+	re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
+
+	// Spawn and initiate new process
+	newProcess.Transition(re)
+
+	re.logProcess(LOGRULE, process, "[new] finished CUT rule")
+	// Continue executing current process
+	TransitionLoop(process, re)
 }
 
 func (process *Process) Terminate(re *RuntimeEnvironment) {
-	re.logProcess(LOGRULEDETAILS, process, "process terminated succesfully")
+	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
 }

@@ -40,12 +40,25 @@ import (
 // 	prc[pid4]: send self<pid5, self>
 // 	end`
 
+// const program = ` 	/* CUT + SND rule */
+//
+//	let
+//	in
+//	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+//	prc[pid2]: send self<pid5, self>
+//	end`
 const program = ` 	/* CUT + SND rule */
 					let
 					in
-					prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
-					prc[pid2]: send self<pid5, self>
+						prc[pid1]: x <- new (send x<pid5, x>); <a, b> <- recv x; close self
 					end`
+
+// const program = ` 	/* CUT + RCV rule */
+// 	let
+// 	in
+// 	prc[pid1]: x <- new (send pid2<pid5, self>); close self
+// 	prc[pid2]: <a, b> <- recv self; close sel
+// 	end`
 
 // const program2 = `let
 // 				in

@@ -27,6 +27,8 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			switch m.Rule {
 			case FWD:
 				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE\n")
+				// Close current channel and switch to new one
+				close(process.Provider.Channel)
 				process.Provider = m.Channel1
 				TransitionLoop(process, re)
 
@@ -34,6 +36,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 			}
 		case process.Provider.Channel <- Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}:
+			// SND rule (provider)
 			// re.logProcess(LOGRULE, process, "[send, provider] starting SND rule")
 			// re.logProcessf(LOGRULEDETAILS, process, "[send, provider] Send to self (%s), proceeding with SND\n", process.Provider.String())
 
@@ -62,8 +65,6 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		process.Body = new_body
 		TransitionLoop(process, re)
-
-		re.logProcess(LOGRULEDETAILS, process, "[send, client] proceeding with RCV ")
 	}
 }
 
@@ -71,14 +72,14 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of receive: %s\n", f.String())
 
 	if f.from_c.IsSelf() {
-		// RCV rule (provider)
-
 		// todo check where the select is random (if both can succeed) -- not sure what happens
 		select {
 		case m := <-process.Provider.Channel:
 			switch m.Rule {
 			case FWD:
 				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE\n")
+				// Close current channel and switch to new one
+				close(process.Provider.Channel)
 				process.Provider = m.Channel1
 				TransitionLoop(process, re)
 
@@ -86,6 +87,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 			}
 		case process.Provider.Channel <- Message{Rule: RCV, ContinuationBody: f.continuation_e, Channel1: f.payload_c, Channel2: f.continuation_c}:
+			// RCV rule (provider)
 			// default:
 			// re.logProcessf(LOGRULEDETAILS, process, "[receive, provider] Send to self (%s), proceeding with RCV\n", process.Provider.String())
 
@@ -127,7 +129,8 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		re.logProcess(LOGRULE, process, "[forward, client] finished FWD rule")
 		// todo terminate goroutine. inform monitor
-		process.Terminate(re)
+		// channel providing on fwd should not be closed, however this process dies
+		// process.Terminate(re)
 	} else {
 		re.logProcess(LOGERROR, process, "should forward on self")
 		// todo panic

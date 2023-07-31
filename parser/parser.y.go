@@ -583,7 +583,7 @@ phidefault:
 		phiDollar = phiS[phipt-2 : phipt+1]
 //line parser/parser.y:47
 		{
-			phiVAL.procs = append(phiDollar[2].procs, phiDollar[1].proc)
+			phiVAL.procs = append([]incompleteProcess{phiDollar[1].proc}, phiDollar[2].procs...)
 		}
 	case 5:
 		phiDollar = phiS[phipt-1 : phipt+1]

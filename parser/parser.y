@@ -44,7 +44,7 @@ program :
 		functionDefinitions = $2
 	 };
 
-processes : process processes { $$ = append($2, $1) }
+processes : process processes { $$ = append([]incompleteProcess{$1}, $2...) }
 		  | process           { $$ = []incompleteProcess{$1} }; 
 
 process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{Body:$6, Names: $3} }

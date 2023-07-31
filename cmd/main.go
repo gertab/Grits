@@ -30,6 +30,16 @@ import (
 //	prc[pid3]: fwd self pid4
 //	prc[pid4]: <a, b> <- recv self; close sel
 //	end`
+//
+// const program = ` 	/* FWD + SND rule */
+//
+//	let
+//	in
+//	prc[pid1]: <a, b> <- recv pid2; close sel
+//	prc[pid2]: fwd self pid3
+//	prc[pid3]: fwd self pid4
+//	prc[pid4]: send self<pid5, self>
+//	end`
 const program = ` 	/* FWD + SND rule */
 					let
 					in 

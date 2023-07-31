@@ -111,7 +111,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 		new_body.Substitute(f.payload_c, message.Channel1)
 		new_body.Substitute(f.continuation_c, message.Channel2)
 
-		re.logProcess(LOGRULE, process, "[receieve, client] finished SND rule")
+		re.logProcess(LOGRULE, process, "[receive, client] finished SND rule")
 
 		process.Body = new_body
 		TransitionLoop(process, re)

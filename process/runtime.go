@@ -1,6 +1,7 @@
 package process
 
 import (
+	"bytes"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -19,6 +20,8 @@ type RuntimeEnvironment struct {
 	logLevels []LogLevel
 	// Debugging info
 	debug bool
+	// Colored output
+	color bool
 	// Keeps counter of the number of channels created
 	debugChannelCounter uint64
 	// Monitor info
@@ -36,7 +39,7 @@ func InitializeProcesses(processes []Process) {
 		LOGPROCESSING,
 	}
 
-	re := &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, logLevels: l}
+	re := &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l}
 
 	re.logf(LOGINFO, "Initializing %d processes\n", len(processes))
 
@@ -174,10 +177,23 @@ func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...inter
 	}
 }
 
+// Color: Red, Green, Yellow, Blue, Purple, Cyan, Gray
+var colors = []string{"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m"}
+var colorsHl = []string{"\033[101m", "\033[102m", "\033[103m", "\033[104m", "\033[105m", "\033[106m", "\033[107m"}
+
+const colorsLen = 7
+
+var resetColor = "\033[0m"
+
 // Similar to Println
 func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, message string) {
 	if slices.Contains(re.logLevels, level) {
-		fmt.Printf("%s: "+message+"\n", process.OutlineString())
+		if re.color {
+			colorIndex := int(process.Provider.ChannelID) % colorsLen
+			fmt.Printf("%s%s: "+message+"\n%s", colors[colorIndex], process.OutlineString(), resetColor)
+		} else {
+			fmt.Printf("%s: "+message+"\n", process.OutlineString())
+		}
 	}
 }
 
@@ -186,6 +202,56 @@ func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, mess
 	if slices.Contains(re.logLevels, level) {
 		data := append([]interface{}{process.OutlineString()}, args...)
 
-		fmt.Printf("%s: "+message, data...)
+		if re.color {
+			colorIndex := int(process.Provider.ChannelID) % colorsLen
+			var buf bytes.Buffer
+			buf.WriteString(colors[colorIndex])
+			buf.WriteString(fmt.Sprintf("%s: "+message, data...))
+			buf.WriteString(resetColor)
+
+			fmt.Print(buf.String())
+		} else {
+			fmt.Printf("%s: "+message, data...)
+		}
+	}
+}
+
+// Similar to logProcessf but adds highlighted text
+func (re *RuntimeEnvironment) logProcessHighlight(level LogLevel, process *Process, message string) {
+	if slices.Contains(re.logLevels, level) {
+
+		colorIndex := int(process.Provider.ChannelID) % colorsLen
+
+		var buf bytes.Buffer
+		buf.WriteString(colorsHl[colorIndex])
+		buf.WriteString(process.OutlineString())
+		buf.WriteString(": ")
+		buf.WriteString(message)
+		buf.WriteString(resetColor)
+
+		fmt.Print(buf.String())
+	}
+}
+
+func (re *RuntimeEnvironment) logProcessHighlightf(level LogLevel, process *Process, message string, args ...interface{}) {
+	if slices.Contains(re.logLevels, level) {
+
+		data := append([]interface{}{process.OutlineString()}, args...)
+
+		if re.color {
+			// todo fix: remove /n (if needed) from message and add it at the end
+
+			colorIndex := int(process.Provider.ChannelID) % colorsLen
+			var buf bytes.Buffer
+			// buf.WriteString(colors[colorIndex])
+			buf.WriteString(colorsHl[colorIndex])
+			buf.WriteString(fmt.Sprintf("%s: "+message, data...))
+			buf.WriteString(resetColor)
+
+			fmt.Print(buf.String())
+		} else {
+			fmt.Printf("%s: "+message, data...)
+		}
+		// fmt.Printf("%s", resetColor)
 	}
 }

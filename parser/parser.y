@@ -22,7 +22,7 @@ var functionDefinitions []process.FunctionDefinition
 	branches []*process.BranchForm
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW LET IN END SPRC PRC FORWARD
+%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW LET IN END SPRC PRC FORWARD SELF
 %type <strval> LABEL
 %type <procs> processes 
 %type <form> expression 
@@ -38,7 +38,7 @@ root : program { }
     ;
 
 program : 
-	expression { processes = append(processes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root"}}}) }
+	expression { processes = append(processes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root", IsSelf: false}}}) }
 	 | LET functions IN processes END { 
 		processes = $4
 		functionDefinitions = $2
@@ -84,7 +84,8 @@ branches :   /* empty */         										 { $$ = nil }
 names : name { $$ = []process.Name{$1} }
  	  | name COMMA names { $$ = append($3, $1) }
 
-name : LABEL { $$ = process.Name{Ident: $1} };
+name : SELF { $$ = process.Name{IsSelf: true} };
+name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 
 %%
 

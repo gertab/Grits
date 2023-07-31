@@ -63,6 +63,8 @@ type FunctionDefinition struct {
 type Name struct {
 	// Ident refers to the original name of the channel (used for pretty printing)
 	Ident string
+	// If IsSelf, then this channel should reference the the channel from the provider
+	IsSelf bool
 	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
 	Channel chan Message
 	// Channel ID is a unique id for each channel
@@ -75,15 +77,19 @@ func (n *Name) Initialized() bool {
 }
 
 func (n *Name) String() string {
-	if n.Initialized() {
-		return n.Ident + "[" + strconv.FormatUint(n.ChannelID, 10) + "]"
-	} else {
-		return n.Ident
-	}
-}
+	m := ""
 
-func (n *Name) IsSelf() bool {
-	return n.Ident == "self"
+	if n.IsSelf {
+		m = "self"
+	} else {
+		m = n.Ident
+	}
+
+	if n.Initialized() {
+		return m + "[" + strconv.FormatUint(n.ChannelID, 10) + "]"
+	} else {
+		return m
+	}
 }
 
 func (name1 *Name) Equal(name2 Name) bool {
@@ -117,7 +123,7 @@ func (n *Name) Substitute(old, new Name) {
 
 // Returns channel directly or the provider channel in case of channel called self
 func (n *Name) GetChannel(p *Process) chan Message {
-	if n.Ident == "self" {
+	if n.IsSelf {
 		return p.Provider.Channel
 	} else {
 		return n.Channel

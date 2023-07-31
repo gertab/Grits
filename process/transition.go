@@ -6,6 +6,7 @@ import (
 
 // Initiates new processes
 func (process *Process) Transition(re *RuntimeEnvironment) {
+	// todo make this atomic
 	re.ProcessCount++
 
 	go TransitionLoop(process, re)
@@ -21,7 +22,7 @@ func TransitionLoop(process *Process, re *RuntimeEnvironment) {
 func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of send: %s\n", f.String())
 
-	if f.to_c.IsSelf() {
+	if f.to_c.IsSelf {
 		select {
 		case m := <-process.Provider.Channel:
 			switch m.Rule {
@@ -71,7 +72,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of receive: %s\n", f.String())
 
-	if f.from_c.IsSelf() {
+	if f.from_c.IsSelf {
 		// todo check where the select is random (if both can succeed) -- not sure what happens
 		select {
 		case m := <-process.Provider.Channel:
@@ -123,7 +124,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of forward: %s\n", f.String())
 
-	if f.to_c.IsSelf() {
+	if f.to_c.IsSelf {
 		// todo check that f.to_c == process.Provider
 		f.from_c.Channel <- Message{Rule: FWD, Channel1: process.Provider}
 
@@ -149,13 +150,22 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of case: ")
 	fmt.Println(f.String())
 }
-func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of new: ")
-	fmt.Println(f.String())
-}
+
 func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of close: ")
 	fmt.Println(f.String())
+}
+
+// CUT rule (Spawn new process) - provider only
+func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of new: %s\n", f.String())
+
+	// First create fresh channel (with fake identity of the continuation_c name) to link both processes
+	// newChannel := re.CreateFreshChannel(f.continuation_c.String())
+
+	// Substitute reference to this new channel by the actual channel
+
+	// newprocess.Transition(re()
 }
 
 func (process *Process) Terminate(re *RuntimeEnvironment) {

@@ -20,11 +20,11 @@ func compareOutputProgram(t *testing.T, got []process.Form, expected []process.F
 
 func TestBasicForms(t *testing.T) {
 	var output, expected []process.Form
-	to_c := process.Name{Ident: "to_c"}
-	pay_c := process.Name{Ident: "pay_c"}
-	cont_c := process.Name{Ident: "cont_c"}
-	from_c := process.Name{Ident: "from_c"}
-	end := process.NewClose(process.Name{Ident: "self"})
+	to_c := process.Name{Ident: "to_c", IsSelf: false}
+	pay_c := process.Name{Ident: "pay_c", IsSelf: false}
+	cont_c := process.Name{Ident: "cont_c", IsSelf: false}
+	from_c := process.Name{Ident: "from_c", IsSelf: false}
+	end := process.NewClose(process.Name{IsSelf: true})
 
 	input := "send to_c<pay_c,cont_c>"
 	output = append(output, ParseString(input)[0].Body)

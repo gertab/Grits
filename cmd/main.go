@@ -20,33 +20,31 @@ import (
 //		prc[pid1]: <a, b> <- recv self; close self
 //		prc[pid2]: send pid1<pid3, self>
 //	end`
-//
 // const program = ` 	/* FWD + RCV rule */
-//
-//	let
-//	in
-//	prc[pid1]: send pid2<pid5, self>
-//	prc[pid2]: fwd self pid3
-//	prc[pid3]: fwd self pid4
-//	prc[pid4]: <a, b> <- recv self; close sel
-//	end`
-//
+
+// 	let
+// 	in
+// 	prc[pid1]: send pid2<pid5, self>
+// 	prc[pid2]: fwd self pid3
+// 	prc[pid3]: fwd self pid4
+// 	prc[pid4]: <a, b> <- recv self; close sel
+// 	end`
+
 // const program = ` 	/* FWD + SND rule */
-//
-//	let
-//	in
-//	prc[pid1]: <a, b> <- recv pid2; close sel
-//	prc[pid2]: fwd self pid3
-//	prc[pid3]: fwd self pid4
-//	prc[pid4]: send self<pid5, self>
-//	end`
-const program = ` 	/* FWD + SND rule */
+
+// 	let
+// 	in
+// 	prc[pid1]: <a, b> <- recv pid2; close sel
+// 	prc[pid2]: fwd self pid3
+// 	prc[pid3]: fwd self pid4
+// 	prc[pid4]: send self<pid5, self>
+// 	end`
+
+const program = ` 	/* CUT + SND rule */
 					let
-					in 
-					prc[pid1]: <a, b> <- recv pid2; close sel
-					prc[pid2]: fwd self pid3
-					prc[pid3]: fwd self pid4
-					prc[pid4]: send self<pid5, self>
+					in
+					prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+					prc[pid2]: send self<pid5, self>
 					end`
 
 // const program2 = `let

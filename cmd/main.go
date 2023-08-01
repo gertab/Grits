@@ -14,7 +14,6 @@ import (
 // 	end`
 
 // const program = ` 	/* RCV rule */
-
 // 	let
 // 	in
 // 		prc[pid1]: <a, b> <- recv self; close self
@@ -59,21 +58,21 @@ import (
 // 		prc[pid2]: x <- new (<a, b> <- recv x; close sel); send x<pid5, self>
 // 	end`
 
-const program = ` /* FWD for client + SND + RCV rule <<- v. cool */
-	/* 
-	Sometimes we have:
-	  prc[pid1[3]]: [send, client] starting RCV rule 
-	or 
-	  prc[pid0_fwd[2]]: [send, client] starting RCV rule
-	depending on whether the FWD rule executed before or after the RCV rule.
-	*/
-	let
-	in
-	prc[pid0]: <a, b> <- recv pid0_fwd; close a
-	prc[pid0_fwd]: fwd self pid1
-	prc[pid1]: send pid2<pid5, self>
-	prc[pid2]: <a, b> <- recv self; send self<a, g>
-	end`
+// const program = ` /* FWD for client + SND + RCV rule <<- v. cool */
+// 	/*
+// 	Sometimes we have:
+// 	  prc[pid1[3]]: [send, client] starting RCV rule
+// 	or
+// 	  prc[pid0_fwd[2]]: [send, client] starting RCV rule
+// 	depending on whether the FWD rule executed before or after the RCV rule.
+// 	*/
+// 	let
+// 	in
+// 	prc[pid0]: <a, b> <- recv pid0_fwd; close a
+// 	prc[pid0_fwd]: fwd self pid1
+// 	prc[pid1]: send pid2<pid5, self>
+// 	prc[pid2]: <a, b> <- recv self; send self<a, g>
+// 	end`
 
 // const program = ` 	/* CUT + inner blocking SND + FWD + RCV rule */
 // 					let
@@ -89,6 +88,13 @@ const program = ` /* FWD for client + SND + RCV rule <<- v. cool */
 // 	prc[pid1]: x <- new (send pid2<pid5, self>); close self
 // 	prc[pid2]: <a, b> <- recv self; close sel
 // 	end`
+
+const program = ` 	/* CUT + RCV rule */
+	let
+	in
+		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a2, b2> <- recv b; close self
+		prc[pid2]: send self<pid3, self>
+	end`
 
 // const program2 = `let
 // 				in

@@ -34,6 +34,12 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 				close(process.Provider.PriorityChannel)
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
+			case SPLIT_DUP:
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received SPLIT_DUP request. Continuing as %s, %s\n", pm.Channels[0].String(), pm.Channels[1].String())
+
+				// var f Form
+				// newProcess1 := Process{Body: f, Provider: pm.Channels[0], FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
+				// newProcess2 := Process{Body: f, Provider: pm.Channels[1], FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
 
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
@@ -201,22 +207,45 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	}
 }
 
-func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of select: ")
-	fmt.Println(f.String())
-}
-func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of branch: ")
-	fmt.Println(f.String())
-}
-func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of case: ")
-	fmt.Println(f.String())
-}
+func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of split: %s\n", f.String())
 
-func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of close: ")
-	fmt.Println(f.String())
+	if f.from_c.IsSelf {
+		// from_cannot be self -- only split other processes
+		re.logProcessHighlight(LOGERROR, process, "should forward on self")
+		// todo panic
+	} else {
+		// Prepare new channels
+		newSplitNames := []Name{re.CreateFreshChannel(f.channel_one.Ident), re.CreateFreshChannel(f.channel_two.Ident)}
+		select {
+		case pm := <-process.Provider.PriorityChannel:
+			switch pm.Action {
+			case FWD:
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
+				// Close current channel and switch to new one
+				close(process.Provider.Channel)
+				close(process.Provider.PriorityChannel)
+				process.Provider = pm.Channel1
+				TransitionLoop(process, re)
+
+			default:
+				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
+				// todo panic
+			}
+		case f.from_c.PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: newSplitNames}:
+			// todo check that f.to_c == process.Provider
+			re.logProcessf(LOGRULE, process, "[split, client] should send SPLIT to priority channel %s\n", f.from_c.String())
+
+			currentProcessBody := f.continuation_e
+			currentProcessBody.Substitute(f.channel_one, newSplitNames[0])
+			currentProcessBody.Substitute(f.channel_two, newSplitNames[1])
+			process.Body = currentProcessBody
+
+			re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule")
+
+			TransitionLoop(process, re)
+		}
+	}
 }
 
 // CUT rule (Spawn new process) - provider only
@@ -268,6 +297,24 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// Continue executing current process
 		TransitionLoop(process, re)
 	}
+}
+
+func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
+	fmt.Print("transition of select: ")
+	fmt.Println(f.String())
+}
+func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
+	fmt.Print("transition of branch: ")
+	fmt.Println(f.String())
+}
+func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
+	fmt.Print("transition of case: ")
+	fmt.Println(f.String())
+}
+
+func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
+	fmt.Print("transition of close: ")
+	fmt.Println(f.String())
 }
 
 func (process *Process) Terminate(re *RuntimeEnvironment) {

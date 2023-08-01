@@ -77,26 +77,32 @@ func TestBasicTokens(t *testing.T) {
 	output = append(output, input9.String())
 	expected = append(expected, "fwd to_c from_c")
 
+	// Split
+	input10 := NewSplit(pay_c, cont_c, from_c, end)
+	output = append(output, input10.String())
+	expected = append(expected, "<pay_c,cont_c> <- split from_c; close self")
+
 	compareOutput(t, output, expected)
 }
 
 func TestSubstitutions(t *testing.T) {
 	expected, output := []Form{}, []Form{}
-	to_c := Name{Ident: "to_c"}
-	new_to_c := Name{Ident: "new_to_c"}
-	pay_c := Name{Ident: "pay_c"}
-	new_pay_c := Name{Ident: "new_pay_c"}
-	cont_c := Name{Ident: "cont_c"}
-	new_cont_c := Name{Ident: "new_cont_c"}
-	from_c := Name{Ident: "from_c"}
-	new_from_c := Name{Ident: "new_from_c"}
-	self := Name{Ident: "from_c"}
-	new_self := Name{Ident: "new_from_c"}
+	to_c := Name{Ident: "to_c", IsSelf: false}
+	new_to_c := Name{Ident: "new_to_c", IsSelf: false}
+	pay_c := Name{Ident: "pay_c", IsSelf: false}
+	new_pay_c := Name{Ident: "new_pay_c", IsSelf: false}
+	cont_c := Name{Ident: "cont_c", IsSelf: false}
+	new_cont_c := Name{Ident: "new_cont_c", IsSelf: false}
+	from_c := Name{Ident: "from_c", IsSelf: false}
+	new_from_c := Name{Ident: "new_from_c", IsSelf: false}
+	self := Name{IsSelf: true}
+	new_self := Name{IsSelf: true}
 	end := NewClose(self)
 	new_end := NewClose(new_self)
 
-	// Send
 	input := NewSend(to_c, pay_c, cont_c)
+
+	// Send
 	input.Substitute(to_c, new_to_c)
 	input.Substitute(pay_c, new_pay_c)
 	input.Substitute(cont_c, new_cont_c)
@@ -108,11 +114,20 @@ func TestSubstitutions(t *testing.T) {
 	input2 := NewReceive(pay_c, cont_c, from_c, end)
 	input2.Substitute(cont_c, new_cont_c)
 	input2.Substitute(pay_c, new_pay_c)
-	input2.Substitute(cont_c, new_cont_c)
+	input2.Substitute(from_c, new_from_c)
 	input2.Substitute(self, new_self)
 	result2 := NewReceive(pay_c, cont_c, new_from_c, new_end)
 	output = append(output, input2)
 	expected = append(expected, result2)
+
+	// Receive
+	input2other := NewReceive(pay_c, cont_c, pay_c, end)
+	input2other.Substitute(cont_c, new_cont_c)
+	input2other.Substitute(pay_c, new_pay_c)
+	input2other.Substitute(self, new_self)
+	result2other := NewReceive(pay_c, cont_c, pay_c, new_end)
+	output = append(output, input2other)
+	expected = append(expected, result2other)
 
 	// Case
 	input3 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "from_c"}, pay_c, end)})
@@ -155,6 +170,16 @@ func TestSubstitutions(t *testing.T) {
 	result7 := NewForward(new_to_c, new_from_c)
 	output = append(output, input7)
 	expected = append(expected, result7)
+
+	// Split
+	input8 := NewSplit(pay_c, cont_c, from_c, end)
+	input8.Substitute(pay_c, new_pay_c)
+	input8.Substitute(cont_c, new_cont_c)
+	input8.Substitute(from_c, new_from_c)
+	input8.Substitute(self, new_self)
+	result8 := NewSplit(pay_c, cont_c, new_from_c, new_end)
+	output = append(output, input8)
+	expected = append(expected, result8)
 
 	compareOutputProgram(t, output, expected)
 }

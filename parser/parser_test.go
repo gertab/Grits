@@ -58,6 +58,10 @@ func TestBasicForms(t *testing.T) {
 	output = append(output, ParseString(input)[0].Body)
 	expected = append(expected, process.NewForward(to_c, from_c))
 
+	input = "<pay_c,cont_c> <- split from_c; close self"
+	output = append(output, ParseString(input)[0].Body)
+	expected = append(expected, process.NewSplit(pay_c, cont_c, from_c, end))
+
 	compareOutputProgram(t, output, expected)
 }
 

@@ -86,6 +86,13 @@ func EqualForm(form1, form2 Form) bool {
 		if ok1 && ok2 {
 			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c)
 		}
+	case *SplitForm:
+		f1, ok1 := form1.(*SplitForm)
+		f2, ok2 := form2.(*SplitForm)
+
+		if ok1 && ok2 {
+			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
 	}
 
 	fmt.Printf("todo implement EqualForm for type %s\n", a)
@@ -334,4 +341,41 @@ func (p *ForwardForm) String() string {
 func (p *ForwardForm) Substitute(old, new Name) {
 	p.to_c.Substitute(old, new)
 	p.from_c.Substitute(old, new)
+}
+
+// Split: <payload_c, continuation_c> <- recv from_c; P
+type SplitForm struct {
+	channel_one    Name
+	channel_two    Name
+	from_c         Name
+	continuation_e Form
+}
+
+func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form) *SplitForm {
+	return &SplitForm{
+		channel_one:    channel_one,
+		channel_two:    channel_two,
+		from_c:         from_c,
+		continuation_e: continuation_e}
+}
+func (p *SplitForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("<")
+	buf.WriteString(p.channel_one.String())
+	buf.WriteString(",")
+	buf.WriteString(p.channel_two.String())
+	buf.WriteString("> <- split ")
+	buf.WriteString(p.from_c.String())
+	buf.WriteString("; ")
+	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *SplitForm) Substitute(old, new Name) {
+	if old != p.channel_one && old != p.channel_two {
+		// payload_c: payload_c,
+		// continuation_c: continuation_c,
+		p.from_c.Substitute(old, new)
+		p.continuation_e.Substitute(old, new)
+	}
 }

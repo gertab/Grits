@@ -56,6 +56,7 @@ state 5
 
 state 6
 	expression:  LANGLE.name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
+	expression:  LANGLE.name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression 
 
 	LABEL  shift 12
 	SELF  shift 11
@@ -101,15 +102,15 @@ state 10
 	name  goto 21
 
 state 11
-	name:  SELF.    (23)
+	name:  SELF.    (24)
 
-	.  reduce 23 (src line 87)
+	.  reduce 24 (src line 88)
 
 
 state 12
-	name:  LABEL.    (24)
+	name:  LABEL.    (25)
 
-	.  reduce 24 (src line 88)
+	.  reduce 25 (src line 89)
 
 
 state 13
@@ -143,6 +144,7 @@ state 15
 
 state 16
 	expression:  LANGLE name.COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
+	expression:  LANGLE name.COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression 
 
 	COMMA  shift 25
 	.  error
@@ -212,6 +214,7 @@ state 24
 
 state 25
 	expression:  LANGLE name COMMA.name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
+	expression:  LANGLE name COMMA.name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression 
 
 	LABEL  shift 12
 	SELF  shift 11
@@ -245,10 +248,10 @@ state 27
 
 state 28
 	expression:  CASE name LPAREN.branches RPAREN 
-	branches: .    (18)
+	branches: .    (19)
 
 	LABEL  shift 40
-	.  reduce 18 (src line 79)
+	.  reduce 19 (src line 80)
 
 	branches  goto 39
 
@@ -299,6 +302,7 @@ state 34
 
 state 35
 	expression:  LANGLE name COMMA name.RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
+	expression:  LANGLE name COMMA name.RANGLE LEFT_ARROW SPLIT name SEQUENCE expression 
 
 	RANGLE  shift 46
 	.  error
@@ -394,6 +398,7 @@ state 45
 
 state 46
 	expression:  LANGLE name COMMA name RANGLE.LEFT_ARROW RECEIVE name SEQUENCE expression 
+	expression:  LANGLE name COMMA name RANGLE.LEFT_ARROW SPLIT name SEQUENCE expression 
 
 	LEFT_ARROW  shift 57
 	.  error
@@ -458,11 +463,11 @@ state 53
 
 
 state 54
-	names:  name.    (21)
+	names:  name.    (22)
 	names:  name.COMMA names 
 
 	COMMA  shift 64
-	.  reduce 21 (src line 84)
+	.  reduce 22 (src line 85)
 
 
 state 55
@@ -481,8 +486,10 @@ state 56
 
 state 57
 	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW.RECEIVE name SEQUENCE expression 
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW.SPLIT name SEQUENCE expression 
 
 	RECEIVE  shift 67
+	SPLIT  shift 68
 	.  error
 
 
@@ -495,7 +502,7 @@ state 58
 state 59
 	expression:  name LEFT_ARROW NEW LPAREN expression RPAREN.SEQUENCE expression 
 
-	SEQUENCE  shift 68
+	SEQUENCE  shift 69
 	.  error
 
 
@@ -508,21 +515,21 @@ state 60
 state 61
 	branches:  branches PIPE LABEL.LANGLE name RANGLE RIGHT_ARROW expression 
 
-	LANGLE  shift 69
+	LANGLE  shift 70
 	.  error
 
 
 state 62
 	branches:  LABEL LANGLE name.RANGLE RIGHT_ARROW expression 
 
-	RANGLE  shift 70
+	RANGLE  shift 71
 	.  error
 
 
 state 63
 	process:  PRC LSBRACK names RSBRACK.COLON expression 
 
-	COLON  shift 71
+	COLON  shift 72
 	.  error
 
 
@@ -534,12 +541,12 @@ state 64
 	.  error
 
 	name  goto 54
-	names  goto 72
+	names  goto 73
 
 state 65
 	process:  SPRC LSBRACK names RSBRACK.COLON expression 
 
-	COLON  shift 73
+	COLON  shift 74
 	.  error
 
 
@@ -556,9 +563,18 @@ state 67
 	SELF  shift 11
 	.  error
 
-	name  goto 74
+	name  goto 75
 
 state 68
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT.name SEQUENCE expression 
+
+	LABEL  shift 12
+	SELF  shift 11
+	.  error
+
+	name  goto 76
+
+state 69
 	expression:  name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE.expression 
 
 	LABEL  shift 12
@@ -570,26 +586,26 @@ state 68
 	SELF  shift 11
 	.  error
 
-	expression  goto 75
+	expression  goto 77
 	name  goto 7
 
-state 69
+state 70
 	branches:  branches PIPE LABEL LANGLE.name RANGLE RIGHT_ARROW expression 
 
 	LABEL  shift 12
 	SELF  shift 11
 	.  error
 
-	name  goto 76
+	name  goto 78
 
-state 70
+state 71
 	branches:  LABEL LANGLE name RANGLE.RIGHT_ARROW expression 
 
-	RIGHT_ARROW  shift 77
+	RIGHT_ARROW  shift 79
 	.  error
 
 
-state 71
+state 72
 	process:  PRC LSBRACK names RSBRACK COLON.expression 
 
 	LABEL  shift 12
@@ -601,16 +617,16 @@ state 71
 	SELF  shift 11
 	.  error
 
-	expression  goto 78
+	expression  goto 80
 	name  goto 7
 
-state 72
-	names:  name COMMA names.    (22)
-
-	.  reduce 22 (src line 85)
-
-
 state 73
+	names:  name COMMA names.    (23)
+
+	.  reduce 23 (src line 86)
+
+
+state 74
 	process:  SPRC LSBRACK names RSBRACK COLON.expression 
 
 	LABEL  shift 12
@@ -622,92 +638,38 @@ state 73
 	SELF  shift 11
 	.  error
 
-	expression  goto 79
+	expression  goto 81
 	name  goto 7
 
-state 74
+state 75
 	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name.SEQUENCE expression 
 
-	SEQUENCE  shift 80
+	SEQUENCE  shift 82
 	.  error
 
 
-state 75
+state 76
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name.SEQUENCE expression 
+
+	SEQUENCE  shift 83
+	.  error
+
+
+state 77
 	expression:  name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression.    (14)
 
 	.  reduce 14 (src line 64)
 
 
-state 76
+state 78
 	branches:  branches PIPE LABEL LANGLE name.RANGLE RIGHT_ARROW expression 
 
-	RANGLE  shift 81
+	RANGLE  shift 84
 	.  error
-
-
-state 77
-	branches:  LABEL LANGLE name RANGLE RIGHT_ARROW.expression 
-
-	LABEL  shift 12
-	LANGLE  shift 6
-	SEND  shift 5
-	CASE  shift 8
-	CLOSE  shift 9
-	FORWARD  shift 10
-	SELF  shift 11
-	.  error
-
-	expression  goto 82
-	name  goto 7
-
-state 78
-	process:  PRC LSBRACK names RSBRACK COLON expression.    (6)
-
-	.  reduce 6 (src line 50)
 
 
 state 79
-	process:  SPRC LSBRACK names RSBRACK COLON expression.    (7)
-
-	.  reduce 7 (src line 51)
-
-
-state 80
-	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE.expression 
-
-	LABEL  shift 12
-	LANGLE  shift 6
-	SEND  shift 5
-	CASE  shift 8
-	CLOSE  shift 9
-	FORWARD  shift 10
-	SELF  shift 11
-	.  error
-
-	expression  goto 83
-	name  goto 7
-
-state 81
-	branches:  branches PIPE LABEL LANGLE name RANGLE.RIGHT_ARROW expression 
-
-	RIGHT_ARROW  shift 84
-	.  error
-
-
-state 82
-	branches:  LABEL LANGLE name RANGLE RIGHT_ARROW expression.    (19)
-
-	.  reduce 19 (src line 80)
-
-
-state 83
-	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression.    (11)
-
-	.  reduce 11 (src line 58)
-
-
-state 84
-	branches:  branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW.expression 
+	branches:  LABEL LANGLE name RANGLE RIGHT_ARROW.expression 
 
 	LABEL  shift 12
 	LANGLE  shift 6
@@ -721,21 +683,103 @@ state 84
 	expression  goto 85
 	name  goto 7
 
+state 80
+	process:  PRC LSBRACK names RSBRACK COLON expression.    (6)
+
+	.  reduce 6 (src line 50)
+
+
+state 81
+	process:  SPRC LSBRACK names RSBRACK COLON expression.    (7)
+
+	.  reduce 7 (src line 51)
+
+
+state 82
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE.expression 
+
+	LABEL  shift 12
+	LANGLE  shift 6
+	SEND  shift 5
+	CASE  shift 8
+	CLOSE  shift 9
+	FORWARD  shift 10
+	SELF  shift 11
+	.  error
+
+	expression  goto 86
+	name  goto 7
+
+state 83
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE.expression 
+
+	LABEL  shift 12
+	LANGLE  shift 6
+	SEND  shift 5
+	CASE  shift 8
+	CLOSE  shift 9
+	FORWARD  shift 10
+	SELF  shift 11
+	.  error
+
+	expression  goto 87
+	name  goto 7
+
+state 84
+	branches:  branches PIPE LABEL LANGLE name RANGLE.RIGHT_ARROW expression 
+
+	RIGHT_ARROW  shift 88
+	.  error
+
+
 state 85
-	branches:  branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW expression.    (20)
+	branches:  LABEL LANGLE name RANGLE RIGHT_ARROW expression.    (20)
 
 	.  reduce 20 (src line 81)
 
 
+state 86
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression.    (11)
+
+	.  reduce 11 (src line 58)
+
+
+state 87
+	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression.    (18)
+
+	.  reduce 18 (src line 72)
+
+
+state 88
+	branches:  branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW.expression 
+
+	LABEL  shift 12
+	LANGLE  shift 6
+	SEND  shift 5
+	CASE  shift 8
+	CLOSE  shift 9
+	FORWARD  shift 10
+	SELF  shift 11
+	.  error
+
+	expression  goto 89
+	name  goto 7
+
+state 89
+	branches:  branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW expression.    (21)
+
+	.  reduce 21 (src line 82)
+
+
 41 terminals, 10 nonterminals
-25 grammar rules, 86/16000 states
+26 grammar rules, 90/16000 states
 0 shift/reduce, 0 reduce/reduce conflicts reported
 59 working sets used
-memory: parser 49/240000
-45 extra closures
-153 shift entries, 1 exceptions
-38 goto entries
-11 entries saved by goto default
-Optimizer space used: output 118/240000
-118 table entries, 15 zero
-maximum spread: 41, maximum offset: 84
+memory: parser 51/240000
+49 extra closures
+164 shift entries, 1 exceptions
+40 goto entries
+12 entries saved by goto default
+Optimizer space used: output 123/240000
+123 table entries, 16 zero
+maximum spread: 41, maximum offset: 88

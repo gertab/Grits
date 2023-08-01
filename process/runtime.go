@@ -3,6 +3,7 @@ package process
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -31,18 +32,32 @@ type RuntimeEnvironment struct {
 	controller *Controller
 }
 
+func Copy(source interface{}, destin interface{}) {
+	x := reflect.ValueOf(source)
+	if x.Kind() == reflect.Ptr {
+		starX := x.Elem()
+		y := reflect.New(starX.Type())
+		starY := y.Elem()
+		starY.Set(starX)
+		reflect.ValueOf(destin).Elem().Set(y.Elem())
+	} else {
+		destin = x.Interface()
+	}
+}
+
 // Entry point for execution
 func InitializeProcesses(processes []Process) {
 
-	// // nc := NewClose(Name{IsSelf: true})
-	// to_c := Name{Ident: "to_c", IsSelf: false}
-	// // new_to_c := Name{Ident: "new_to_c", IsSelf: false}
-	// a := NewSend(to_c, Name{Ident: "payload_c", IsSelf: false}, Name{Ident: "cont_c", IsSelf: false})
-	// b := a
-	// a.continuation_c.Ident = "assss"
-	// // a.Substitute(to_c, new_to_c)
-	// fmt.Println(a.String())
-	// fmt.Println(b.String())
+	// nc := NewClose(Name{IsSelf: true})
+	payload_c := Name{Ident: "payload_c", IsSelf: false}
+	orig := NewReceive(payload_c, Name{Ident: "cont_c", IsSelf: false}, Name{Ident: "from_c", IsSelf: false}, NewClose(Name{Ident: "orig_close", ChannelID: 111, Channel: make(chan Message), IsSelf: false}))
+	copied := CopyForm(orig)
+	copiedWithType := copied.(*ReceiveForm)
+	copiedWithType.payload_c.Ident = "payload_c"
+	fmt.Println(orig.String())
+	fmt.Println(copied.String())
+	fmt.Println(copiedWithType.String())
+	fmt.Println(EqualForm(orig, copied))
 
 	l := []LogLevel{
 		LOGINFO,

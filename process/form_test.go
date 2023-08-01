@@ -1,6 +1,8 @@
 package process
 
-import "testing"
+import (
+	"testing"
+)
 
 func compareOutput(t *testing.T, got []string, expected []string) {
 	if len(got) != len(expected) {
@@ -13,6 +15,18 @@ func compareOutput(t *testing.T, got []string, expected []string) {
 			// t.Errorf("got %s, expected %s\n", "sa", "de")
 			t.Errorf("got %s, expected %s\n", got[index], expected[index])
 		}
+	}
+}
+
+func assertEqual(t *testing.T, i1, i2 Form) {
+	if !EqualForm(i1, i2) {
+		t.Errorf("got %s, expected %s\n", i1.String(), i2.String())
+	}
+}
+
+func assertNotEqual(t *testing.T, i1, i2 Form) {
+	if EqualForm(i1, i2) {
+		t.Errorf("got %s, expected %s\n", i1.String(), i2.String())
 	}
 }
 
@@ -182,6 +196,93 @@ func TestSubstitutions(t *testing.T) {
 	expected = append(expected, result8)
 
 	compareOutputProgram(t, output, expected)
+}
+
+func TestCopy(t *testing.T) {
+	to_c := Name{Ident: "to_c", IsSelf: false}
+	// new_to_c := Name{Ident: "new_to_c", IsSelf: false}
+	pay_c := Name{Ident: "pay_c", IsSelf: false}
+	// new_pay_c := Name{Ident: "new_pay_c", IsSelf: false}
+	cont_c := Name{Ident: "cont_c", IsSelf: false}
+	// new_cont_c := Name{Ident: "new_cont_c", IsSelf: false}
+	from_c := Name{Ident: "from_c", IsSelf: false}
+	// new_from_c := Name{Ident: "new_from_c", IsSelf: false}
+	self := Name{IsSelf: true}
+	// new_self := Name{IsSelf: true}
+	end := NewClose(self)
+	// new_end := NewClose(new_self)
+
+	// Send
+	input := NewSend(to_c, pay_c, cont_c)
+	copy := CopyForm(input)
+	copyWithType := copy.(*SendForm)
+	copyWithType.to_c.Ident = "to_c"
+	assertEqual(t, input, copy)
+	copyWithType.to_c.Ident = "to_c_edited"
+	assertNotEqual(t, input, copy)
+
+	// Receive
+	input2 := NewReceive(pay_c, cont_c, from_c, end)
+	copy = CopyForm(input2)
+	copyWithType2 := copy.(*ReceiveForm)
+	copyWithType2.payload_c.Ident = "pay_c"
+	assertEqual(t, input2, copy)
+	copyWithType2.payload_c.Ident = "pay_c_edited"
+	assertNotEqual(t, input2, copy)
+
+	// Case
+	input3 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "from_c"}, pay_c, end)})
+	copy3 := CopyForm(input3)
+	copyWithType3 := copy3.(*CaseForm)
+	copyWithType3.from_c.Ident = "from_c"
+	assertEqual(t, input3, copy3)
+	copyWithType3.from_c.Ident = "from_c_edited"
+	assertNotEqual(t, input3, copy3)
+
+	// Select
+	input4 := NewSelect(to_c, Label{L: "label1"}, cont_c)
+	copy4 := CopyForm(input4)
+	copyWithType4 := copy4.(*SelectForm)
+	copyWithType4.to_c.Ident = "to_c"
+	assertEqual(t, input4, copy4)
+	copyWithType4.to_c.Ident = "to_c_edited"
+	assertNotEqual(t, input4, copy4)
+
+	// New
+	input5 := NewNew(cont_c, end, end)
+	copy5 := CopyForm(input5)
+	copyWithType5 := copy5.(*NewForm)
+	copyWithType5.continuation_c.Ident = "cont_c"
+	assertEqual(t, input5, copy5)
+	copyWithType5.continuation_c.Ident = "cont_c_edited"
+	assertNotEqual(t, input5, copy5)
+
+	// Close
+	input6 := NewClose(from_c)
+	copy6 := CopyForm(input6)
+	copyWithType6 := copy6.(*CloseForm)
+	copyWithType6.from_c.Ident = "from_c"
+	assertEqual(t, input6, copy6)
+	copyWithType6.from_c.Ident = "from_c_edited"
+	assertNotEqual(t, input6, copy6)
+
+	// Forward
+	input7 := NewForward(to_c, from_c)
+	copy7 := CopyForm(input7)
+	copyWithType7 := copy7.(*ForwardForm)
+	copyWithType7.from_c.Ident = "from_c"
+	assertEqual(t, input7, copy7)
+	copyWithType7.from_c.Ident = "from_c_edited"
+	assertNotEqual(t, input7, copy7)
+
+	// Split
+	input8 := NewSplit(pay_c, cont_c, from_c, end)
+	copy8 := CopyForm(input8)
+	copyWithType8 := copy8.(*SplitForm)
+	copyWithType8.from_c.Ident = "from_c"
+	assertEqual(t, input8, copy8)
+	copyWithType8.from_c.Ident = "from_c_edited"
+	assertNotEqual(t, input8, copy8)
 }
 
 // func TestSimpleToken(t *testing.T) {

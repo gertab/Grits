@@ -18,6 +18,12 @@ func compareOutputProgram(t *testing.T, got []process.Form, expected []process.F
 	}
 }
 
+func assertEqual(t *testing.T, i1, i2 process.Form) {
+	if !process.EqualForm(i1, i2) {
+		t.Errorf("got %s, expected %s\n", i1.String(), i2.String())
+	}
+}
+
 func TestBasicForms(t *testing.T) {
 	var output, expected []process.Form
 	to_c := process.Name{Ident: "to_c", IsSelf: false}
@@ -33,6 +39,9 @@ func TestBasicForms(t *testing.T) {
 	input = "<pay_c,cont_c> <- recv from_c; close self"
 	output = append(output, ParseString(input)[0].Body)
 	expected = append(expected, process.NewReceive(pay_c, cont_c, from_c, end))
+	i1 := ParseString(input)[0].Body
+	i2 := ParseString(input)[0].Body
+	assertEqual(t, i1, i2)
 
 	input = "case from_c ( \n   label1<pay_c> => close self\n)"
 	output = append(output, ParseString(input)[0].Body)

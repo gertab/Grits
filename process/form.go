@@ -99,6 +99,78 @@ func EqualForm(form1, form2 Form) bool {
 	return false
 }
 
+func CopyForm(orig Form) Form {
+	// origWithType := reflect.TypeOf(orig)
+
+	switch interface{}(orig).(type) {
+	case *SendForm:
+		p, ok := orig.(*SendForm)
+		if ok {
+			return NewSend(p.to_c, p.payload_c, p.continuation_c)
+		}
+	case *ReceiveForm:
+		p, ok := orig.(*ReceiveForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewReceive(p.payload_c, p.continuation_c, p.from_c, cont)
+		}
+	case *SelectForm:
+		p, ok := orig.(*SelectForm)
+		if ok {
+			return NewSelect(p.to_c, p.label, p.continuation_c)
+		}
+	case *CaseForm:
+		p, ok := orig.(*CaseForm)
+		if ok {
+			branches := make([]*BranchForm, len(p.branches))
+
+			for i := 0; i < len(p.branches); i++ {
+				b := CopyForm(p.branches[i]).(*BranchForm)
+				branches[i] = b
+			}
+
+			return NewCase(p.from_c, branches)
+		}
+
+	case *BranchForm:
+		p, ok := orig.(*BranchForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewBranch(p.label, p.payload_c, cont)
+		}
+
+	case *CloseForm:
+		p, ok := orig.(*CloseForm)
+		if ok {
+			return NewClose(p.from_c)
+		}
+	case *NewForm:
+		p, ok := orig.(*NewForm)
+		if ok {
+			body := CopyForm(p.body)
+			cont := CopyForm(p.continuation_e)
+			return NewNew(p.continuation_c, body, cont)
+		}
+	case *ForwardForm:
+		p, ok := orig.(*ForwardForm)
+		if ok {
+			return NewForward(p.to_c, p.from_c)
+		}
+	case *SplitForm:
+		p, ok := orig.(*SplitForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont)
+		}
+	}
+
+	// todo panic
+	fmt.Print("todo: Should not happen")
+	panic("Should not happen")
+
+	return nil
+}
+
 ///////////////////////////////
 ////// Different Forms ////////
 ///////////////////////////////
@@ -135,6 +207,10 @@ func (p *SendForm) Substitute(old, new Name) {
 	p.continuation_c.Substitute(old, new)
 }
 
+func (p *SendForm) Copy() *SendForm {
+	return NewSend(p.to_c, p.payload_c, p.continuation_c)
+}
+
 // Receive: <payload_c, continuation_c> <- recv from_c; P
 type ReceiveForm struct {
 	payload_c      Name
@@ -150,6 +226,7 @@ func NewReceive(payload_c, continuation_c, from_c Name, continuation_e Form) *Re
 		from_c:         from_c,
 		continuation_e: continuation_e}
 }
+
 func (p *ReceiveForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("<")
@@ -172,6 +249,11 @@ func (p *ReceiveForm) Substitute(old, new Name) {
 	}
 }
 
+// func (p *ReceiveForm) Copy() *ReceiveForm {
+// 	cont := p.continuation_e.Copy()
+// 	return NewReceive(p.payload_c, p.continuation_c, p.from_c, *cont)
+// }
+
 type SelectForm struct {
 	to_c           Name
 	label          Label
@@ -184,6 +266,7 @@ func NewSelect(to_c Name, label Label, continuation_c Name) *SelectForm {
 		label:          label,
 		continuation_c: continuation_c}
 }
+
 func (p *SelectForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString(p.to_c.String())
@@ -200,6 +283,10 @@ func (p *SelectForm) Substitute(old, new Name) {
 	p.continuation_c.Substitute(old, new)
 	// p.continuation_e.Substitute(old, new)
 }
+
+// func (p *SelectForm) Copy() *SelectForm {
+// 	return NewSelect(p.to_c, p.label, p.continuation_c)
+// }
 
 type BranchForm struct {
 	label          Label
@@ -243,6 +330,11 @@ func StringifyBranches(branches []*BranchForm) string {
 	return buf.String()
 }
 
+// func (p *BranchForm) Copy() *BranchForm {
+// 	cont := p.continuation_e.Copy()
+// 	return NewBranch(p.label, p.payload_c, *cont)
+// }
+
 type CaseForm struct {
 	from_c   Name
 	branches []*BranchForm
@@ -271,18 +363,30 @@ func (p *CaseForm) Substitute(old, new Name) {
 	}
 }
 
+// func (p *CaseForm) Copy() *CaseForm {
+// 	branches := make([]*BranchForm, len(p.branches))
+
+// 	for i := 0; i < len(p.branches); i++ {
+// 		b := p.branches[i].Copy()
+// 		branches[i] = b
+// 	}
+
+// 	return NewCase(p.from_c, branches)
+// }
+
 type NewForm struct {
 	continuation_c Name
 	body           Form
 	continuation_e Form
 }
 
-func NewNew(continuation_c Name, body Form, continuation_e Form) *NewForm {
+func NewNew(continuation_c Name, body, continuation_e Form) *NewForm {
 	return &NewForm{
 		continuation_c: continuation_c,
 		body:           body,
 		continuation_e: continuation_e}
 }
+
 func (p *NewForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString(p.continuation_c.String())
@@ -300,6 +404,12 @@ func (p *NewForm) Substitute(old, new Name) {
 		p.continuation_e.Substitute(old, new)
 	}
 }
+
+// func (p *NewForm) Copy() *NewForm {
+// 	body := p.body.Copy()
+// 	cont := p.continuation_e.Copy()
+// 	return NewNew(p.continuation_c, *body, *cont)
+// }
 
 type CloseForm struct {
 	from_c Name
@@ -319,6 +429,10 @@ func (p *CloseForm) String() string {
 func (p *CloseForm) Substitute(old, new Name) {
 	p.from_c.Substitute(old, new)
 }
+
+// func (p *CloseForm) Copy() *CloseForm {
+// 	return NewClose(p.from_c)
+// }
 
 type ForwardForm struct {
 	to_c   Name
@@ -342,6 +456,10 @@ func (p *ForwardForm) Substitute(old, new Name) {
 	p.to_c.Substitute(old, new)
 	p.from_c.Substitute(old, new)
 }
+
+// func (p *ForwardForm) Copy() *ForwardForm {
+// 	return NewForward(p.to_c, p.from_c)
+// }
 
 // Split: <payload_c, continuation_c> <- recv from_c; P
 type SplitForm struct {
@@ -379,3 +497,8 @@ func (p *SplitForm) Substitute(old, new Name) {
 		p.continuation_e.Substitute(old, new)
 	}
 }
+
+// func (p *SplitForm) Copy() *SplitForm {
+// 	cont := p.continuation_e.Copy()
+// 	return NewSplit(p.channel_one, p.channel_two, p.from_c, *cont)
+// }

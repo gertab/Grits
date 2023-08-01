@@ -25,17 +25,18 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	if f.to_c.IsSelf {
 		select {
-		case m := <-process.Provider.Channel:
-			switch m.Rule {
-			case FWD:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", m.Channel1.String())
+		case pm := <-process.Provider.PriorityChannel:
+			switch pm.Action {
+			case FWD2:
+				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
 				close(process.Provider.Channel)
-				process.Provider = m.Channel1
+				close(process.Provider.PriorityChannel)
+				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 
 			default:
-				re.logProcessHighlightf(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
+				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 				// todo panic
 			}
 		case process.Provider.Channel <- Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}:
@@ -85,13 +86,14 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 	if f.from_c.IsSelf {
 		// todo check where the select is random (if both can succeed) -- not sure what happens
 		select {
-		case m := <-process.Provider.Channel:
-			switch m.Rule {
-			case FWD:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. Continuing as %s\n", m.Channel1.String())
+		case pm := <-process.Provider.PriorityChannel:
+			switch pm.Action {
+			case FWD2:
+				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
 				close(process.Provider.Channel)
-				process.Provider = m.Channel1
+				close(process.Provider.PriorityChannel)
+				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 
 			default:
@@ -140,15 +142,39 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of forward: %s\n", f.String())
+	// todo check priority messages
 
 	if f.to_c.IsSelf {
-		// todo check that f.to_c == process.Provider
-		f.from_c.Channel <- Message{Rule: FWD, Channel1: process.Provider}
+		// ######
+		select {
+		case pm := <-process.Provider.PriorityChannel:
+			switch pm.Action {
+			case FWD2:
+				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", pm.Channel1.String())
+				// Close current channel and switch to new one
+				close(process.Provider.Channel)
+				close(process.Provider.PriorityChannel)
+				process.Provider = pm.Channel1
+				TransitionLoop(process, re)
 
-		re.logProcess(LOGRULE, process, "[forward, client] finished FWD rule")
-		// todo terminate goroutine. inform monitor
-		// channel providing on fwd should not be closed, however this process dies
-		// process.Terminate(re)
+			default:
+				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
+				// todo panic
+			}
+		case f.from_c.PriorityChannel <- PriorityMessage{Action: FWD2, Channel1: process.Provider}:
+			// todo check that f.to_c == process.Provider
+			// f.from_c.Channel <- Message{Rule: FWD, Channel1: process.Provider}
+			re.logProcessf(LOGRULE, process, "[forward, client] should send FWD to priority channel %s\n", f.from_c.String())
+
+			re.logProcess(LOGRULE, process, "[forward, client] finished FWD rule")
+			// todo terminate goroutine. inform monitor
+			// channel providing on fwd should not be closed, however this process dies
+			// process.Terminate(re)
+			process.Terminate(re)
+		}
+
+		// ######
+
 	} else {
 		re.logProcess(LOGERROR, process, "should forward on self")
 		// todo panic

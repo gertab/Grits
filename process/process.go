@@ -67,6 +67,8 @@ type Name struct {
 	IsSelf bool
 	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
 	Channel chan Message
+	// Used for priority commands (e.g. fwd, split, ...)
+	PriorityChannel chan PriorityMessage
 	// Channel ID is a unique id for each channel
 	// Used only for debugging, since setting the ChannelID is a slow (& synchronous) operation
 	ChannelID uint64
@@ -110,6 +112,7 @@ func (n *Name) Substitute(old, new Name) {
 		// If a channel is initialized, then compare using the channel value
 		n.Channel = new.Channel
 		n.IsSelf = new.IsSelf
+		n.PriorityChannel = new.PriorityChannel
 		if new.Ident != "" {
 			// not sure if this works
 			n.Ident = new.Ident
@@ -124,6 +127,7 @@ func (n *Name) Substitute(old, new Name) {
 			n.Channel = new.Channel
 			n.ChannelID = new.ChannelID
 			n.IsSelf = new.IsSelf
+			n.PriorityChannel = new.PriorityChannel
 		}
 	}
 }
@@ -134,6 +138,14 @@ func (n *Name) GetChannel(p *Process) chan Message {
 		return p.Provider.Channel
 	} else {
 		return n.Channel
+	}
+}
+
+func (n *Name) GetPriorityChannel(p *Process) chan PriorityMessage {
+	if n.IsSelf {
+		return p.Provider.PriorityChannel
+	} else {
+		return n.PriorityChannel
 	}
 }
 

@@ -90,8 +90,9 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	atomic.AddUint64(&re.debugChannelCounter, 1)
 
 	// Create new channel and assign a name to it
-	c := make(chan Message)
-	return Name{Ident: ident, Channel: c, ChannelID: re.debugChannelCounter}
+	mChan := make(chan Message)
+	pmChan := make(chan PriorityMessage)
+	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan}
 }
 
 func (re *RuntimeEnvironment) InitializeMonitor(started chan bool) {
@@ -144,7 +145,21 @@ type Rule int
 const (
 	SND Rule = iota // Channel1 and Channel2
 	RCV             // ContinuationBody, Channel1 and Channel2
-	FWD             // Channel1
+	FWD             // Channel1 todo remove
+)
+
+type PriorityMessage struct {
+	Action Action
+	// Possible payload types, depending on the action
+	Channel1 Name
+	Channels []Name
+}
+
+type Action int
+
+const (
+	FWD2 Action = iota // Channel1
+	// SPLIT             // ContinuationBody, Channel1 and Channel2
 )
 
 type NameInitialization struct {

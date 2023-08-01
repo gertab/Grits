@@ -33,6 +33,17 @@ type RuntimeEnvironment struct {
 
 // Entry point for execution
 func InitializeProcesses(processes []Process) {
+
+	// // nc := NewClose(Name{IsSelf: true})
+	// to_c := Name{Ident: "to_c", IsSelf: false}
+	// // new_to_c := Name{Ident: "new_to_c", IsSelf: false}
+	// a := NewSend(to_c, Name{Ident: "payload_c", IsSelf: false}, Name{Ident: "cont_c", IsSelf: false})
+	// b := a
+	// a.continuation_c.Ident = "assss"
+	// // a.Substitute(to_c, new_to_c)
+	// fmt.Println(a.String())
+	// fmt.Println(b.String())
+
 	l := []LogLevel{
 		LOGINFO,
 		LOGPROCESSING,
@@ -157,8 +168,8 @@ type PriorityMessage struct {
 type Action int
 
 const (
-	FWD Action = iota // Channel1
-	// SPLIT             // ContinuationBody, Channel1 and Channel2
+	FWD       Action = iota // Channel1
+	SPLIT_DUP               // ContinuationBody, Channel1 and Channel2
 )
 
 type NameInitialization struct {

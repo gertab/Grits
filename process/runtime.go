@@ -125,7 +125,7 @@ func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 		p_uniq := p
 		p_uniq.Transition(re)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
 }

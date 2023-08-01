@@ -28,14 +28,15 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 		case m := <-process.Provider.Channel:
 			switch m.Rule {
 			case FWD:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE\n")
+				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", m.Channel1.String())
 				// Close current channel and switch to new one
 				close(process.Provider.Channel)
 				process.Provider = m.Channel1
 				TransitionLoop(process, re)
 
 			default:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
+				re.logProcessHighlightf(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
+				// todo panic
 			}
 		case process.Provider.Channel <- Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}:
 			// SND rule (provider)
@@ -52,6 +53,13 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 		}
 	} else {
 		// RCV rule (client)
+
+		// todo i think this should also be here -- but there is an issue of picking up a message that should be read later:
+		//              select {
+		//              case m := <-process.Provider.Channel:
+		//              	switch m.Rule {
+		//              	case FWD:
+
 		re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
 
 		re.logProcessf(LOGRULEDETAILS, process, "Should message on channel %s, containing message.Rule RCV\n", f.to_c.String())
@@ -80,14 +88,15 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 		case m := <-process.Provider.Channel:
 			switch m.Rule {
 			case FWD:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE\n")
+				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. Continuing as %s\n", m.Channel1.String())
 				// Close current channel and switch to new one
 				close(process.Provider.Channel)
 				process.Provider = m.Channel1
 				TransitionLoop(process, re)
 
 			default:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
+				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
+				// todo panic
 			}
 		case process.Provider.Channel <- Message{Rule: RCV, ContinuationBody: f.continuation_e, Channel1: f.payload_c, Channel2: f.continuation_c}:
 			// RCV rule (provider)
@@ -104,6 +113,12 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 	} else {
 		// SND rule (client)
 		// todo ask for controller permission
+
+		// todo i think this should also be here:
+		//              select {
+		//              case m := <-process.Provider.Channel:
+		//              	switch m.Rule {
+		//              	case FWD:
 		re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")
 		re.logProcessf(LOGRULEDETAILS, process, "[receive, client] proceeding with SND, will receive from %s\n", f.from_c.String())
 
@@ -164,8 +179,8 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	// This name is indicative only (for debugging), since there shouldn't be more than one process with the same channel name
 	// Although channels may have an ID, processes (i.e. goroutines) are anonymous
-	// newChannelIdent := "*"
-	newChannelIdent := ""
+	newChannelIdent := f.continuation_c.Ident
+	// newChannelIdent := ""
 
 	// First create fresh channel (with fake identity of the continuation_c name) to link both processes
 	newChannel := re.CreateFreshChannel(newChannelIdent)
@@ -188,6 +203,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcess(LOGRULE, process, "[new] finished CUT rule")
 	// Continue executing current process
 	TransitionLoop(process, re)
+
 }
 
 func (process *Process) Terminate(re *RuntimeEnvironment) {

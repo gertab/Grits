@@ -145,7 +145,6 @@ type Rule int
 const (
 	SND Rule = iota // Channel1 and Channel2
 	RCV             // ContinuationBody, Channel1 and Channel2
-	FWD             // Channel1 todo remove
 )
 
 type PriorityMessage struct {
@@ -158,7 +157,7 @@ type PriorityMessage struct {
 type Action int
 
 const (
-	FWD2 Action = iota // Channel1
+	FWD Action = iota // Channel1
 	// SPLIT             // ContinuationBody, Channel1 and Channel2
 )
 

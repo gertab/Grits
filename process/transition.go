@@ -27,8 +27,8 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 		select {
 		case pm := <-process.Provider.PriorityChannel:
 			switch pm.Action {
-			case FWD2:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", pm.Channel1.String())
+			case FWD:
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
@@ -55,28 +55,39 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 	} else {
 		// RCV rule (client)
 
-		// todo i think this should also be here -- but there is an issue of picking up a message that should be read later:
-		//              select {
-		//              case m := <-process.Provider.Channel:
-		//              	switch m.Rule {
-		//              	case FWD:
+		select {
+		case pm := <-process.Provider.PriorityChannel:
+			switch pm.Action {
+			case FWD:
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
+				// Close current channel and switch to new one
+				close(process.Provider.Channel)
+				close(process.Provider.PriorityChannel)
+				process.Provider = pm.Channel1
+				TransitionLoop(process, re)
 
-		re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
+			default:
+				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
+				// todo panic
+			}
+		case message := <-f.to_c.Channel:
+			re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
+			re.logProcessf(LOGRULEDETAILS, process, "Should received message on channel %s, containing message rule RCV\n", f.to_c.String())
+			// message := <-f.to_c.Channel
+			close(f.to_c.Channel)
+			close(f.to_c.PriorityChannel)
 
-		re.logProcessf(LOGRULEDETAILS, process, "Should message on channel %s, containing message.Rule RCV\n", f.to_c.String())
-		message := <-f.to_c.Channel
-		close(f.to_c.Channel)
+			// todo check that rule matches RCV
 
-		// todo check that rule matches
+			new_body := message.ContinuationBody
+			new_body.Substitute(message.Channel1, f.payload_c)
+			new_body.Substitute(message.Channel2, f.continuation_c)
 
-		new_body := message.ContinuationBody
-		new_body.Substitute(message.Channel1, f.payload_c)
-		new_body.Substitute(message.Channel2, f.continuation_c)
+			re.logProcess(LOGRULE, process, "[send, client] finished RCV rule")
 
-		re.logProcess(LOGRULE, process, "[send, client] finished RCV rule")
-
-		process.Body = new_body
-		TransitionLoop(process, re)
+			process.Body = new_body
+			TransitionLoop(process, re)
+		}
 	}
 }
 
@@ -88,8 +99,8 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 		select {
 		case pm := <-process.Provider.PriorityChannel:
 			switch pm.Action {
-			case FWD2:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", pm.Channel1.String())
+			case FWD:
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
@@ -116,27 +127,40 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// SND rule (client)
 		// todo ask for controller permission
 
-		// todo i think this should also be here:
-		//              select {
-		//              case m := <-process.Provider.Channel:
-		//              	switch m.Rule {
-		//              	case FWD:
-		re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")
-		re.logProcessf(LOGRULEDETAILS, process, "[receive, client] proceeding with SND, will receive from %s\n", f.from_c.String())
+		select {
+		case pm := <-process.Provider.PriorityChannel:
+			switch pm.Action {
+			case FWD:
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
+				// Close current channel and switch to new one
+				close(process.Provider.Channel)
+				close(process.Provider.PriorityChannel)
+				process.Provider = pm.Channel1
+				TransitionLoop(process, re)
 
-		message := <-f.from_c.Channel
-		close(f.from_c.Channel)
+			default:
+				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
+				// todo panic
+			}
+		case message := <-f.from_c.Channel:
+			re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")
+			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] proceeding with SND, will receive from %s\n", f.from_c.String())
 
-		re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message.Rule %d\n", f.from_c.String(), message.Rule)
+			// message := <-f.from_c.Channel
+			close(f.from_c.Channel)
+			close(f.from_c.PriorityChannel)
 
-		new_body := f.continuation_e
-		new_body.Substitute(f.payload_c, message.Channel1)
-		new_body.Substitute(f.continuation_c, message.Channel2)
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message.Rule %d\n", f.from_c.String(), message.Rule)
 
-		re.logProcess(LOGRULE, process, "[receive, client] finished SND rule")
+			new_body := f.continuation_e
+			new_body.Substitute(f.payload_c, message.Channel1)
+			new_body.Substitute(f.continuation_c, message.Channel2)
 
-		process.Body = new_body
-		TransitionLoop(process, re)
+			re.logProcess(LOGRULE, process, "[receive, client] finished SND rule")
+
+			process.Body = new_body
+			TransitionLoop(process, re)
+		}
 	}
 }
 
@@ -145,12 +169,11 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	// todo check priority messages
 
 	if f.to_c.IsSelf {
-		// ######
 		select {
 		case pm := <-process.Provider.PriorityChannel:
 			switch pm.Action {
-			case FWD2:
-				re.logProcessf(LOGRULEDETAILS, process, "RECEIVED FWD RULE. continuing as %s\n", pm.Channel1.String())
+			case FWD:
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
@@ -161,7 +184,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 				// todo panic
 			}
-		case f.from_c.PriorityChannel <- PriorityMessage{Action: FWD2, Channel1: process.Provider}:
+		case f.from_c.PriorityChannel <- PriorityMessage{Action: FWD, Channel1: process.Provider}:
 			// todo check that f.to_c == process.Provider
 			// f.from_c.Channel <- Message{Rule: FWD, Channel1: process.Provider}
 			re.logProcessf(LOGRULE, process, "[forward, client] should send FWD to priority channel %s\n", f.from_c.String())
@@ -172,11 +195,8 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 			// process.Terminate(re)
 			process.Terminate(re)
 		}
-
-		// ######
-
 	} else {
-		re.logProcess(LOGERROR, process, "should forward on self")
+		re.logProcessHighlight(LOGERROR, process, "should forward on self")
 		// todo panic
 	}
 }
@@ -203,33 +223,51 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of new: %s\n", f.String())
 
-	// This name is indicative only (for debugging), since there shouldn't be more than one process with the same channel name
-	// Although channels may have an ID, processes (i.e. goroutines) are anonymous
-	newChannelIdent := f.continuation_c.Ident
-	// newChannelIdent := ""
+	select {
+	case pm := <-process.Provider.PriorityChannel:
+		switch pm.Action {
+		case FWD:
+			re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
+			// Close current channel and switch to new one
+			close(process.Provider.Channel)
+			close(process.Provider.PriorityChannel)
+			process.Provider = pm.Channel1
+			TransitionLoop(process, re)
 
-	// First create fresh channel (with fake identity of the continuation_c name) to link both processes
-	newChannel := re.CreateFreshChannel(newChannelIdent)
+		default:
+			re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
+			// todo panic
+		}
+	default:
+		re.logProcess(LOGRULEDETAILS, process, "[new] will create new process")
 
-	// Substitute reference to this new channel by the actual channel in the current process and new process
-	currentProcessBody := f.continuation_e
-	currentProcessBody.Substitute(f.continuation_c, newChannel)
-	process.Body = currentProcessBody
+		// This name is indicative only (for debugging), since there shouldn't be more than one process with the same channel name
+		// Although channels may have an ID, processes (i.e. goroutines) are anonymous
+		newChannelIdent := f.continuation_c.Ident
+		// newChannelIdent := ""
 
-	// Create structure of new process
-	newProcessBody := f.body
-	newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
-	newProcess := Process{Body: newProcessBody, Provider: newChannel, FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
+		// First create fresh channel (with fake identity of the continuation_c name) to link both processes
+		newChannel := re.CreateFreshChannel(newChannelIdent)
 
-	re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
+		// Substitute reference to this new channel by the actual channel in the current process and new process
+		currentProcessBody := f.continuation_e
+		currentProcessBody.Substitute(f.continuation_c, newChannel)
+		process.Body = currentProcessBody
 
-	// Spawn and initiate new process
-	newProcess.Transition(re)
+		// Create structure of new process
+		newProcessBody := f.body
+		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
+		newProcess := Process{Body: newProcessBody, Provider: newChannel, FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
 
-	re.logProcess(LOGRULE, process, "[new] finished CUT rule")
-	// Continue executing current process
-	TransitionLoop(process, re)
+		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 
+		// Spawn and initiate new process
+		newProcess.Transition(re)
+
+		re.logProcess(LOGRULE, process, "[new] finished CUT rule")
+		// Continue executing current process
+		TransitionLoop(process, re)
+	}
 }
 
 func (process *Process) Terminate(re *RuntimeEnvironment) {

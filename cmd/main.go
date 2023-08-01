@@ -21,40 +21,60 @@ import (
 // 		prc[pid2]: send pid1<pid3, self>
 // 	end`
 
-const program = ` 	/* FWD + RCV rule */
-	let
-	in
-	prc[pid1]: send pid2<pid5, self>
-	prc[pid2]: fwd self pid3
-	prc[pid3]: fwd self pid4
-	prc[pid4]: <a, b> <- recv self; close a
-	end`
+// const program = ` 	/* FWD + RCV rule */
+// 	let
+// 	in
+// 	prc[pid1]: send pid2<pid5, self>
+// 	prc[pid2]: fwd self pid3
+// 	prc[pid3]: fwd self pid4
+// 	prc[pid4]: <a, b> <- recv self; close a
+// 	end`
 
 // const program = ` 	/* FWD + SND rule */
-
 // 	let
 // 	in
 // 	prc[pid1]: <a, b> <- recv pid2; close sel
 // 	prc[pid2]: fwd self pid3
 // 	prc[pid3]: fwd self pid4
-// 	prc[pid4]: send self<pid5, self>
+// 	prc[pid4]: fwd self pid5
+// 	prc[pid5]: fwd self pid6
+// 	prc[pid6]: fwd self pid7
+// 	prc[pid7]: fwd self pid8
+// 	prc[pid8]: fwd self pid9
+// 	prc[pid9]: fwd self pid10
+// 	prc[pid10]: send self<pid5, self>
 // 	end`
 
 // const program = ` 	/* CUT + SND rule */
-//
-//	let
-//	in
-//	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
-//	prc[pid2]: send self<pid5, self>
-//	end`
-//
+// 	let
+// 	in
+// 	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+// 	prc[pid2]: send self<pid5, self>
+// 	end`
+
 // const program = ` 	/* CUT + inner SND + inner RCV rule */
-//
-//	let
-//	in
-//		prc[pid1]: x <- new (send x<pid5, x>); <a, b> <- recv x; close self
-//		prc[pid2]: x <- new (<a, b> <- recv x; close sel); send x<pid5, self>
-//	end`
+// 	let
+// 	in
+// 		prc[pid1]: x <- new (send x<pid5, x>); <a, b> <- recv x; close self
+// 		prc[pid2]: x <- new (<a, b> <- recv x; close sel); send x<pid5, self>
+// 	end`
+
+const program = ` /* FWD for client + SND + RCV rule <<- v. cool */
+	/* 
+	Sometimes we have:
+	  prc[pid1[3]]: [send, client] starting RCV rule 
+	or 
+	  prc[pid0_fwd[2]]: [send, client] starting RCV rule
+	depending on whether the FWD rule executed before or after the RCV rule.
+	*/
+	let
+	in
+	prc[pid0]: <a, b> <- recv pid0_fwd; close a
+	prc[pid0_fwd]: fwd self pid1
+	prc[pid1]: send pid2<pid5, self>
+	prc[pid2]: <a, b> <- recv self; send self<a, g>
+	end`
+
 // const program = ` 	/* CUT + inner blocking SND + FWD + RCV rule */
 // 					let
 // 					in

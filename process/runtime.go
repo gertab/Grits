@@ -3,7 +3,6 @@ package process
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -32,32 +31,42 @@ type RuntimeEnvironment struct {
 	controller *Controller
 }
 
-func Copy(source interface{}, destin interface{}) {
-	x := reflect.ValueOf(source)
-	if x.Kind() == reflect.Ptr {
-		starX := x.Elem()
-		y := reflect.New(starX.Type())
-		starY := y.Elem()
-		starY.Set(starX)
-		reflect.ValueOf(destin).Elem().Set(y.Elem())
-	} else {
-		destin = x.Interface()
-	}
-}
-
 // Entry point for execution
 func InitializeProcesses(processes []Process) {
+	to_c := Name{Ident: "to_c", IsSelf: false}
+	// new_to_c := Name{Ident: "new_to_c", IsSelf: false}
+	pay_c := Name{Ident: "pay_c", IsSelf: false}
+	// new_pay_c := Name{Ident: "new_pay_c", IsSelf: false}
+	cont_c := Name{Ident: "cont_c", IsSelf: false}
+	// new_cont_c := Name{Ident: "new_cont_c", IsSelf: false}
+	from_c := Name{Ident: "from_c", IsSelf: false}
+	// new_from_c := Name{Ident: "new_from_c", IsSelf: false}
+	// self := Name{IsSelf: true}
+	// new_self := Name{IsSelf: true}
+	// end := NewClose(self)
+	// new_end := NewClose(new_self)
 
-	// nc := NewClose(Name{IsSelf: true})
-	payload_c := Name{Ident: "payload_c", IsSelf: false}
-	orig := NewReceive(payload_c, Name{Ident: "cont_c", IsSelf: false}, Name{Ident: "from_c", IsSelf: false}, NewClose(Name{Ident: "orig_close", ChannelID: 111, Channel: make(chan Message), IsSelf: false}))
-	copied := CopyForm(orig)
-	copiedWithType := copied.(*ReceiveForm)
-	copiedWithType.payload_c.Ident = "payload_c"
-	fmt.Println(orig.String())
-	fmt.Println(copied.String())
-	fmt.Println(copiedWithType.String())
-	fmt.Println(EqualForm(orig, copied))
+	// Send
+	input := NewSend(to_c, pay_c, cont_c)
+
+	// Receive
+	// input2 := NewReceive(pay_c, cont_c, from_c, input)
+
+	input3 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "labell"}, Name{Ident: "pay_c", IsSelf: false}, input), NewBranch(Label{L: "labell"}, Name{Ident: "pay_c", IsSelf: false}, NewClose(cont_c))})
+	fmt.Println(input3.String())
+	fmt.Println(input3.FreeNames())
+	// assertEqualNames(t, input3.FreeNames(), []Name{from_c})
+
+	// // nc := NewClose(Name{IsSelf: true})
+	// payload_c := Name{Ident: "payload_c", IsSelf: false}
+	// orig := NewReceive(payload_c, Name{Ident: "cont_c", IsSelf: false}, Name{Ident: "from_c", IsSelf: false}, NewClose(Name{Ident: "orig_close", ChannelID: 111, Channel: make(chan Message), IsSelf: false}))
+	// copied := CopyForm(orig)
+	// copiedWithType := copied.(*ReceiveForm)
+	// copiedWithType.payload_c.Ident = "payload_c"
+	// fmt.Println(orig.String())
+	// fmt.Println(copied.String())
+	// fmt.Println(copiedWithType.String())
+	// fmt.Println(EqualForm(orig, copied))
 
 	l := []LogLevel{
 		LOGINFO,

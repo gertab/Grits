@@ -26,8 +26,8 @@ func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {
 	counter := 0
 	for _, p := range u.procs {
 		for _, n := range p.Names {
-			new_p := process.Process{Body: p.Body, FunctionDefinitions: p.FunctionDefinitions, Provider: n}
-			processes[counter] = new_p
+			new_p := process.NewProcess(p.Body, n, process.LINEAR, p.FunctionDefinitions)
+			processes[counter] = *new_p
 			counter++
 		}
 	}

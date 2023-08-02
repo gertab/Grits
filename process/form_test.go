@@ -18,6 +18,20 @@ func compareOutput(t *testing.T, got []string, expected []string) {
 	}
 }
 
+func assertEqualNames(t *testing.T, got []Name, expected []Name) {
+	if len(got) != len(expected) {
+		t.Errorf("len of got %d, does not match len of expected %d\n", len(got), len(expected))
+		return
+	}
+
+	for index := range got {
+		if got[index] != expected[index] {
+			// t.Errorf("got %s, expected %s\n", "sa", "de")
+			t.Errorf("got %s, expected %s\n", got[index].String(), expected[index].String())
+		}
+	}
+}
+
 func assertEqual(t *testing.T, i1, i2 Form) {
 	if !EqualForm(i1, i2) {
 		t.Errorf("got %s, expected %s\n", i1.String(), i2.String())
@@ -283,6 +297,67 @@ func TestCopy(t *testing.T) {
 	assertEqual(t, input8, copy8)
 	copyWithType8.from_c.Ident = "from_c_edited"
 	assertNotEqual(t, input8, copy8)
+}
+
+func TestFreeNames(t *testing.T) {
+	to_c := Name{Ident: "to_c", IsSelf: false}
+	pay_c := Name{Ident: "pay_c", IsSelf: false}
+	cont_c := Name{Ident: "cont_c", IsSelf: false}
+	from_c := Name{Ident: "from_c", IsSelf: false}
+	new_from_c := Name{Ident: "new_from_c", IsSelf: false}
+	other_c := Name{Ident: "other_c", IsSelf: false}
+	self := Name{IsSelf: true}
+	end := NewClose(self)
+
+	// Send
+	input := NewSend(to_c, pay_c, cont_c)
+	assertEqualNames(t, input.FreeNames(), []Name{to_c, pay_c, cont_c})
+
+	// Receive
+	input2 := NewReceive(pay_c, cont_c, from_c, input)
+	assertEqualNames(t, input2.FreeNames(), []Name{from_c, to_c})
+
+	// Case
+	input3 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "labell"}, pay_c, input)})
+	assertEqualNames(t, input3.FreeNames(), []Name{from_c, to_c, cont_c})
+
+	input3other := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "labell"}, pay_c, end)})
+	assertEqualNames(t, input3other.FreeNames(), []Name{from_c})
+
+	otherName := Name{Ident: "other_var", IsSelf: false}
+	input3branches := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "labell"}, pay_c, end), NewBranch(Label{L: "otherbranch"}, pay_c, NewClose(otherName))})
+	assertEqualNames(t, input3branches.FreeNames(), []Name{from_c, otherName})
+
+	input3copy := CopyForm(input3branches)
+	input3copy.Substitute(from_c, new_from_c)
+	input3copy.Substitute(new_from_c, other_c)
+	assertEqualNames(t, input3copy.FreeNames(), []Name{other_c, otherName})
+
+	// Select
+	input4 := NewSelect(to_c, Label{L: "label1"}, cont_c)
+	assertEqualNames(t, input4.FreeNames(), []Name{to_c, cont_c})
+
+	// New
+	input5 := NewNew(cont_c, end, end)
+	assertEqualNames(t, input5.FreeNames(), []Name{})
+
+	input5other := NewNew(cont_c, input3, end)
+	assertEqualNames(t, input5other.FreeNames(), []Name{from_c, to_c})
+
+	// Close
+	input6 := NewClose(from_c)
+	assertEqualNames(t, input6.FreeNames(), []Name{from_c})
+
+	// Forward
+	input7 := NewForward(to_c, from_c)
+	assertEqualNames(t, input7.FreeNames(), []Name{to_c, from_c})
+
+	input7other := NewForward(self, from_c)
+	assertEqualNames(t, input7other.FreeNames(), []Name{from_c})
+
+	// Split
+	input8 := NewSplit(pay_c, cont_c, from_c, end)
+	assertEqualNames(t, input8.FreeNames(), []Name{from_c})
 }
 
 // func TestSimpleToken(t *testing.T) {

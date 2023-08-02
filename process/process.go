@@ -32,6 +32,15 @@ type Process struct {
 	FunctionDefinitions *[]FunctionDefinition
 }
 
+func NewProcess(body Form, provider Name, shape Shape, functionDefinitions *[]FunctionDefinition) *Process {
+	return &Process{
+		Body:                body,
+		Provider:            provider,
+		Shape:               shape,
+		FunctionDefinitions: functionDefinitions,
+	}
+}
+
 func (p *Process) InsertFunctionDefinitions(all *[]FunctionDefinition) {
 	p.FunctionDefinitions = all
 }
@@ -97,6 +106,20 @@ func (n *Name) String() string {
 	} else {
 		return m
 	}
+}
+
+func NamesToString(names []Name) string {
+	var buf bytes.Buffer
+
+	for i, n := range names {
+		buf.WriteString(n.String())
+
+		if i < len(names)-1 {
+			buf.WriteString(", ")
+		}
+	}
+
+	return buf.String()
 }
 
 func (name1 *Name) Equal(name2 Name) bool {

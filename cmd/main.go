@@ -6,7 +6,6 @@ import (
 )
 
 // const program = ` 	/* SND rule */
-
 // 	let
 // 	in
 // 		prc[pid1]: send self<pid3, self>

@@ -10,7 +10,7 @@ import (
 // Form refers to AST types
 type Form interface {
 	String() string
-	// FreeNames() []Name
+	FreeNames() []Name
 	Substitute(Name, Name)
 	Transition(*Process, *RuntimeEnvironment)
 }
@@ -168,7 +168,7 @@ func CopyForm(orig Form) Form {
 	fmt.Print("todo: Should not happen")
 	panic("Should not happen")
 
-	return nil
+	// return nil
 }
 
 ///////////////////////////////
@@ -207,8 +207,13 @@ func (p *SendForm) Substitute(old, new Name) {
 	p.continuation_c.Substitute(old, new)
 }
 
-func (p *SendForm) Copy() *SendForm {
-	return NewSend(p.to_c, p.payload_c, p.continuation_c)
+// Free names, excluding self references
+func (p *SendForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.to_c, fn)
+	fn = appendIfNotSelf(p.payload_c, fn)
+	fn = appendIfNotSelf(p.continuation_c, fn)
+	return fn
 }
 
 // Receive: <payload_c, continuation_c> <- recv from_c; P
@@ -249,11 +254,16 @@ func (p *ReceiveForm) Substitute(old, new Name) {
 	}
 }
 
-// func (p *ReceiveForm) Copy() *ReceiveForm {
-// 	cont := p.continuation_e.Copy()
-// 	return NewReceive(p.payload_c, p.continuation_c, p.from_c, *cont)
-// }
+func (p *ReceiveForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.from_c, fn)
+	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.payload_c)
+	continuation_e_excluding_bound_names = removeBoundName(continuation_e_excluding_bound_names, p.continuation_c)
+	fn = mergeTwoNamesList(fn, continuation_e_excluding_bound_names)
+	return fn
+}
 
+// Select: to_c.label<continuation_c>
 type SelectForm struct {
 	to_c           Name
 	label          Label
@@ -284,10 +294,14 @@ func (p *SelectForm) Substitute(old, new Name) {
 	// p.continuation_e.Substitute(old, new)
 }
 
-// func (p *SelectForm) Copy() *SelectForm {
-// 	return NewSelect(p.to_c, p.label, p.continuation_c)
-// }
+func (p *SelectForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.to_c, fn)
+	fn = appendIfNotSelf(p.continuation_c, fn)
+	return fn
+}
 
+// Branch: label<payload_c> => continuation_e
 type BranchForm struct {
 	label          Label
 	payload_c      Name
@@ -330,11 +344,14 @@ func StringifyBranches(branches []*BranchForm) string {
 	return buf.String()
 }
 
-// func (p *BranchForm) Copy() *BranchForm {
-// 	cont := p.continuation_e.Copy()
-// 	return NewBranch(p.label, p.payload_c, *cont)
-// }
+func (p *BranchForm) FreeNames() []Name {
+	var fn []Name
+	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.payload_c)
+	fn = append(fn, continuation_e_excluding_bound_names...)
+	return fn
+}
 
+// Case: case from_c ( branches )
 type CaseForm struct {
 	from_c   Name
 	branches []*BranchForm
@@ -363,17 +380,16 @@ func (p *CaseForm) Substitute(old, new Name) {
 	}
 }
 
-// func (p *CaseForm) Copy() *CaseForm {
-// 	branches := make([]*BranchForm, len(p.branches))
+func (p *CaseForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.from_c, fn)
+	for _, branch := range p.branches {
+		fn = mergeTwoNamesList(fn, branch.FreeNames())
+	}
+	return fn
+}
 
-// 	for i := 0; i < len(p.branches); i++ {
-// 		b := p.branches[i].Copy()
-// 		branches[i] = b
-// 	}
-
-// 	return NewCase(p.from_c, branches)
-// }
-
+// New: continuation_c <- new (body); continuation_e
 type NewForm struct {
 	continuation_c Name
 	body           Form
@@ -405,12 +421,16 @@ func (p *NewForm) Substitute(old, new Name) {
 	}
 }
 
-// func (p *NewForm) Copy() *NewForm {
-// 	body := p.body.Copy()
-// 	cont := p.continuation_e.Copy()
-// 	return NewNew(p.continuation_c, *body, *cont)
-// }
+func (p *NewForm) FreeNames() []Name {
+	var fn []Name
+	body_excluding_bound_names := removeBoundName(p.body.FreeNames(), p.continuation_c)
+	fn = mergeTwoNamesList(fn, body_excluding_bound_names)
+	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.continuation_c)
+	fn = mergeTwoNamesList(fn, continuation_e_excluding_bound_names)
+	return fn
+}
 
+// Close: close from_c
 type CloseForm struct {
 	from_c Name
 }
@@ -430,10 +450,13 @@ func (p *CloseForm) Substitute(old, new Name) {
 	p.from_c.Substitute(old, new)
 }
 
-// func (p *CloseForm) Copy() *CloseForm {
-// 	return NewClose(p.from_c)
-// }
+func (p *CloseForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.from_c, fn)
+	return fn
+}
 
+// Forward: fwd to_c from_c
 type ForwardForm struct {
 	to_c   Name
 	from_c Name
@@ -457,9 +480,12 @@ func (p *ForwardForm) Substitute(old, new Name) {
 	p.from_c.Substitute(old, new)
 }
 
-// func (p *ForwardForm) Copy() *ForwardForm {
-// 	return NewForward(p.to_c, p.from_c)
-// }
+func (p *ForwardForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.to_c, fn)
+	fn = appendIfNotSelf(p.from_c, fn)
+	return fn
+}
 
 // Split: <payload_c, continuation_c> <- recv from_c; P
 type SplitForm struct {
@@ -491,14 +517,60 @@ func (p *SplitForm) String() string {
 
 func (p *SplitForm) Substitute(old, new Name) {
 	if old != p.channel_one && old != p.channel_two {
-		// payload_c: payload_c,
-		// continuation_c: continuation_c,
+		// channel_one: channel_one,
+		// channel_two: channel_two,
 		p.from_c.Substitute(old, new)
 		p.continuation_e.Substitute(old, new)
 	}
 }
 
-// func (p *SplitForm) Copy() *SplitForm {
-// 	cont := p.continuation_e.Copy()
-// 	return NewSplit(p.channel_one, p.channel_two, p.from_c, *cont)
-// }
+func (p *SplitForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.from_c, fn)
+	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.channel_one)
+	continuation_e_excluding_bound_names = removeBoundName(continuation_e_excluding_bound_names, p.channel_two)
+	fn = mergeTwoNamesList(fn, continuation_e_excluding_bound_names)
+	return fn
+}
+
+// Utility functions
+
+// Add name to fn list, excluding ones with IsSelf: true
+func appendIfNotSelf(name Name, fn []Name) []Name {
+	if !name.IsSelf {
+		fn = append(fn, name)
+	}
+
+	return fn
+}
+
+// Remove bound name from list [used when computing the list of free names]
+func removeBoundName(names []Name, boundName Name) (freeNames []Name) {
+	for _, n := range names {
+		if !n.Equal(boundName) {
+			freeNames = append(freeNames, n)
+		}
+	}
+	return
+}
+
+// Check whether name 'check' exists within a slice 'names'
+func nameExists(names []Name, check Name) bool {
+	for _, n := range names {
+		if n.Equal(check) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Merges two lists of names keeping only unique values (avoiding duplicates)
+func mergeTwoNamesList(names1, names2 []Name) []Name {
+	for _, n := range names2 {
+		if !nameExists(names1, n) {
+			names1 = append(names1, n)
+		}
+	}
+	return names1
+}

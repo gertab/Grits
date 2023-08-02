@@ -35,11 +35,15 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 			case SPLIT_DUP:
-				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received SPLIT_DUP request. Continuing as %s, %s\n", pm.Channels[0].String(), pm.Channels[1].String())
+				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received SPLIT_DUP request. Continuing as %s\n", NamesToString(pm.Channels))
+				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Will split in %d processes\n", len(pm.Channels))
 
-				// var f Form
-				// newProcess1 := Process{Body: f, Provider: pm.Channels[0], FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
-				// newProcess2 := Process{Body: f, Provider: pm.Channels[1], FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
+				newProcess1 := NewProcess(CopyForm(f), pm.Channels[0], LINEAR, process.FunctionDefinitions)
+				newProcess2 := NewProcess(CopyForm(f), pm.Channels[1], LINEAR, process.FunctionDefinitions)
+				newProcess1.Body.Substitute(Name{Ident: "pid3"}, Name{Ident: "AAAA"})
+				re.logProcessHighlightf(LOGRULEDETAILS, newProcess1, "!! %s\n", newProcess1.String())
+				re.logProcessHighlightf(LOGRULEDETAILS, newProcess2, "!! %s\n", newProcess2.String())
+				re.logProcessHighlightf(LOGRULEDETAILS, process, "original %s\n", process.String())
 
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
@@ -286,7 +290,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// Create structure of new process
 		newProcessBody := f.body
 		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
-		newProcess := Process{Body: newProcessBody, Provider: newChannel, FunctionDefinitions: process.FunctionDefinitions, Shape: LINEAR}
+		newProcess := NewProcess(newProcessBody, newChannel, LINEAR, process.FunctionDefinitions)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 

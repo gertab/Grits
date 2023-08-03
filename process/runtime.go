@@ -127,7 +127,7 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	// Create new channel and assign a name to it
 	mChan := make(chan Message)
 	pmChan := make(chan PriorityMessage)
-	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan}
+	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan, IsSelf: false}
 }
 
 func (re *RuntimeEnvironment) InitializeMonitor(started chan bool) {

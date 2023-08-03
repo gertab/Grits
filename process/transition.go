@@ -35,16 +35,64 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 			case SPLIT_DUP:
-				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received SPLIT_DUP request. Continuing as %s\n", NamesToString(pm.Channels))
-				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Will split in %d processes\n", len(pm.Channels))
+				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
 
-				newProcess1 := NewProcess(CopyForm(f), pm.Channels[0], LINEAR, process.FunctionDefinitions)
-				newProcess2 := NewProcess(CopyForm(f), pm.Channels[1], LINEAR, process.FunctionDefinitions)
-				newProcess1.Body.Substitute(Name{Ident: "pid3"}, Name{Ident: "AAAA"})
-				re.logProcessHighlightf(LOGRULEDETAILS, newProcess1, "!! %s\n", newProcess1.String())
-				re.logProcessHighlightf(LOGRULEDETAILS, newProcess2, "!! %s\n", newProcess2.String())
-				re.logProcessHighlightf(LOGRULEDETAILS, process, "original %s\n", process.String())
+				processFreeNames := process.Body.FreeNames()
+				// re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Free names: %s\n", NamesToString(processFreeNames))
 
+				// Create an array of arrays containing fresh channels
+				// E.g. if we are splitting to two channels, and have 1 free name called a, then
+				// we create freshChannels containing:
+				//   [][]Names{
+				//       [Names]{a', a''},
+				//   }
+				// where a' and a'' are the new fresh channels that will be substituted in place of a
+				freshChannels := make([][]Name, len(processFreeNames))
+
+				for i := range freshChannels {
+					freshChannels[i] = make([]Name, len(pm.Channels))
+
+					for j := range pm.Channels {
+						freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+					}
+				}
+
+				chanString := ""
+				for i := range freshChannels {
+					chanString += processFreeNames[i].String() + ": {"
+					chanString += NamesToString(freshChannels[i])
+					chanString += "}; "
+				}
+				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] NEW Free names: %s\n", chanString)
+
+				// for i := range freshChannels {
+
+				for i := range pm.Channels {
+					// Prepare process to spawn, by substituting all free names with the unique ones just created
+					newProcessBody := CopyForm(f)
+					for k := range freshChannels {
+						newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+					}
+
+					// Create and spawn the new processes
+					// Set its provider to the channel received in the SPLIT_DUP request
+					newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], process.Shape, process.FunctionDefinitions)
+					newSplitProcess.Transition(re)
+				}
+				// }
+
+				for i := range processFreeNames {
+					// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+					// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+					re.logProcessf(LOGRULE, process, "[SPLIT_DUP] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+					processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: freshChannels[i]}
+				}
+
+				re.logProcess(LOGRULE, process, "[SPLIT_DUP] Rule SPLIT finished (SPLIT -> DUP -> FWD)")
+
+				// The process body has been delegated to the freshly spawned processes, so die
+				// todo die
+				process.Terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 				// todo panic
@@ -76,6 +124,65 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 
+			case SPLIT_DUP:
+				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
+
+				processFreeNames := process.Body.FreeNames()
+				// re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Free names: %s\n", NamesToString(processFreeNames))
+
+				// Create an array of arrays containing fresh channels
+				// E.g. if we are splitting to two channels, and have 1 free name called a, then
+				// we create freshChannels containing:
+				//   [][]Names{
+				//       [Names]{a', a''},
+				//   }
+				// where a' and a'' are the new fresh channels that will be substituted in place of a
+				freshChannels := make([][]Name, len(processFreeNames))
+
+				for i := range freshChannels {
+					freshChannels[i] = make([]Name, len(pm.Channels))
+
+					for j := range pm.Channels {
+						freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+					}
+				}
+
+				chanString := ""
+				for i := range freshChannels {
+					chanString += processFreeNames[i].String() + ": {"
+					chanString += NamesToString(freshChannels[i])
+					chanString += "}; "
+				}
+				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] NEW Free names: %s\n", chanString)
+
+				// for i := range freshChannels {
+
+				for i := range pm.Channels {
+					// Prepare process to spawn, by substituting all free names with the unique ones just created
+					newProcessBody := CopyForm(f)
+					for k := range freshChannels {
+						newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+					}
+
+					// Create and spawn the new processes
+					// Set its provider to the channel received in the SPLIT_DUP request
+					newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], process.Shape, process.FunctionDefinitions)
+					newSplitProcess.Transition(re)
+				}
+				// }
+
+				for i := range processFreeNames {
+					// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+					// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+					re.logProcessf(LOGRULE, process, "[SPLIT_DUP] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+					processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: freshChannels[i]}
+				}
+
+				re.logProcess(LOGRULE, process, "[SPLIT_DUP] Rule SPLIT finished (SPLIT -> DUP -> FWD)")
+
+				// The process body has been delegated to the freshly spawned processes, so die
+				// todo die
+				process.Terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 				// todo panic
@@ -117,6 +224,65 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 
+			case SPLIT_DUP:
+				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
+
+				processFreeNames := process.Body.FreeNames()
+				// re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Free names: %s\n", NamesToString(processFreeNames))
+
+				// Create an array of arrays containing fresh channels
+				// E.g. if we are splitting to two channels, and have 1 free name called a, then
+				// we create freshChannels containing:
+				//   [][]Names{
+				//       [Names]{a', a''},
+				//   }
+				// where a' and a'' are the new fresh channels that will be substituted in place of a
+				freshChannels := make([][]Name, len(processFreeNames))
+
+				for i := range freshChannels {
+					freshChannels[i] = make([]Name, len(pm.Channels))
+
+					for j := range pm.Channels {
+						freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+					}
+				}
+
+				chanString := ""
+				for i := range freshChannels {
+					chanString += processFreeNames[i].String() + ": {"
+					chanString += NamesToString(freshChannels[i])
+					chanString += "}; "
+				}
+				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] NEW Free names: %s\n", chanString)
+
+				// for i := range freshChannels {
+
+				for i := range pm.Channels {
+					// Prepare process to spawn, by substituting all free names with the unique ones just created
+					newProcessBody := CopyForm(f)
+					for k := range freshChannels {
+						newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+					}
+
+					// Create and spawn the new processes
+					// Set its provider to the channel received in the SPLIT_DUP request
+					newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], process.Shape, process.FunctionDefinitions)
+					newSplitProcess.Transition(re)
+				}
+				// }
+
+				for i := range processFreeNames {
+					// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+					// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+					re.logProcessf(LOGRULE, process, "[SPLIT_DUP] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+					processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: freshChannels[i]}
+				}
+
+				re.logProcess(LOGRULE, process, "[SPLIT_DUP] Rule SPLIT finished (SPLIT -> DUP -> FWD)")
+
+				// The process body has been delegated to the freshly spawned processes, so die
+				// todo die
+				process.Terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 				// todo panic
@@ -148,6 +314,65 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 
+			case SPLIT_DUP:
+				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
+
+				processFreeNames := process.Body.FreeNames()
+				// re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Free names: %s\n", NamesToString(processFreeNames))
+
+				// Create an array of arrays containing fresh channels
+				// E.g. if we are splitting to two channels, and have 1 free name called a, then
+				// we create freshChannels containing:
+				//   [][]Names{
+				//       [Names]{a', a''},
+				//   }
+				// where a' and a'' are the new fresh channels that will be substituted in place of a
+				freshChannels := make([][]Name, len(processFreeNames))
+
+				for i := range freshChannels {
+					freshChannels[i] = make([]Name, len(pm.Channels))
+
+					for j := range pm.Channels {
+						freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+					}
+				}
+
+				chanString := ""
+				for i := range freshChannels {
+					chanString += processFreeNames[i].String() + ": {"
+					chanString += NamesToString(freshChannels[i])
+					chanString += "}; "
+				}
+				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] NEW Free names: %s\n", chanString)
+
+				// for i := range freshChannels {
+
+				for i := range pm.Channels {
+					// Prepare process to spawn, by substituting all free names with the unique ones just created
+					newProcessBody := CopyForm(f)
+					for k := range freshChannels {
+						newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+					}
+
+					// Create and spawn the new processes
+					// Set its provider to the channel received in the SPLIT_DUP request
+					newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], process.Shape, process.FunctionDefinitions)
+					newSplitProcess.Transition(re)
+				}
+				// }
+
+				for i := range processFreeNames {
+					// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+					// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+					re.logProcessf(LOGRULE, process, "[SPLIT_DUP] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+					processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: freshChannels[i]}
+				}
+
+				re.logProcess(LOGRULE, process, "[SPLIT_DUP] Rule SPLIT finished (SPLIT -> DUP -> FWD)")
+
+				// The process body has been delegated to the freshly spawned processes, so die
+				// todo die
+				process.Terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 				// todo panic
@@ -157,8 +382,8 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] proceeding with SND, will receive from %s\n", f.from_c.String())
 
 			// message := <-f.from_c.Channel
-			close(f.from_c.Channel)
-			close(f.from_c.PriorityChannel)
+			// close(f.from_c.Channel)
+			// close(f.from_c.PriorityChannel)
 
 			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message.Rule %d\n", f.from_c.String(), message.Rule)
 
@@ -190,6 +415,65 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 
+			case SPLIT_DUP:
+				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
+
+				processFreeNames := process.Body.FreeNames()
+				// re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Free names: %s\n", NamesToString(processFreeNames))
+
+				// Create an array of arrays containing fresh channels
+				// E.g. if we are splitting to two channels, and have 1 free name called a, then
+				// we create freshChannels containing:
+				//   [][]Names{
+				//       [Names]{a', a''},
+				//   }
+				// where a' and a'' are the new fresh channels that will be substituted in place of a
+				freshChannels := make([][]Name, len(processFreeNames))
+
+				for i := range freshChannels {
+					freshChannels[i] = make([]Name, len(pm.Channels))
+
+					for j := range pm.Channels {
+						freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+					}
+				}
+
+				chanString := ""
+				for i := range freshChannels {
+					chanString += processFreeNames[i].String() + ": {"
+					chanString += NamesToString(freshChannels[i])
+					chanString += "}; "
+				}
+				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] NEW Free names: %s\n", chanString)
+
+				// for i := range freshChannels {
+
+				for i := range pm.Channels {
+					// Prepare process to spawn, by substituting all free names with the unique ones just created
+					newProcessBody := CopyForm(f)
+					for k := range freshChannels {
+						newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+					}
+
+					// Create and spawn the new processes
+					// Set its provider to the channel received in the SPLIT_DUP request
+					newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], process.Shape, process.FunctionDefinitions)
+					newSplitProcess.Transition(re)
+				}
+				// }
+
+				for i := range processFreeNames {
+					// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+					// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+					re.logProcessf(LOGRULE, process, "[SPLIT_DUP] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+					processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: freshChannels[i]}
+				}
+
+				re.logProcess(LOGRULE, process, "[SPLIT_DUP] Rule SPLIT finished (SPLIT -> DUP -> FWD)")
+
+				// The process body has been delegated to the freshly spawned processes, so die
+				// todo die
+				process.Terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 				// todo panic
@@ -232,6 +516,65 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 				process.Provider = pm.Channel1
 				TransitionLoop(process, re)
 
+			case SPLIT_DUP:
+				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
+
+				processFreeNames := process.Body.FreeNames()
+				// re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Free names: %s\n", NamesToString(processFreeNames))
+
+				// Create an array of arrays containing fresh channels
+				// E.g. if we are splitting to two channels, and have 1 free name called a, then
+				// we create freshChannels containing:
+				//   [][]Names{
+				//       [Names]{a', a''},
+				//   }
+				// where a' and a'' are the new fresh channels that will be substituted in place of a
+				freshChannels := make([][]Name, len(processFreeNames))
+
+				for i := range freshChannels {
+					freshChannels[i] = make([]Name, len(pm.Channels))
+
+					for j := range pm.Channels {
+						freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+					}
+				}
+
+				chanString := ""
+				for i := range freshChannels {
+					chanString += processFreeNames[i].String() + ": {"
+					chanString += NamesToString(freshChannels[i])
+					chanString += "}; "
+				}
+				re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] NEW Free names: %s\n", chanString)
+
+				// for i := range freshChannels {
+
+				for i := range pm.Channels {
+					// Prepare process to spawn, by substituting all free names with the unique ones just created
+					newProcessBody := CopyForm(f)
+					for k := range freshChannels {
+						newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+					}
+
+					// Create and spawn the new processes
+					// Set its provider to the channel received in the SPLIT_DUP request
+					newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], process.Shape, process.FunctionDefinitions)
+					newSplitProcess.Transition(re)
+				}
+				// }
+
+				for i := range processFreeNames {
+					// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+					// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+					re.logProcessf(LOGRULE, process, "[SPLIT_DUP] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+					processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: freshChannels[i]}
+				}
+
+				re.logProcess(LOGRULE, process, "[SPLIT_DUP] Rule SPLIT finished (SPLIT -> DUP -> FWD)")
+
+				// The process body has been delegated to the freshly spawned processes, so die
+				// todo die
+				process.Terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 				// todo panic
@@ -267,6 +610,65 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 			process.Provider = pm.Channel1
 			TransitionLoop(process, re)
 
+		case SPLIT_DUP:
+			re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
+
+			processFreeNames := process.Body.FreeNames()
+			// re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] Free names: %s\n", NamesToString(processFreeNames))
+
+			// Create an array of arrays containing fresh channels
+			// E.g. if we are splitting to two channels, and have 1 free name called a, then
+			// we create freshChannels containing:
+			//   [][]Names{
+			//       [Names]{a', a''},
+			//   }
+			// where a' and a'' are the new fresh channels that will be substituted in place of a
+			freshChannels := make([][]Name, len(processFreeNames))
+
+			for i := range freshChannels {
+				freshChannels[i] = make([]Name, len(pm.Channels))
+
+				for j := range pm.Channels {
+					freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+				}
+			}
+
+			chanString := ""
+			for i := range freshChannels {
+				chanString += processFreeNames[i].String() + ": {"
+				chanString += NamesToString(freshChannels[i])
+				chanString += "}; "
+			}
+			re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP] NEW Free names: %s\n", chanString)
+
+			// for i := range freshChannels {
+
+			for i := range pm.Channels {
+				// Prepare process to spawn, by substituting all free names with the unique ones just created
+				newProcessBody := CopyForm(f)
+				for k := range freshChannels {
+					newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+				}
+
+				// Create and spawn the new processes
+				// Set its provider to the channel received in the SPLIT_DUP request
+				newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], process.Shape, process.FunctionDefinitions)
+				newSplitProcess.Transition(re)
+			}
+			// }
+
+			for i := range processFreeNames {
+				// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+				// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+				re.logProcessf(LOGRULE, process, "[SPLIT_DUP] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+				processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP, Channels: freshChannels[i]}
+			}
+
+			re.logProcess(LOGRULE, process, "[SPLIT_DUP] Rule SPLIT finished (SPLIT -> DUP -> FWD)")
+
+			// The process body has been delegated to the freshly spawned processes, so die
+			// todo die
+			process.Terminate(re)
 		default:
 			re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 			// todo panic

@@ -88,11 +88,22 @@ import (
 // 	prc[pid2]: <a, b> <- recv self; close sel
 // 	end`
 
-const program = ` 	/* CUT + RCV rule */
+// const program = ` 	/* Simple SPLIT + SND rule (x 2) */
+// 	let
+// 	in
+// 		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a2, b2> <- recv b; close self
+// 		prc[pid2]: send self<pid3, self>
+// 	end`
+
+const program = ` 	/* SPLIT + SND rule (x 2) */
 	let
 	in
-		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a2, b2> <- recv b; close self
-		prc[pid2]: send self<pid3, self>
+		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a2, b2> <- recv b; close abc
+		/*prc[pid1]: <a, b> <- split pid2; <c, d> <- split a; <a2, b2> <- recv b; <a2, b2> <- recv c; <a2, b2> <- recv d; close abc*/
+		prc[pid2]: send pid3<f, g>
+		prc[pid3]: <a, b> <- recv self; send b<_w, _z>
+		prc[f]: close self
+		prc[g]: close self
 	end`
 
 // const program2 = `let

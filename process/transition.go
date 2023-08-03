@@ -200,6 +200,12 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			new_body.Substitute(message.Channel1, f.payload_c)
 			new_body.Substitute(message.Channel2, f.continuation_c)
 
+			if !f.continuation_c.IsSelf {
+				// todo error
+				re.logProcessf(LOGERROR, process, "[send, client] in RCV rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
+				panic("Expected self but found something else")
+			}
+
 			re.logProcess(LOGRULE, process, "[send, client] finished RCV rule")
 
 			process.Body = new_body

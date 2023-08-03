@@ -69,6 +69,7 @@ func InitializeProcesses(processes []Process) {
 	// fmt.Println(EqualForm(orig, copied))
 
 	l := []LogLevel{
+		LOGERROR,
 		LOGINFO,
 		LOGPROCESSING,
 		LOGRULE,

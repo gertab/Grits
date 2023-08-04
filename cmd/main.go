@@ -40,8 +40,8 @@ import (
 // 	prc[pid7]: fwd self pid8
 // 	prc[pid8]: fwd self pid9
 // 	prc[pid9]: fwd self pid10
-// 	prc[pid10]: send self<pid5, self>
-// 	end`
+// 	prc[pid10]: send self<pid555, self>
+// end`
 
 const program = ` 	/* CUT + SND rule */
 	let

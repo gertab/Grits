@@ -22,7 +22,7 @@ var functionDefinitions []process.FunctionDefinition
 	branches []*process.BranchForm
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW LET IN END SPRC PRC FORWARD SELF
+%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW LET IN END SPRC PRC FORWARD SELF PRINT
 %type <strval> LABEL
 %type <procs> processes 
 %type <form> expression 
@@ -64,13 +64,15 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   | /* new */ name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression 
 		   			{ $$ = process.NewNew($1, $5, $8) }
 		   | /* new */ name LEFT_ARROW NEW expression SEQUENCE expression 
-		   			{ $$ = process.NewNew($1, $4, $6) };
+		   			{ $$ = process.NewNew($1, $4, $6) }
 		   | /* close */ CLOSE name
-		   			{ $$ = process.NewClose($2) };
+		   			{ $$ = process.NewClose($2) }
 		   | /* forward */ FORWARD name name
-		   			{ $$ = process.NewForward($2, $3) };
+		   			{ $$ = process.NewForward($2, $3) }
 		   | /* split */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
-		   			{ $$ = process.NewSplit($2, $4, $8, $10) };
+		   			{ $$ = process.NewSplit($2, $4, $8, $10) }
+		   | /* print - for debugging */ PRINT name
+		   			{ $$ = process.NewPrint($2) };
  
 /* remaining expressions:
 Call, Drop, Snew, Wait, Close, Cast, Shift

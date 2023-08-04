@@ -222,6 +222,9 @@ func (s *scanner) scanLabel() (token tok, value string, startPos, endPos TokenPo
 		return PRC, buf.String(), startPos, endPos
 	case "self":
 		return SELF, buf.String(), startPos, endPos
+	case "print":
+		// Debug keyword
+		return PRINT, buf.String(), startPos, endPos
 	}
 	return LABEL, buf.String(), startPos, endPos
 }

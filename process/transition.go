@@ -749,6 +749,12 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Println(f.String())
 }
 
+// Debug
+func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
+	fmt.Print("transition of print: ")
+	fmt.Println(f.String())
+}
+
 func (process *Process) Terminate(re *RuntimeEnvironment) {
 	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
 }

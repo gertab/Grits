@@ -31,7 +31,7 @@ import (
 const program = ` 	/* FWD + SND rule */
 	let
 	in
-	prc[pid1]: <a, b> <- recv pid2; close a
+	prc[pid1]: <a, b> <- recv pid2; print a
 	prc[pid2]: fwd self pid3
 	prc[pid3]: fwd self pid4
 	prc[pid4]: fwd self pid5

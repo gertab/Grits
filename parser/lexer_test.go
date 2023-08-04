@@ -60,6 +60,7 @@ func TestSimpleToken(t *testing.T) {
 		{"cast shift accept acc acquire acq detach det", []int{CAST, SHIFT, ACCEPT, ACCEPT, ACQUIRE, ACQUIRE, DETACH, DETACH}},
 		{"release rel drop split push new", []int{RELEASE, RELEASE, DROP, SPLIT, PUSH, NEW}},
 		{"snew forward fwd let in end sprc prc self", []int{SNEW, FORWARD, FORWARD, LET, IN, END, SPRC, PRC, SELF}},
+		{"print", []int{PRINT}},
 	}
 
 	for _, c := range cases {

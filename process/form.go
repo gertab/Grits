@@ -72,6 +72,13 @@ func EqualForm(form1, form2 Form) bool {
 		if ok1 && ok2 {
 			return f1.from_c.Equal(f2.from_c)
 		}
+	case *PrintForm:
+		f1, ok1 := form1.(*PrintForm)
+		f2, ok2 := form2.(*PrintForm)
+
+		if ok1 && ok2 {
+			return f1.name_c.Equal(f2.name_c)
+		}
 	case *NewForm:
 		f1, ok1 := form1.(*NewForm)
 		f2, ok2 := form2.(*NewForm)
@@ -138,11 +145,15 @@ func CopyForm(orig Form) Form {
 			cont := CopyForm(p.continuation_e)
 			return NewBranch(p.label, p.payload_c, cont)
 		}
-
 	case *CloseForm:
 		p, ok := orig.(*CloseForm)
 		if ok {
 			return NewClose(p.from_c)
+		}
+	case *PrintForm:
+		p, ok := orig.(*PrintForm)
+		if ok {
+			return NewClose(p.name_c)
 		}
 	case *NewForm:
 		p, ok := orig.(*NewForm)
@@ -530,6 +541,33 @@ func (p *SplitForm) FreeNames() []Name {
 	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.channel_one)
 	continuation_e_excluding_bound_names = removeBoundName(continuation_e_excluding_bound_names, p.channel_two)
 	fn = mergeTwoNamesList(fn, continuation_e_excluding_bound_names)
+	return fn
+}
+
+// Print: print name_c
+// Used to print channel name for debugging purposes
+type PrintForm struct {
+	name_c Name
+}
+
+func NewPrint(name_c Name) *PrintForm {
+	return &PrintForm{name_c: name_c}
+}
+
+func (p *PrintForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("print ")
+	buf.WriteString(p.name_c.String())
+	return buf.String()
+}
+
+func (p *PrintForm) Substitute(old, new Name) {
+	p.name_c.Substitute(old, new)
+}
+
+func (p *PrintForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.name_c, fn)
 	return fn
 }
 

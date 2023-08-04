@@ -20,11 +20,21 @@ func TransitionLoop(process *Process, re *RuntimeEnvironment) {
 }
 
 func finishedRule(process *Process, rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULE, process, "%s finished %s rule %s", prefix, rule, suffix)
+	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, ruleString[rule], suffix)
 
 	if re.debug {
 		// Update monitor
-		re.monitor.monitorChan <- MonitorUpdate{process: *process, rule: rule}
+		re.monitor.MonitorRuleFinished(process, rule)
+		// re.monitor.monitorChan <- MonitorUpdate{process: *process, rule: rule}
+	}
+}
+
+func (process *Process) terminate(re *RuntimeEnvironment) {
+	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
+
+	if re.debug {
+		// Update monitor
+		re.monitor.MonitorProcessTerminated(process)
 	}
 }
 
@@ -45,10 +55,16 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			case FWD:
 				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
+
+				// process.Provider = pm.Channel1
+				// Reply with the body and shape so that the other process can continue executing
+				process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body}
+
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
-				process.Provider = pm.Channel1
-				TransitionLoop(process, re)
+				// TransitionLoop(process, re)
+				process.terminate(re)
+
 			case SPLIT_DUP_FWD:
 				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
 
@@ -106,7 +122,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 				// The process body has been delegated to the freshly spawned processes, so die
 				// todo die
-				process.Terminate(re)
+				process.terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 				// todo panic
@@ -120,11 +136,10 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			// process.Provider.Channel <- Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}
 			re.logProcess(LOGRULEDETAILS, process, "[send, provider] finished sending on self")
 
-			// finishedRule(process, SND, "[send, provider]", "(p)", re)
-			re.logProcess(LOGRULE, process, "[send, provider] finished SND rule (p)")
+			finishedRule(process, SND, "[send, provider]", "(p)", re)
+			// re.logProcess(LOGRULE, process, "[send, provider] finished SND rule (p)")
 
-			// todo terminate goroutine. inform monitor
-			process.Terminate(re)
+			process.terminate(re)
 		}
 	} else {
 		// RCV rule (client)
@@ -135,10 +150,15 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			case FWD:
 				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
+
+				// process.Provider = pm.Channel1
+				// Reply with the body and shape so that the other process can continue executing
+				process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body}
+
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
-				process.Provider = pm.Channel1
-				TransitionLoop(process, re)
+				// TransitionLoop(process, re)
+				process.terminate(re)
 
 			case SPLIT_DUP_FWD:
 				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
@@ -198,7 +218,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 				// The process body has been delegated to the freshly spawned processes, so die
 				// todo die
-				process.Terminate(re)
+				process.terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 				// todo panic
@@ -224,7 +244,8 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 				panic("Expected self but found something else")
 			}
 
-			re.logProcess(LOGRULE, process, "[send, client] finished RCV rule (c)")
+			finishedRule(process, RCV, "[send, client]", "(c)", re)
+			// re.logProcess(LOGRULE, process, "[send, client] finished RCV rule (c)")
 
 			process.Body = new_body
 			TransitionLoop(process, re)
@@ -243,10 +264,15 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			case FWD:
 				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
+
+				// process.Provider = pm.Channel1
+				// Reply with the body and shape so that the other process can continue executing
+				process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body}
+
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
-				process.Provider = pm.Channel1
-				TransitionLoop(process, re)
+				// TransitionLoop(process, re)
+				process.terminate(re)
 
 			case SPLIT_DUP_FWD:
 				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
@@ -306,7 +332,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 				// The process body has been delegated to the freshly spawned processes, so die
 				// todo die
-				process.Terminate(re)
+				process.terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 				// todo panic
@@ -320,9 +346,10 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			// process.Provider.Channel <- Message{Rule: RCV, ContinuationBody: f.continuation_e, Channel1: f.payload_c, Channel2: f.continuation_c}
 			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished sending on self")
 
-			re.logProcess(LOGRULE, process, "[receive, provider] finished RCV rule (p)")
-			// todo terminate goroutine. inform monitor
-			process.Terminate(re)
+			finishedRule(process, RCV, "[receive, provider]", "(p)", re)
+			// re.logProcess(LOGRULE, process, "[receive, provider] finished RCV rule (p)")
+
+			process.terminate(re)
 		}
 	} else {
 		// SND rule (client)
@@ -334,10 +361,15 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			case FWD:
 				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
+
+				// process.Provider = pm.Channel1
+				// Reply with the body and shape so that the other process can continue executing
+				process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body}
+
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
-				process.Provider = pm.Channel1
-				TransitionLoop(process, re)
+				// TransitionLoop(process, re)
+				process.terminate(re)
 
 			case SPLIT_DUP_FWD:
 				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
@@ -397,7 +429,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 				// The process body has been delegated to the freshly spawned processes, so die
 				// todo die
-				process.Terminate(re)
+				process.terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 				// todo panic
@@ -411,13 +443,14 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			// close(f.from_c.Channel)
 			// close(f.from_c.PriorityChannel)
 
-			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message.Rule %d\n", f.from_c.String(), message.Rule)
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing rule: %s\n", f.from_c.String(), ruleString[message.Rule])
 
 			new_body := f.continuation_e
 			new_body.Substitute(f.payload_c, message.Channel1)
 			new_body.Substitute(f.continuation_c, message.Channel2)
 
-			re.logProcess(LOGRULE, process, "[receive, client] finished SND rule (c)")
+			// re.logProcess(LOGRULE, process, "[receive, client] finished SND rule (c)")
+			finishedRule(process, SND, "[receive, client]", "(c)", re)
 
 			process.Body = new_body
 			TransitionLoop(process, re)
@@ -436,10 +469,15 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 			case FWD:
 				re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
 				// Close current channel and switch to new one
+
+				// process.Provider = pm.Channel1
+				// Reply with the body and shape so that the other process can continue executing
+				process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body}
+
 				close(process.Provider.Channel)
 				close(process.Provider.PriorityChannel)
-				process.Provider = pm.Channel1
-				TransitionLoop(process, re)
+				// TransitionLoop(process, re)
+				process.terminate(re)
 
 			case SPLIT_DUP_FWD:
 				re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
@@ -499,7 +537,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 				// The process body has been delegated to the freshly spawned processes, so die
 				// todo die
-				process.Terminate(re)
+				process.terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 				// todo panic
@@ -509,11 +547,20 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 			// f.from_c.Channel <- Message{Rule: FWD, Channel1: process.Provider}
 			re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to priority channel %s\n", f.from_c.String())
 
-			re.logProcess(LOGRULE, process, "[forward, client] finished FWD rule")
+			// Get reply containing body and shape to continue executing
+			pm := <-f.from_c.PriorityChannel
+			// todo assert that
+			// re.logProcess(LOGRULE, process, "[forward, client] finished FWD rule")
+			finishedRule(process, FWD, "[forward, client]", "", re)
+
 			// todo terminate goroutine. inform monitor
 			// channel providing on fwd should not be closed, however this process dies
-			// process.Terminate(re)
-			process.Terminate(re)
+			// process.terminate(re)
+			// process.terminate(re)
+
+			process.Body = pm.Body
+			process.Shape = pm.Shape
+			TransitionLoop(process, re)
 		}
 	} else {
 		re.logProcessHighlight(LOGERROR, process, "should forward on self")
@@ -600,7 +647,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 				// The process body has been delegated to the freshly spawned processes, so die
 				// todo die
-				process.Terminate(re)
+				process.terminate(re)
 			default:
 				re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 				// todo panic
@@ -614,7 +661,8 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 			currentProcessBody.Substitute(f.channel_two, newSplitNames[1])
 			process.Body = currentProcessBody
 
-			re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule (c)")
+			finishedRule(process, SPLIT_DUP_FWD, "[split, client]", "(c)", re)
+			// re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule (c)")
 
 			TransitionLoop(process, re)
 		}
@@ -694,7 +742,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			// The process body has been delegated to the freshly spawned processes, so die
 			// todo die
-			process.Terminate(re)
+			process.terminate(re)
 		default:
 			re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix")
 			// todo panic
@@ -753,8 +801,4 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of print: ")
 	fmt.Println(f.String())
-}
-
-func (process *Process) Terminate(re *RuntimeEnvironment) {
-	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
 }

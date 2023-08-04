@@ -181,21 +181,30 @@ type Rule int
 const (
 	SND Rule = iota // Channel1 and Channel2
 	RCV             // ContinuationBody, Channel1 and Channel2
+
+	// Special rules
+	FWD // Channel1
+	FWD_REPLY
+	SPLIT_DUP_FWD // ContinuationBody, Channel1 and Channel2
 )
 
+var ruleString = map[Rule]string{
+	SND: "SND",
+	RCV: "RCV",
+
+	FWD:           "FWD",
+	FWD_REPLY:     "FWD_REPLY",
+	SPLIT_DUP_FWD: "SPLIT_DUP_FWD",
+}
+
 type PriorityMessage struct {
-	Action Action
+	Action Rule
 	// Possible payload types, depending on the action
 	Channel1 Name
 	Channels []Name
+	Body     Form
+	Shape    Shape
 }
-
-type Action int
-
-const (
-	FWD           Action = iota // Channel1
-	SPLIT_DUP_FWD               // ContinuationBody, Channel1 and Channel2
-)
 
 type NameInitialization struct {
 	old Name

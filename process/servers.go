@@ -33,21 +33,22 @@ func (m *Monitor) startMonitor(started chan bool) {
 	started <- true
 
 	m.monitorLoop()
-
 }
 
 func (m *Monitor) monitorLoop() {
 	select {
 	case processUpdate := <-m.monitorChan:
 		if processUpdate.isDead {
-			fmt.Println("[monitor] Process died")
+			fmt.Printf("[monitor] Process %s died\n", processUpdate.process.Provider.String())
 		} else {
-			fmt.Println("[monitor] ", processUpdate.rule, processUpdate.process.String())
+			fmt.Println("[monitor] finished", ruleString[processUpdate.rule], processUpdate.process.String())
 		}
+		m.monitorLoop()
 
 	case error := <-m.errorChan:
 		fmt.Println(error)
 	}
+
 }
 
 // Monitor: User API
@@ -61,7 +62,6 @@ func (m *Monitor) MonitorRuleFinished(process *Process, rule Rule) {
 }
 
 func (m *Monitor) MonitorProcessTerminated(process *Process) {
-
 	// body := CopyForm(process.Body)
 	provider := process.Provider
 	shape := process.Shape

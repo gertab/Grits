@@ -136,7 +136,7 @@ func (re *RuntimeEnvironment) InitializeMonitor(started chan bool) {
 	re.monitor = NewMonitor(re)
 
 	// Start monitor on new thread
-	go re.monitor.StartMonitor(started)
+	go re.monitor.startMonitor(started)
 }
 
 func (re *RuntimeEnvironment) InitializeController(started chan bool) {
@@ -144,7 +144,7 @@ func (re *RuntimeEnvironment) InitializeController(started chan bool) {
 	re.controller = NewController(re)
 
 	// Start controller on new thread
-	go re.controller.StartController(started)
+	go re.controller.startController(started)
 }
 
 // Used after initialization to substitute known names to the actual channel
@@ -193,8 +193,8 @@ type PriorityMessage struct {
 type Action int
 
 const (
-	FWD       Action = iota // Channel1
-	SPLIT_DUP               // ContinuationBody, Channel1 and Channel2
+	FWD           Action = iota // Channel1
+	SPLIT_DUP_FWD               // ContinuationBody, Channel1 and Channel2
 )
 
 type NameInitialization struct {

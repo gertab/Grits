@@ -227,13 +227,25 @@ func TestCopy(t *testing.T) {
 	// new_end := NewClose(new_self)
 
 	// Send
-	input := NewSend(to_c, pay_c, cont_c)
+	input := NewSend(Name{Ident: "to_c", IsSelf: false}, pay_c, cont_c)
 	copy := CopyForm(input)
 	copyWithType := copy.(*SendForm)
 	copyWithType.to_c.Ident = "to_c"
 	assertEqual(t, input, copy)
 	copyWithType.to_c.Ident = "to_c_edited"
-	assertNotEqual(t, input, copy)
+	assertNotEqual(t, input, copyWithType)
+	c1 := make(chan Message)
+	c2 := make(chan Message)
+	// c2 := make(chan Message)
+	input.to_c.Channel = c1
+	copyWithType.to_c.Ident = "to_c"
+	copyWithType.to_c.Channel = c1
+	assertEqual(t, input, copyWithType)
+	copyWithType.to_c.Channel = c2
+	assertNotEqual(t, input, copyWithType)
+	if input.to_c.Channel == copyWithType.to_c.Channel {
+		t.Errorf("Channels shouldn't be equal: got %s and %s\n", input.to_c.String(), copyWithType.to_c.String())
+	}
 
 	// Receive
 	input2 := NewReceive(pay_c, cont_c, from_c, end)

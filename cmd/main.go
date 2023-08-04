@@ -19,29 +19,29 @@ import (
 // 		prc[pid2]: send pid1<pid3, self>
 // 	end`
 
-const program = ` 	/* FWD + RCV rule */
-	let
-	in
-	prc[pid1]: send pid2<pid5, self>
-	prc[pid2]: fwd self pid3
-	prc[pid3]: fwd self pid4
-	prc[pid4]: <a, b> <- recv self; close a
-	end`
-
-// const program = ` 	/* FWD + SND rule */
+// const program = ` 	/* FWD + RCV rule */
 // 	let
 // 	in
-// 	prc[pid1]: <a, b> <- recv pid2; close sel
+// 	prc[pid1]: send pid2<pid5, self>
 // 	prc[pid2]: fwd self pid3
 // 	prc[pid3]: fwd self pid4
-// 	prc[pid4]: fwd self pid5
-// 	prc[pid5]: fwd self pid6
-// 	prc[pid6]: fwd self pid7
-// 	prc[pid7]: fwd self pid8
-// 	prc[pid8]: fwd self pid9
-// 	prc[pid9]: fwd self pid10
-// 	prc[pid10]: send self<pid5, self>
+// 	prc[pid4]: <a, b> <- recv self; close a
 // 	end`
+
+const program = ` 	/* FWD + SND rule */
+	let
+	in
+	prc[pid1]: <a, b> <- recv pid2; close a
+	prc[pid2]: fwd self pid3
+	prc[pid3]: fwd self pid4
+	prc[pid4]: fwd self pid5
+	prc[pid5]: fwd self pid6
+	prc[pid6]: fwd self pid7
+	prc[pid7]: fwd self pid8
+	prc[pid8]: fwd self pid9
+	prc[pid9]: fwd self pid10
+	prc[pid10]: send self<pid5, self>
+	end`
 
 // const program = ` 	/* CUT + SND rule */
 // 	let

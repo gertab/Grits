@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 )
 
-// Initiates new processes
+// Initiates new processes [new processes are spawned here]
 func (process *Process) Transition(re *RuntimeEnvironment) {
 	// todo make this atomic
 	atomic.AddUint64(&re.ProcessCount, 1)
@@ -49,15 +49,7 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 func TransitionAsProvider(process *Process, providerFunc func(), sendingMessage Message, re *RuntimeEnvironment) {
 	select {
 	case pm := <-process.Provider.PriorityChannel:
-		switch pm.Action {
-		case FWD:
-			fwdHandlePriorityMessage(process, pm, re)
-		case SPLIT_DUP_FWD:
-			splitHandlePriorityMessage(process, pm, re)
-		default:
-			re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
-			// todo panic
-		}
+		handlePriorityMessage(process, pm, re)
 	case process.Provider.Channel <- sendingMessage:
 		// Acting as a provider by sending a message on 'self'
 		providerFunc()
@@ -67,12 +59,7 @@ func TransitionAsProvider(process *Process, providerFunc func(), sendingMessage 
 func TransitionAsClient(process *Process, clientChan chan Message, clientFunc func(Message), re *RuntimeEnvironment) {
 	select {
 	case pm := <-process.Provider.PriorityChannel:
-		switch pm.Action {
-		case FWD:
-			fwdHandlePriorityMessage(process, pm, re)
-		case SPLIT_DUP_FWD:
-			splitHandlePriorityMessage(process, pm, re)
-		}
+		handlePriorityMessage(process, pm, re)
 	case receivedMessage := <-clientChan:
 		// Acting as a client by consuming a message from some channel
 		clientFunc(receivedMessage)
@@ -83,14 +70,7 @@ func TransitionAsSpecialForm(process *Process, priorityChannel chan PriorityMess
 	// Certain forms (e.g. forward and split forms) send their command on the priority channel, never utilizing their main provider channel
 	select {
 	case pm := <-process.Provider.PriorityChannel:
-		switch pm.Action {
-		case FWD:
-			fwdHandlePriorityMessage(process, pm, re)
-		case SPLIT_DUP_FWD:
-			splitHandlePriorityMessage(process, pm, re)
-			// re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
-			// // todo panic
-		}
+		handlePriorityMessage(process, pm, re)
 	case priorityChannel <- sendingPriorityMessage:
 		specialFormFunc()
 	}
@@ -99,14 +79,20 @@ func TransitionAsSpecialForm(process *Process, priorityChannel chan PriorityMess
 func TransitionInternally(process *Process, internalFunction func(), re *RuntimeEnvironment) {
 	select {
 	case pm := <-process.Provider.PriorityChannel:
-		switch pm.Action {
-		case FWD:
-			fwdHandlePriorityMessage(process, pm, re)
-		case SPLIT_DUP_FWD:
-			splitHandlePriorityMessage(process, pm, re)
-		}
+		handlePriorityMessage(process, pm, re)
 	default:
 		internalFunction()
+	}
+}
+
+func handlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
+	switch pm.Action {
+	case FWD:
+		fwdHandlePriorityMessage(process, pm, re)
+	case SPLIT_DUP_FWD:
+		splitHandlePriorityMessage(process, pm, re)
+	default:
+		handleInvalidPriorityMessage(process, re)
 	}
 }
 
@@ -181,16 +167,23 @@ func splitHandlePriorityMessage(process *Process, pm PriorityMessage, re *Runtim
 	process.terminate(re)
 }
 
+func handleInvalidPriorityMessage(process *Process, re *RuntimeEnvironment) {
+	re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
+	// todo panic
+	panic("Received incorrect priority message")
+}
+
 ////////////////////////////////////////////////////////////
 ///////////////// Transition for each form /////////////////
 ////////////////////////////////////////////////////////////
-
 // Transition according to the present body form (e.g. send, receive, ...)
+
 func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of send: %s\n", f.String())
 
 	if f.to_c.IsSelf {
 		// SND rule (provider)
+		// snd self<...>
 
 		sndRule := func() {
 			// SND rule (provider)
@@ -211,6 +204,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 		TransitionAsProvider(process, sndRule, message, re)
 	} else {
 		// RCV rule (client)
+		// snd to_c<...>
 
 		rcvRule := func(message Message) {
 			re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")

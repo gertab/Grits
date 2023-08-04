@@ -19,14 +19,14 @@ import (
 // 		prc[pid2]: send pid1<pid3, self>
 // 	end`
 
-// const program = ` 	/* FWD + RCV rule */
-// 	let
-// 	in
-// 	prc[pid1]: send pid2<pid5, self>
-// 	prc[pid2]: fwd self pid3
-// 	prc[pid3]: fwd self pid4
-// 	prc[pid4]: <a, b> <- recv self; close a
-// 	end`
+const program = ` 	/* FWD + RCV rule */
+	let
+	in
+	prc[pid1]: send pid2<pid5, self>
+	prc[pid2]: fwd self pid3
+	prc[pid3]: fwd self pid4
+	prc[pid4]: <a, b> <- recv self; close a
+	end`
 
 // const program = ` 	/* FWD + SND rule */
 // 	let
@@ -43,12 +43,12 @@ import (
 // 	prc[pid10]: send self<pid555, self>
 // end`
 
-const program = ` 	/* CUT + SND rule */
-	let
-	in
-	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
-	prc[pid2]: send self<pid5, self>
-	end`
+// const program = ` 	/* CUT + SND rule */
+// 	let
+// 	in
+// 	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+// 	prc[pid2]: send self<pid5, self>
+// 	end`
 
 // const program = ` 	/* CUT + inner SND + inner RCV rule */
 // 	let

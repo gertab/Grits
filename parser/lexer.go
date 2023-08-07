@@ -5,6 +5,7 @@ package parser
 import (
 	"fmt"
 	"io"
+	"phi/process"
 )
 
 // Generated from goyacc
@@ -16,6 +17,9 @@ import (
 type lexer struct {
 	scanner *scanner
 	Errors  chan error
+
+	processesRes           []incompleteProcess
+	functionDefinitionsRes []process.FunctionDefinition
 }
 
 // newLexer returns a new yacc-compatible lexer.

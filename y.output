@@ -28,13 +28,13 @@ state 1
 state 2
 	root:  program.    (1)
 
-	.  reduce 1 (src line 37)
+	.  reduce 1 (src line 34)
 
 
 state 3
 	program:  expression.    (2)
 
-	.  reduce 2 (src line 40)
+	.  reduce 2 (src line 37)
 
 
 state 4
@@ -42,7 +42,7 @@ state 4
 	functions: .    (8)
 
 	SPRC  shift 15
-	.  reduce 8 (src line 53)
+	.  reduce 8 (src line 52)
 
 	functions  goto 14
 
@@ -114,13 +114,13 @@ state 11
 state 12
 	name:  SELF.    (25)
 
-	.  reduce 25 (src line 90)
+	.  reduce 25 (src line 89)
 
 
 state 13
 	name:  LABEL.    (26)
 
-	.  reduce 26 (src line 91)
+	.  reduce 26 (src line 90)
 
 
 state 14
@@ -186,7 +186,7 @@ state 20
 state 21
 	expression:  CLOSE name.    (16)
 
-	.  reduce 16 (src line 68)
+	.  reduce 16 (src line 67)
 
 
 state 22
@@ -201,7 +201,7 @@ state 22
 state 23
 	expression:  PRINT name.    (19)
 
-	.  reduce 19 (src line 74)
+	.  reduce 19 (src line 73)
 
 
 state 24
@@ -217,7 +217,7 @@ state 24
 state 25
 	functions:  SPRC expression.    (9)
 
-	.  reduce 9 (src line 54)
+	.  reduce 9 (src line 53)
 
 
 state 26
@@ -269,14 +269,14 @@ state 30
 	branches: .    (20)
 
 	LABEL  shift 42
-	.  reduce 20 (src line 82)
+	.  reduce 20 (src line 81)
 
 	branches  goto 41
 
 state 31
 	expression:  FORWARD name name.    (17)
 
-	.  reduce 17 (src line 70)
+	.  reduce 17 (src line 69)
 
 
 state 32
@@ -292,7 +292,7 @@ state 33
 
 	SPRC  shift 35
 	PRC  shift 34
-	.  reduce 5 (src line 48)
+	.  reduce 5 (src line 47)
 
 	processes  goto 44
 	process  goto 33
@@ -377,13 +377,13 @@ state 42
 state 43
 	program:  LET functions IN processes END.    (3)
 
-	.  reduce 3 (src line 42)
+	.  reduce 3 (src line 41)
 
 
 state 44
 	processes:  process processes.    (4)
 
-	.  reduce 4 (src line 47)
+	.  reduce 4 (src line 46)
 
 
 state 45
@@ -456,7 +456,7 @@ state 51
 state 52
 	expression:  CASE name LPAREN branches RPAREN.    (13)
 
-	.  reduce 13 (src line 62)
+	.  reduce 13 (src line 61)
 
 
 state 53
@@ -487,7 +487,7 @@ state 56
 	names:  name.COMMA names 
 
 	COMMA  shift 66
-	.  reduce 23 (src line 87)
+	.  reduce 23 (src line 86)
 
 
 state 57
@@ -516,7 +516,7 @@ state 59
 state 60
 	expression:  name DOT LABEL LANGLE name RANGLE.    (12)
 
-	.  reduce 12 (src line 60)
+	.  reduce 12 (src line 59)
 
 
 state 61
@@ -529,7 +529,7 @@ state 61
 state 62
 	expression:  name LEFT_ARROW NEW expression SEQUENCE expression.    (15)
 
-	.  reduce 15 (src line 66)
+	.  reduce 15 (src line 65)
 
 
 state 63
@@ -573,7 +573,7 @@ state 67
 state 68
 	expression:  SEND name LANGLE name COMMA name RANGLE.    (10)
 
-	.  reduce 10 (src line 56)
+	.  reduce 10 (src line 55)
 
 
 state 69
@@ -645,7 +645,7 @@ state 74
 state 75
 	names:  name COMMA names.    (24)
 
-	.  reduce 24 (src line 88)
+	.  reduce 24 (src line 87)
 
 
 state 76
@@ -681,7 +681,7 @@ state 78
 state 79
 	expression:  name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression.    (14)
 
-	.  reduce 14 (src line 64)
+	.  reduce 14 (src line 63)
 
 
 state 80
@@ -710,13 +710,13 @@ state 81
 state 82
 	process:  PRC LSBRACK names RSBRACK COLON expression.    (6)
 
-	.  reduce 6 (src line 50)
+	.  reduce 6 (src line 49)
 
 
 state 83
 	process:  SPRC LSBRACK names RSBRACK COLON expression.    (7)
 
-	.  reduce 7 (src line 51)
+	.  reduce 7 (src line 50)
 
 
 state 84
@@ -761,19 +761,19 @@ state 86
 state 87
 	branches:  LABEL LANGLE name RANGLE RIGHT_ARROW expression.    (21)
 
-	.  reduce 21 (src line 83)
+	.  reduce 21 (src line 82)
 
 
 state 88
 	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression.    (11)
 
-	.  reduce 11 (src line 58)
+	.  reduce 11 (src line 57)
 
 
 state 89
 	expression:  LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression.    (18)
 
-	.  reduce 18 (src line 72)
+	.  reduce 18 (src line 71)
 
 
 state 90
@@ -795,7 +795,7 @@ state 90
 state 91
 	branches:  branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW expression.    (22)
 
-	.  reduce 22 (src line 84)
+	.  reduce 22 (src line 83)
 
 
 42 terminals, 10 nonterminals

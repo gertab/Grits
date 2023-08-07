@@ -84,6 +84,9 @@ func TestSimpleToken(t *testing.T) {
 
 func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOption) {
 	repetitions := 200
+	// If you increase the number of repetitions to a very high number, make sure to increase
+	// the monitor inactiveTimer (to avoid the monitor timing out before terminating).
+
 	done := make(chan bool)
 	for i := 0; i < repetitions; i++ {
 		go checkInput(t, input, expectedOptions, done)
@@ -93,15 +96,20 @@ func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOpt
 		<-done
 	}
 }
+
 func checkInput(t *testing.T, input string, expectedOptions []traceOption, done chan bool) {
 	processes := parser.ParseString(input)
 	deadProcesses, rulesLog, _ := initProcesses(processes)
-	r := convertRulesLog(rulesLog)
+	stepsGot := convertRulesLog(rulesLog)
+
+	if len(stepsGot) == 0 {
+		t.Errorf("Zero transitions: %s (Increase monitor timeout value) \n", stingifySteps(stepsGot))
+	}
 
 	// Make sure that at least the rulesLog match to one of the trance options
-	if !compareAllTraces(t, r, expectedOptions, len(deadProcesses)) {
+	if !compareAllTraces(t, stepsGot, expectedOptions, len(deadProcesses)) {
 		// All failed so compare to each expected trace
-		printAllTraces(t, r, expectedOptions, input)
+		printAllTraces(t, stepsGot, expectedOptions, input)
 	}
 	done <- true
 }
@@ -112,6 +120,7 @@ func compareAllTraces(t *testing.T, got []step, cases []traceOption, deadProcess
 			if compareSteps(t, c.trace, got) {
 				if c.deadProcesses != deadProcesses {
 					t.Errorf("Expected %d dead processes but got %d\n", c.deadProcesses, deadProcesses)
+					return false
 				}
 				return true
 			}
@@ -122,11 +131,12 @@ func compareAllTraces(t *testing.T, got []step, cases []traceOption, deadProcess
 }
 
 func printAllTraces(t *testing.T, got []step, cases []traceOption, input string) {
-	for _, c := range cases {
-		if len(c.trace) == len(got) {
-			t.Errorf("Got %s, expected %s\n%s\n", stingifySteps(got), stingifySteps(c.trace), input)
+	for i := range cases {
+
+		if len(cases[i].trace) == len(got) {
+			t.Errorf("Got %s, expected %s\n%s\n", stingifySteps(got), stingifySteps(cases[i].trace), input)
 		} else {
-			t.Errorf("Error not equal trace length expected %d, got %d.\n%s\n", len(c.trace), len(got), input)
+			t.Errorf("Error: trace length not equal. Expected %d (%s), got %d (%s).\n%s\n", len(cases[i].trace), stingifySteps(cases[i].trace), len(got), stingifySteps(got), input)
 		}
 	}
 }

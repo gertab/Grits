@@ -1,8 +1,11 @@
 package process
 
 import (
+	"bytes"
 	"fmt"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 type Monitor struct {
@@ -40,7 +43,7 @@ func NewMonitor(re *RuntimeEnvironment) *Monitor {
 	errorChan := make(chan error)
 	monitorFinishedChan := make(chan bool)
 
-	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 50 * time.Millisecond}
+	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 200 * time.Millisecond}
 }
 
 func (m *Monitor) startMonitor(started chan bool) {
@@ -56,14 +59,14 @@ func (m *Monitor) monitorLoop() {
 	case processUpdate := <-m.monitorChan:
 		if processUpdate.isDead {
 			// Process is terminated
-			fmt.Printf("[monitor] Process %s died\n", processUpdate.process.Provider.String())
+			m.re.logMonitorf("Process %s died\n", processUpdate.process.Provider.String())
 			m.deadProcesses = append(m.deadProcesses, processUpdate.process)
 		} else if processUpdate.stopMonitor {
 			// Stops monitoring
 			return
 		} else {
 			// Process finished rule
-			fmt.Println("[monitor] finished", RuleString[processUpdate.rule], processUpdate.process.String())
+			m.re.logMonitorf("Finished %s, %s\n", RuleString[processUpdate.rule], processUpdate.process.String())
 			m.rulesLog = append(m.rulesLog, MonitorRulesLog{Process: processUpdate.process, Rule: processUpdate.rule})
 		}
 
@@ -71,7 +74,7 @@ func (m *Monitor) monitorLoop() {
 		fmt.Println(error)
 
 	case <-time.After(m.inactiveTimer):
-		fmt.Println("[monitor] Monitor inactive, terminating")
+		m.re.logMonitorf("Monitor inactive, terminating")
 		m.monitorFinished <- true
 		return
 	}
@@ -99,6 +102,22 @@ func (m *Monitor) MonitorProcessTerminated(process *Process) {
 	shape := process.Shape
 
 	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true, stopMonitor: false}
+}
+
+func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {
+	if slices.Contains(re.logLevels, LOGMONITOR) {
+
+		data := append([]interface{}{"[monitor]"}, args...)
+
+		colorIndex := 1
+
+		var buf bytes.Buffer
+		buf.WriteString(colorsHl[colorIndex])
+		buf.WriteString(fmt.Sprintf("%s:\033[0m "+message, data...))
+		buf.WriteString(resetColor)
+
+		fmt.Print(buf.String())
+	}
 }
 
 // Controller

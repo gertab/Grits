@@ -25,7 +25,6 @@ func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *Runti
 	if re.debug {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, rule)
-		// re.monitor.monitorChan <- MonitorUpdate{process: *process, rule: rule}
 	}
 }
 
@@ -314,7 +313,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		newProcess.Transition(re)
 
 		process.finishedRule(CUT, "[new]", "", re)
-		re.logProcess(LOGRULE, process, "[new] finished CUT rule")
+		// re.logProcess(LOGRULE, process, "[new] finished CUT rule")
 		// Continue executing current process
 		TransitionLoop(process, re)
 	}
@@ -327,18 +326,22 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Println(f.String())
 }
 
+// CALL rule
 func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of call: %s\n", f.String())
 
 	callRule := func() {
+		// Look up function by name and arity
 		arity := len(f.parameters)
 		functionCall := GetFunctionByNameArity(*process.FunctionDefinitions, f.functionName, arity)
 
 		if functionCall == nil {
+			// No function found in the FunctionDefinitions list
 			re.logProcessf(LOGERROR, process, "Function %s does not exist.\n", f.String())
 			panic("Wrong function call")
 		}
 
+		// Function found
 		functionCallBody := functionCall.Body
 
 		for i := range functionCall.Parameters {
@@ -347,12 +350,14 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		process.Body = functionCallBody
 
+		process.finishedRule(CALL, "[call]", "", re)
+
 		TransitionLoop(process, re)
 	}
 
 	TransitionInternally(process, callRule, re)
-
 }
+
 func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of branch: ")
 	fmt.Println(f.String())

@@ -42,6 +42,7 @@ func InitializeProcesses(processes []Process) {
 		LOGPROCESSING,
 		LOGRULE,
 		LOGRULEDETAILS,
+		LOGMONITOR,
 	}
 
 	re := &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l}
@@ -157,6 +158,7 @@ const (
 	SND Rule = iota // uses Channel1 and Channel2
 	RCV             // uses ContinuationBody, Channel1 and Channel2
 	CUT
+	CALL
 
 	// Special rules for priority messages
 	FWD           // uses Channel1
@@ -165,9 +167,10 @@ const (
 )
 
 var RuleString = map[Rule]string{
-	SND: "SND",
-	RCV: "RCV",
-	CUT: "CUT",
+	SND:  "SND",
+	RCV:  "RCV",
+	CUT:  "CUT",
+	CALL: "CALL",
 
 	FWD:           "FWD",
 	FWD_REPLY:     "FWD_REPLY",
@@ -197,6 +200,7 @@ const (
 	LOGRULEDETAILS                 // rule while processing
 	LOGPROCESSING                  // process info
 	LOGERROR
+	LOGMONITOR
 )
 
 // Similar to Println

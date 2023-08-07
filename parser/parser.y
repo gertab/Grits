@@ -1,4 +1,6 @@
 %{
+// Run this after each change:
+// goyacc -p phi -o parser/parser.y.go parser/parser.y
 package parser
 
 import (
@@ -35,13 +37,19 @@ root : program { }
     ;
 
 program : 
-	expression { 
-		philex.(*lexer).processesRes = append(philex.(*lexer).processesRes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root", IsSelf: false}}})
+	expression 
+		{
+			philex.(*lexer).processesRes = append(philex.(*lexer).processesRes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root", IsSelf: false}}})
 		}
-	 | LET functions IN processes END { 
-		philex.(*lexer).processesRes = $4
-		philex.(*lexer).functionDefinitionsRes = $2
-	 };
+	 | processes 
+		{ 
+			philex.(*lexer).processesRes = $1
+		}
+	 | LET functions IN processes END 
+		{ 
+			philex.(*lexer).processesRes = $4
+			philex.(*lexer).functionDefinitionsRes = $2
+		};
 
 processes : process processes { $$ = append([]incompleteProcess{$1}, $2...) }
 		  | process           { $$ = []incompleteProcess{$1} }; 
@@ -71,13 +79,16 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewCall($1, []process.Name{}) }
 		   | /* call */ LABEL LPAREN names RPAREN
 		   			{ $$ = process.NewCall($1, $3) }
+/* Drop, Wait */
+					/* used for shared processes */
+					/* for debugging */
+/* remaining expressions:
+	Snew, Cast, Shift
+	Acquire, Accept, Push, Detach, Release
+*/
 		   | /* print - for debugging */ PRINT name
 		   			{ $$ = process.NewPrint($2) };
  
-/* remaining expressions:
-Drop, Snew, Wait, Close, Cast, Shift
-Acquire, Accept, Push, Detach, Release
-*/
 
 branches :   /* empty */         										 { $$ = nil }
          |               LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = []*process.BranchForm{process.NewBranch(process.Label{L: $1}, $3, $6)} }

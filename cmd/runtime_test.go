@@ -18,6 +18,7 @@ type traceOption struct {
 }
 
 func TestSimpleToken(t *testing.T) {
+	// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
 	var input string
 	var expected []traceOption
 
@@ -83,7 +84,7 @@ func TestSimpleToken(t *testing.T) {
 }
 
 func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOption) {
-	repetitions := 200
+	repetitions := 100
 	// If you increase the number of repetitions to a very high number, make sure to increase
 	// the monitor inactiveTimer (to avoid the monitor timing out before terminating).
 

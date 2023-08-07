@@ -71,10 +71,6 @@ func InitializeProcesses(processes []Process) {
 	// time.Sleep(5 * time.Second)
 
 	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
-
-	// // analyze results
-	// re.logf(LOGINFO, "[monitor] monitor received deaths: %d\n", len(re.monitor.deadProcesses))
-	// re.logf(LOGINFO, "[monitor] rules: %d\n", len(re.monitor.rulesLog))
 }
 
 func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
@@ -221,7 +217,7 @@ func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...inter
 var colors = []string{"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m"}
 var colorsHl = []string{"\033[101m", "\033[102m", "\033[103m", "\033[104m", "\033[105m", "\033[106m", "\033[107m"}
 
-const colorsLen = 7
+const colorsLen = 6 // avoiding gray coz it looks like white
 
 var resetColor = "\033[0m"
 

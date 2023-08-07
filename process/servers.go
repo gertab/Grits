@@ -1,6 +1,9 @@
 package process
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Monitor struct {
 	i int
@@ -10,12 +13,24 @@ type Monitor struct {
 	errorChan chan error
 	// Runtime environment contains log info
 	re *RuntimeEnvironment
+	// Keeps a log of all the rules that took place
+	rulesLog      []monitorRulesLog
+	deadProcesses []Process
+	// Inactive after _ milliseconds
+	inactiveTimer   time.Duration
+	monitorFinished chan bool
 }
 
 type MonitorUpdate struct {
+	process     Process
+	rule        Rule
+	isDead      bool
+	stopMonitor bool
+}
+
+type monitorRulesLog struct {
 	process Process
 	rule    Rule
-	isDead  bool
 }
 
 func NewMonitor(re *RuntimeEnvironment) *Monitor {
@@ -24,7 +39,7 @@ func NewMonitor(re *RuntimeEnvironment) *Monitor {
 	monitorChan := make(chan MonitorUpdate)
 	errorChan := make(chan error)
 
-	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, re: re}
+	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, re: re, inactiveTimer: 50 * time.Millisecond}
 }
 
 func (m *Monitor) startMonitor(started chan bool) {
@@ -39,16 +54,32 @@ func (m *Monitor) monitorLoop() {
 	select {
 	case processUpdate := <-m.monitorChan:
 		if processUpdate.isDead {
+			// Process is terminated
 			fmt.Printf("[monitor] Process %s died\n", processUpdate.process.Provider.String())
+			m.deadProcesses = append(m.deadProcesses, processUpdate.process)
+		} else if processUpdate.stopMonitor {
+			// Stops monitoring
+			return
 		} else {
+			// Process finished rule
 			fmt.Println("[monitor] finished", ruleString[processUpdate.rule], processUpdate.process.String())
+			m.rulesLog = append(m.rulesLog, monitorRulesLog{process: processUpdate.process, rule: processUpdate.rule})
 		}
-		m.monitorLoop()
 
 	case error := <-m.errorChan:
 		fmt.Println(error)
+
+	case <-time.After(m.inactiveTimer):
+		fmt.Println("Timer terminated after", m.inactiveTimer)
+		// m.monitorFinished <- true
+		return
 	}
 
+	m.monitorLoop()
+}
+
+func (m *Monitor) GetRulesLog() []monitorRulesLog {
+	return m.rulesLog
 }
 
 // Monitor: User API
@@ -58,7 +89,7 @@ func (m *Monitor) MonitorRuleFinished(process *Process, rule Rule) {
 	provider := process.Provider
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: rule}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: rule, isDead: false, stopMonitor: false}
 }
 
 func (m *Monitor) MonitorProcessTerminated(process *Process) {
@@ -66,7 +97,7 @@ func (m *Monitor) MonitorProcessTerminated(process *Process) {
 	provider := process.Provider
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true, stopMonitor: false}
 }
 
 // Controller

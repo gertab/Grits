@@ -33,41 +33,6 @@ type RuntimeEnvironment struct {
 
 // Entry point for execution
 func InitializeProcesses(processes []Process) {
-	to_c := Name{Ident: "to_c", IsSelf: false}
-	// new_to_c := Name{Ident: "new_to_c", IsSelf: false}
-	pay_c := Name{Ident: "pay_c", IsSelf: false}
-	// new_pay_c := Name{Ident: "new_pay_c", IsSelf: false}
-	cont_c := Name{Ident: "cont_c", IsSelf: false}
-	// new_cont_c := Name{Ident: "new_cont_c", IsSelf: false}
-	from_c := Name{Ident: "from_c", IsSelf: false}
-	// new_from_c := Name{Ident: "new_from_c", IsSelf: false}
-	// self := Name{IsSelf: true}
-	// new_self := Name{IsSelf: true}
-	// end := NewClose(self)
-	// new_end := NewClose(new_self)
-
-	// Send
-	input := NewSend(to_c, pay_c, cont_c)
-
-	// Receive
-	// input2 := NewReceive(pay_c, cont_c, from_c, input)
-
-	input3 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "labell"}, Name{Ident: "pay_c", IsSelf: false}, input), NewBranch(Label{L: "labell"}, Name{Ident: "pay_c", IsSelf: false}, NewClose(cont_c))})
-	fmt.Println(input3.String())
-	fmt.Println(input3.FreeNames())
-	// assertEqualNames(t, input3.FreeNames(), []Name{from_c})
-
-	// // nc := NewClose(Name{IsSelf: true})
-	// payload_c := Name{Ident: "payload_c", IsSelf: false}
-	// orig := NewReceive(payload_c, Name{Ident: "cont_c", IsSelf: false}, Name{Ident: "from_c", IsSelf: false}, NewClose(Name{Ident: "orig_close", ChannelID: 111, Channel: make(chan Message), IsSelf: false}))
-	// copied := CopyForm(orig)
-	// copiedWithType := copied.(*ReceiveForm)
-	// copiedWithType.payload_c.Ident = "payload_c"
-	// fmt.Println(orig.String())
-	// fmt.Println(copied.String())
-	// fmt.Println(copiedWithType.String())
-	// fmt.Println(EqualForm(orig, copied))
-
 	l := []LogLevel{
 		LOGERROR,
 		LOGINFO,
@@ -101,6 +66,8 @@ func InitializeProcesses(processes []Process) {
 	}
 
 	re.StartTransitions(processes)
+
+	// <-re.monitor.monitorFinished
 }
 
 // Create the initial channels required. E.g. for a process prc[c1], a channel with Ident: c1 is created
@@ -179,13 +146,14 @@ type Message struct {
 type Rule int
 
 const (
-	SND Rule = iota // Channel1 and Channel2
-	RCV             // ContinuationBody, Channel1 and Channel2
+	SND Rule = iota // uses Channel1 and Channel2
+	RCV             // uses ContinuationBody, Channel1 and Channel2
+	CUT
 
-	// Special rules
-	FWD // Channel1
-	FWD_REPLY
-	SPLIT_DUP_FWD // ContinuationBody, Channel1 and Channel2
+	// Special rules for priority messages
+	FWD           // uses Channel1
+	FWD_REPLY     // uses Body, Shape
+	SPLIT_DUP_FWD // uses Channels
 )
 
 var ruleString = map[Rule]string{
@@ -200,7 +168,6 @@ var ruleString = map[Rule]string{
 type PriorityMessage struct {
 	Action Rule
 	// Possible payload types, depending on the action
-	Channel1 Name
 	Channels []Name
 	Body     Form
 	Shape    Shape

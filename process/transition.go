@@ -97,12 +97,12 @@ func handlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvi
 }
 
 func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channel1.String())
+	re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channels[0].String())
 	// Close current channel and switch to new one
 
 	// process.Provider = pm.Channel1
 	// Reply with the body and shape so that the other process can continue executing
-	process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body}
+	process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body, Shape: process.Shape}
 
 	close(process.Provider.Channel)
 	close(process.Provider.PriorityChannel)
@@ -313,6 +313,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// Spawn and initiate new process
 		newProcess.Transition(re)
 
+		process.finishedRule(CUT, "[new]", "", re)
 		re.logProcess(LOGRULE, process, "[new] finished CUT rule")
 		// Continue executing current process
 		TransitionLoop(process, re)
@@ -373,7 +374,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 			TransitionLoop(process, re)
 		}
 
-		priorityMessage := PriorityMessage{Action: FWD, Channel1: process.Provider}
+		priorityMessage := PriorityMessage{Action: FWD, Channels: []Name{process.Provider}}
 
 		TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
 	} else {

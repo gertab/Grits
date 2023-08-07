@@ -37,6 +37,7 @@ root : program { }
     ;
 
 program : 
+		/* collect results in processesRes and functionDefinitionsRes */
 	expression 
 		{
 			philex.(*lexer).processesRes = append(philex.(*lexer).processesRes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root", IsSelf: false}}})

@@ -52,11 +52,6 @@ func InitializeProcesses(processes []Process) {
 
 	re.SubstituteNameInitialization(processes, channels)
 
-	// re.log(LOGINFO, "After Substitutions")
-	// for _, p := range processes {
-	// 	re.log(LOGINFO, p.String())
-	// }
-
 	if re.debug {
 		started := make(chan bool)
 
@@ -76,14 +71,9 @@ func InitializeProcesses(processes []Process) {
 
 	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
 
-	// analyze results
-	re.logf(LOGINFO, "[monitor] monitor received deaths: %d\n", len(re.monitor.deadProcesses))
-	re.logf(LOGINFO, "[monitor] rules: %d\n", len(re.monitor.rulesLog))
-	for _, j := range re.monitor.rulesLog {
-		fmt.Println(RuleString[j.Rule])
-		fmt.Println(j.Process.Provider.Ident)
-	}
-
+	// // analyze results
+	// re.logf(LOGINFO, "[monitor] monitor received deaths: %d\n", len(re.monitor.deadProcesses))
+	// re.logf(LOGINFO, "[monitor] rules: %d\n", len(re.monitor.rulesLog))
 }
 
 func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {

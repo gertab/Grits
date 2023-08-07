@@ -100,6 +100,27 @@ func EqualForm(form1, form2 Form) bool {
 		if ok1 && ok2 {
 			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
+	case *CallForm:
+		f1, ok1 := form1.(*CallForm)
+		f2, ok2 := form2.(*CallForm)
+
+		if ok1 && ok2 {
+			if f1.functionName != f2.functionName {
+				return false
+			}
+
+			if len(f1.parameters) != len(f2.parameters) {
+				return false
+			}
+
+			for i := range f1.parameters {
+				if !f1.parameters[i].Equal(f2.parameters[i]) {
+					return false
+				}
+			}
+			return true
+		}
+
 	}
 
 	fmt.Printf("todo implement EqualForm for type %s\n", a)
@@ -173,6 +194,14 @@ func CopyForm(orig Form) Form {
 			cont := CopyForm(p.continuation_e)
 			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont)
 		}
+	case *CallForm:
+		p, ok := orig.(*CallForm)
+		if ok {
+			copiedParameters := make([]Name, len(p.parameters))
+			copiedParameters = append(copiedParameters, p.parameters...)
+			return NewCall(p.functionName, copiedParameters)
+		}
+
 	}
 
 	// todo panic
@@ -541,6 +570,39 @@ func (p *SplitForm) FreeNames() []Name {
 	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.channel_one)
 	continuation_e_excluding_bound_names = removeBoundName(continuation_e_excluding_bound_names, p.channel_two)
 	fn = mergeTwoNamesList(fn, continuation_e_excluding_bound_names)
+	return fn
+}
+
+// Call: fwd to_c from_c
+type CallForm struct {
+	functionName string
+	parameters   []Name
+}
+
+func NewCall(functionName string, parameters []Name) *CallForm {
+	return &CallForm{functionName: functionName, parameters: parameters}
+}
+
+func (p *CallForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(p.functionName)
+	buf.WriteString("(")
+	buf.WriteString(NamesToString(p.parameters))
+	buf.WriteString(")")
+	return buf.String()
+}
+
+func (p *CallForm) Substitute(old, new Name) {
+	for i := range p.parameters {
+		p.parameters[i].Substitute(old, new)
+	}
+}
+
+func (p *CallForm) FreeNames() []Name {
+	var fn []Name
+	for i := range p.parameters {
+		fn = appendIfNotSelf(p.parameters[i], fn)
+	}
 	return fn
 }
 

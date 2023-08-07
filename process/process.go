@@ -63,11 +63,6 @@ func (p *Process) String() string {
 	return buf.String()
 }
 
-type FunctionDefinition struct {
-	Body Form
-	Name string
-}
-
 // Name is channel or value.
 type Name struct {
 	// Ident refers to the original name of the channel (used for pretty printing)
@@ -183,4 +178,24 @@ func (p *Label) String() string {
 
 func (label1 *Label) Equal(label2 Label) bool {
 	return label1.String() == label2.String()
+}
+
+type FunctionDefinition struct {
+	Body         Form
+	FunctionName string
+	Parameters   []Name
+}
+
+func (function *FunctionDefinition) Arity() int {
+	return len(function.Parameters)
+}
+
+func GetFunctionByNameArity(functions []FunctionDefinition, name string, arity int) *FunctionDefinition {
+	for _, f := range functions {
+		if f.FunctionName == name && f.Arity() == arity {
+			return &f
+		}
+	}
+
+	return nil
 }

@@ -12,11 +12,11 @@ type unexpandedProcesses struct {
 	functions []process.FunctionDefinition
 }
 
-// Process that is currently being parses and yet to become a process.Process
+// Process that is currently being parsed and yet to become a process.Process
 type incompleteProcess struct {
-	Body                process.Form
-	Names               []process.Name
-	FunctionDefinitions *[]process.FunctionDefinition
+	Body  process.Form
+	Names []process.Name
+	// FunctionDefinitions *[]process.FunctionDefinition
 }
 
 func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {
@@ -26,7 +26,7 @@ func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {
 	counter := 0
 	for _, p := range u.procs {
 		for _, n := range p.Names {
-			new_p := process.NewProcess(p.Body, n, process.LINEAR, p.FunctionDefinitions)
+			new_p := process.NewProcess(p.Body, n, process.LINEAR, &u.functions)
 			processes[counter] = *new_p
 			counter++
 		}
@@ -49,7 +49,8 @@ func ParseFile(fileName string) []process.Process {
 		fmt.Println(err)
 		panic("Parsing error!")
 	default:
-		return expandUnexpandedProcesses(prc)
+		expandedProcesses := expandUnexpandedProcesses(prc)
+		return expandedProcesses
 	}
 }
 
@@ -64,7 +65,8 @@ func ParseString(program string) []process.Process {
 		fmt.Println(err)
 		panic("Parsing error!")
 	default:
-		return expandUnexpandedProcesses(prc)
+		expandedProcesses := expandUnexpandedProcesses(prc)
+		return expandedProcesses
 	}
 }
 

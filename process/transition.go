@@ -326,6 +326,33 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of select: ")
 	fmt.Println(f.String())
 }
+
+func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of call: %s\n", f.String())
+
+	callRule := func() {
+		arity := len(f.parameters)
+		functionCall := GetFunctionByNameArity(*process.FunctionDefinitions, f.functionName, arity)
+
+		if functionCall == nil {
+			re.logProcessf(LOGERROR, process, "Function %s does not exist.\n", f.String())
+			panic("Wrong function call")
+		}
+
+		functionCallBody := functionCall.Body
+
+		for i := range functionCall.Parameters {
+			functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
+		}
+
+		process.Body = functionCallBody
+
+		TransitionLoop(process, re)
+	}
+
+	TransitionInternally(process, callRule, re)
+
+}
 func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Print("transition of branch: ")
 	fmt.Println(f.String())

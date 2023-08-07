@@ -49,9 +49,6 @@ processes : process processes { $$ = append([]incompleteProcess{$1}, $2...) }
 process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{Body:$6, Names: $3} }
 		| SPRC LSBRACK names RSBRACK COLON expression { $$ = incompleteProcess{Body:$6, Names: $3} };
 
-functions : { $$ = nil }
-		  | SPRC expression { $$ = []process.FunctionDefinition{{Body: $2}} };
-
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }
 		   | /* Receive */ LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
@@ -70,11 +67,15 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewForward($2, $3) }
 		   | /* split */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $8, $10) }
+		   | /* call */ LABEL LPAREN RPAREN
+		   			{ $$ = process.NewCall($1, []process.Name{}) }
+		   | /* call */ LABEL LPAREN names RPAREN
+		   			{ $$ = process.NewCall($1, $3) }
 		   | /* print - for debugging */ PRINT name
 		   			{ $$ = process.NewPrint($2) };
  
 /* remaining expressions:
-Call, Drop, Snew, Wait, Close, Cast, Shift
+Drop, Snew, Wait, Close, Cast, Shift
 Acquire, Accept, Push, Detach, Release
 */
 
@@ -88,6 +89,13 @@ names : name { $$ = []process.Name{$1} }
 
 name : SELF { $$ = process.Name{IsSelf: true} };
 name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
+
+functions : /* empty */         										 
+				{ $$ = nil }
+		  | LABEL LPAREN RPAREN EQUALS expression 
+				{ $$ = []process.FunctionDefinition{{FunctionName: $1, Parameters: []process.Name{}, Body: $5}} }
+		  | LABEL LPAREN names RPAREN EQUALS expression functions
+		  		{ $$ = append($7, process.FunctionDefinition{FunctionName: $1, Parameters: $3, Body: $6}) };
 
 %%
 

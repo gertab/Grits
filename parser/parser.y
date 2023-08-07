@@ -6,9 +6,6 @@ import (
 	"phi/process"
 )
 
-var processes []incompleteProcess
-var functionDefinitions []process.FunctionDefinition
-
 %}
 
 %union {
@@ -38,10 +35,12 @@ root : program { }
     ;
 
 program : 
-	expression { processes = append(processes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root", IsSelf: false}}}) }
+	expression { 
+		philex.(*lexer).processesRes = append(philex.(*lexer).processesRes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root", IsSelf: false}}})
+		}
 	 | LET functions IN processes END { 
-		processes = $4
-		functionDefinitions = $2
+		philex.(*lexer).processesRes = $4
+		philex.(*lexer).functionDefinitionsRes = $2
 	 };
 
 processes : process processes { $$ = append([]incompleteProcess{$1}, $2...) }
@@ -100,9 +99,7 @@ func Parse(r io.Reader) (unexpandedProcesses, error) {
 	case err := <-l.Errors:
 		return unexpandedProcesses{}, err
 	default:
-		unexpandedProcesses := unexpandedProcesses{procs: processes, functions: functionDefinitions}
-		// todo: not sure if copy is needed
-		processes = nil
-		functionDefinitions = nil
-		return unexpandedProcesses, nil	}
+		unexpandedProcesses := unexpandedProcesses{procs: l.processesRes, functions: l.functionDefinitionsRes}
+		return unexpandedProcesses, nil	
+	}
 }

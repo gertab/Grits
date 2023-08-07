@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"sync/atomic"
-	"time"
 
 	"golang.org/x/exp/slices"
 )
@@ -29,6 +28,10 @@ type RuntimeEnvironment struct {
 	monitor *Monitor
 	// Controller info
 	controller *Controller
+}
+
+func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvironment {
+	return &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l}
 }
 
 // Entry point for execution
@@ -67,7 +70,25 @@ func InitializeProcesses(processes []Process) {
 
 	re.StartTransitions(processes)
 
-	// <-re.monitor.monitorFinished
+	re.WaitForMonitorToFinish()
+
+	// time.Sleep(5 * time.Second)
+
+	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
+
+	// analyze results
+	re.logf(LOGINFO, "[monitor] monitor received deaths: %d\n", len(re.monitor.deadProcesses))
+	re.logf(LOGINFO, "[monitor] rules: %d\n", len(re.monitor.rulesLog))
+	for _, j := range re.monitor.rulesLog {
+		fmt.Println(RuleString[j.Rule])
+		fmt.Println(j.Process.Provider.Ident)
+	}
+
+}
+
+func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
+	<-re.monitor.monitorFinished
+	return re.monitor.deadProcesses, re.monitor.rulesLog
 }
 
 // Create the initial channels required. E.g. for a process prc[c1], a channel with Ident: c1 is created
@@ -129,9 +150,6 @@ func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 		p_uniq := p
 		p_uniq.Transition(re)
 	}
-	time.Sleep(5 * time.Second)
-
-	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
 }
 
 type Message struct {
@@ -156,9 +174,10 @@ const (
 	SPLIT_DUP_FWD // uses Channels
 )
 
-var ruleString = map[Rule]string{
+var RuleString = map[Rule]string{
 	SND: "SND",
 	RCV: "RCV",
+	CUT: "CUT",
 
 	FWD:           "FWD",
 	FWD_REPLY:     "FWD_REPLY",

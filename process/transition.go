@@ -20,7 +20,7 @@ func TransitionLoop(process *Process, re *RuntimeEnvironment) {
 }
 
 func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, ruleString[rule], suffix)
+	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
 
 	if re.debug {
 		// Update monitor
@@ -104,8 +104,8 @@ func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeE
 	// Reply with the body and shape so that the other process can continue executing
 	process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body, Shape: process.Shape}
 
-	close(process.Provider.Channel)
-	close(process.Provider.PriorityChannel)
+	// close(process.Provider.Channel)
+	// close(process.Provider.PriorityChannel)
 	// TransitionLoop(process, re)
 	process.terminate(re)
 }
@@ -210,8 +210,8 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
 			re.logProcessf(LOGRULEDETAILS, process, "Should received message on channel %s, containing message rule RCV\n", f.to_c.String())
 			// message := <-f.to_c.Channel
-			close(f.to_c.Channel)
-			close(f.to_c.PriorityChannel)
+			// close(f.to_c.Channel)
+			// close(f.to_c.PriorityChannel)
 
 			// todo check that rule matches RCV
 
@@ -266,7 +266,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")
 			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] proceeding with SND, will receive from %s\n", f.from_c.String())
 
-			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing rule: %s\n", f.from_c.String(), ruleString[message.Rule])
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
 
 			new_body := f.continuation_e
 			new_body.Substitute(f.payload_c, message.Channel1)

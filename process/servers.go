@@ -14,7 +14,7 @@ type Monitor struct {
 	// Runtime environment contains log info
 	re *RuntimeEnvironment
 	// Keeps a log of all the rules that took place
-	rulesLog      []monitorRulesLog
+	rulesLog      []MonitorRulesLog
 	deadProcesses []Process
 	// Inactive after _ milliseconds
 	inactiveTimer   time.Duration
@@ -28,9 +28,9 @@ type MonitorUpdate struct {
 	stopMonitor bool
 }
 
-type monitorRulesLog struct {
-	process Process
-	rule    Rule
+type MonitorRulesLog struct {
+	Process Process
+	Rule    Rule
 }
 
 func NewMonitor(re *RuntimeEnvironment) *Monitor {
@@ -38,8 +38,9 @@ func NewMonitor(re *RuntimeEnvironment) *Monitor {
 	// todo make these buffered
 	monitorChan := make(chan MonitorUpdate)
 	errorChan := make(chan error)
+	monitorFinishedChan := make(chan bool)
 
-	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, re: re, inactiveTimer: 50 * time.Millisecond}
+	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 50 * time.Millisecond}
 }
 
 func (m *Monitor) startMonitor(started chan bool) {
@@ -62,23 +63,23 @@ func (m *Monitor) monitorLoop() {
 			return
 		} else {
 			// Process finished rule
-			fmt.Println("[monitor] finished", ruleString[processUpdate.rule], processUpdate.process.String())
-			m.rulesLog = append(m.rulesLog, monitorRulesLog{process: processUpdate.process, rule: processUpdate.rule})
+			fmt.Println("[monitor] finished", RuleString[processUpdate.rule], processUpdate.process.String())
+			m.rulesLog = append(m.rulesLog, MonitorRulesLog{Process: processUpdate.process, Rule: processUpdate.rule})
 		}
 
 	case error := <-m.errorChan:
 		fmt.Println(error)
 
 	case <-time.After(m.inactiveTimer):
-		fmt.Println("Timer terminated after", m.inactiveTimer)
-		// m.monitorFinished <- true
+		fmt.Println("[monitor] Monitor inactive, terminating")
+		m.monitorFinished <- true
 		return
 	}
 
 	m.monitorLoop()
 }
 
-func (m *Monitor) GetRulesLog() []monitorRulesLog {
+func (m *Monitor) GetRulesLog() []MonitorRulesLog {
 	return m.rulesLog
 }
 

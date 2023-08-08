@@ -56,6 +56,11 @@ func TransitionAsProvider(process *Process, providerFunc func(), sendingMessage 
 }
 
 func TransitionAsClient(process *Process, clientChan chan Message, clientFunc func(Message), re *RuntimeEnvironment) {
+	if clientChan == nil {
+		re.logProcess(LOGERROR, process, "Channel not initialized (attempting to receive on a dead channel)")
+		panic("Channel not initialized (attempting to receive on a dead channel)")
+	}
+
 	select {
 	case pm := <-process.Provider.PriorityChannel:
 		handlePriorityMessage(process, pm, re)

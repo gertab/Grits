@@ -62,8 +62,8 @@ process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{B
 
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }
-		   | /* Send */ SEND name LANGLE name COMMA name RANGLE SEQUENCE expression
-					{ $$ = process.NewSend($2, $4, $6) }
+		   | /* Send Macro */ SEND name LANGLE name COMMA name RANGLE SEQUENCE expression
+					{ $$ = NewSendMacroForm($2, $4, $6, $9) }
 		   | /* Receive */ LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
 		   			{ $$ = process.NewReceive($2, $4, $8, $10) }
 		   | /* select */ name DOT LABEL LANGLE name RANGLE 

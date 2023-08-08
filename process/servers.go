@@ -43,7 +43,7 @@ func NewMonitor(re *RuntimeEnvironment) *Monitor {
 	errorChan := make(chan error)
 	monitorFinishedChan := make(chan bool)
 
-	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 200 * time.Millisecond}
+	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 500 * time.Millisecond}
 }
 
 func (m *Monitor) startMonitor(started chan bool) {

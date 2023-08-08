@@ -24,27 +24,40 @@ import (
 // 	prc[pid4]: <a, b> <- recv self; close a
 // 	end`
 
-const program = ` 	/* FWD + SND rule */
-	let
-	in
-	prc[pid1]: <a, b> <- recv pid2; close a
-	prc[pid2]: fwd self pid3
-	prc[pid3]: fwd self pid4
-	prc[pid4]: fwd self pid5
-	prc[pid5]: fwd self pid6
-	prc[pid6]: fwd self pid7
-	prc[pid7]: fwd self pid8
-	prc[pid8]: fwd self pid9
-	prc[pid9]: fwd self pid10
-	prc[pid10]: send self<pid555, self>
-end`
-
-// const program = ` 	/* CUT + SND rule */
+// const program = ` 	/* FWD + SND rule */
 // 	let
 // 	in
-// 	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
-// 	prc[pid2]: send self<pid5, self>
-// 	end`
+// 	prc[pid1]: <a, b> <- recv pid2; close a
+// 	prc[pid2]: fwd self pid3
+// 	prc[pid3]: fwd self pid4
+// 	prc[pid4]: fwd self pid5
+// 	prc[pid5]: fwd self pid6
+// 	prc[pid6]: fwd self pid7
+// 	prc[pid7]: fwd self pid8
+// 	prc[pid8]: fwd self pid9
+// 	prc[pid9]: fwd self pid10
+// 	prc[pid10]: send self<pid555, self>
+// end`
+
+// const program = ` /* SND rule with process having multiple names */
+// 		prc[pa, pb, pc, pd]: send self<pid0, self>
+// 		prc[pid2]: <a, b> <- recv pa; close self
+// 		prc[pid3]: <a, b> <- recv pb; close self
+// 		prc[pid4]: <a, b> <- recv pc; close self
+// 		prc[pid5]: <a, b> <- recv pd; close self
+// 		`
+
+// const program = ` /* SND rule - with a bug */
+// 		prc[a]: send self<pid3, self>
+// 		prc[pid2]: <a, b> <- recv a; close self
+// `
+
+const program = ` 	/* CUT + SND rule */
+	let
+	in
+	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+	prc[pid2]: send self<pid5, self>
+	end`
 
 // const program = ` 	/* CUT + inner SND + inner RCV rule */
 // 	let

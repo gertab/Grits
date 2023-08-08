@@ -636,7 +636,7 @@ phidefault:
 		phiDollar = phiS[phipt-9 : phipt+1]
 //line ../parser/parser.y:66
 		{
-			phiVAL.form = process.NewSend(phiDollar[2].name, phiDollar[4].name, phiDollar[6].name)
+			phiVAL.form = NewSendMacroForm(phiDollar[2].name, phiDollar[4].name, phiDollar[6].name, phiDollar[9].form)
 		}
 	case 11:
 		phiDollar = phiS[phipt-10 : phipt+1]

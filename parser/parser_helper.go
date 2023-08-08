@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"phi/process"
@@ -14,30 +15,36 @@ type unexpandedProcesses struct {
 
 // Process that is currently being parsed and yet to become a process.Process
 type incompleteProcess struct {
-	Body  Form
+	Body  process.Form
 	Names []process.Name
 	// FunctionDefinitions *[]process.FunctionDefinition
 }
 
-type Form interface {
-	String() string
-	FreeNames() []process.Name
-	Substitute(process.Name, process.Name)
-	Transition(*process.Process, *process.RuntimeEnvironment)
-}
+func expandProcesses(u unexpandedProcesses) []process.Process {
 
-func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {
+	var processes []process.Process
 
-	processes := make([]process.Process, len(u.procs))
+	// First step is to duplicate process having multiple names:
+	// 		e.g. prc[a, b, c, d]: send self<...>
+	// becomes 4 separate processes
 
-	counter := 0
+	// This is wrong because you can have a free name pointing to another process that becomes duplicated (which shouldn't unless shareable)
+	// Todo change this to a split construct:
+	//   <a, b, c, d> <- split ...
+
 	for _, p := range u.procs {
 		for _, n := range p.Names {
 			new_p := process.NewProcess(p.Body, n, process.LINEAR, &u.functions)
-			processes[counter] = *new_p
-			counter++
+			processes = append(processes, *new_p)
 		}
 	}
+
+	// The next step is to get rid of all the macros
+	// this is not easy since some macros may need type information
+	// todo
+	// for _, p := range processes {
+	// 	p.Body.
+	// }
 
 	return processes
 }
@@ -50,15 +57,13 @@ func ParseFile(fileName string) []process.Process {
 	// LexAndPrintTokens(file)
 	prc, err := Parse(file)
 
-	switch {
-	case err != nil:
-		// fmt.Println("Parsing error: ")
+	if err != nil {
 		fmt.Println(err)
 		panic("Parsing error!")
-	default:
-		expandedProcesses := expandUnexpandedProcesses(prc)
-		return expandedProcesses
 	}
+
+	expandedProcesses := expandProcesses(prc)
+	return expandedProcesses
 }
 
 func ParseString(program string) []process.Process {
@@ -66,15 +71,13 @@ func ParseString(program string) []process.Process {
 
 	prc, err := Parse(r)
 
-	switch {
-	case err != nil:
-		// fmt.Println("Parsing error: ")
+	if err != nil {
 		fmt.Println(err)
 		panic("Parsing error!")
-	default:
-		expandedProcesses := expandUnexpandedProcesses(prc)
-		return expandedProcesses
 	}
+
+	expandedProcesses := expandProcesses(prc)
+	return expandedProcesses
 }
 
 func Check() {
@@ -86,4 +89,51 @@ func Check() {
 			fmt.Println(len(*p.FunctionDefinitions))
 		}
 	}
+}
+
+// Forms used as shorthand notations
+// When expanded, these are converted to the other ones
+
+// Send: send to_c<payload_c, continuation_c>; continuation_e
+type SendMacroForm struct {
+	to_c           process.Name
+	payload_c      process.Name
+	continuation_c process.Name
+	// Extra used for shorthand notation
+	continuation_e process.Form
+}
+
+func NewSendMacroForm(to_c, payload_c, continuation_c process.Name, continuation_e process.Form) *SendMacroForm {
+	return &SendMacroForm{
+		to_c:           to_c,
+		payload_c:      payload_c,
+		continuation_c: continuation_c,
+		continuation_e: continuation_e}
+}
+
+func (p *SendMacroForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("send ")
+	buf.WriteString(p.to_c.String())
+	buf.WriteString("<")
+	buf.WriteString(p.payload_c.String())
+	buf.WriteString(",")
+	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(">; ")
+	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *SendMacroForm) Substitute(old, new process.Name) {
+}
+
+// Free names, excluding self references
+func (p *SendMacroForm) FreeNames() []process.Name {
+	var fn []process.Name
+	return fn
+}
+
+func (f *SendMacroForm) Transition(process *process.Process, re *process.RuntimeEnvironment) {
+	// Should never be called
+	panic("Unexpanded form found")
 }

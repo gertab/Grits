@@ -31,10 +31,12 @@ import (
 %type <proc> process
 %type <branches> branches
 
+%left SEND
+%left SEQUENCE
+
 %%
 
-root : program { }
-    ;
+root : program { };
 
 program : 
 		/* collect results in processesRes and functionDefinitionsRes */
@@ -60,6 +62,8 @@ process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{B
 
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }
+		   | /* Send */ SEND name LANGLE name COMMA name RANGLE SEQUENCE expression
+					{ $$ = process.NewSend($2, $4, $6) }
 		   | /* Receive */ LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
 		   			{ $$ = process.NewReceive($2, $4, $8, $10) }
 		   | /* select */ name DOT LABEL LANGLE name RANGLE 
@@ -80,10 +84,10 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewCall($1, []process.Name{}) }
 		   | /* call */ LABEL LPAREN names RPAREN
 		   			{ $$ = process.NewCall($1, $3) }
-/* Drop, Wait */
 					/* used for shared processes */
 					/* for debugging */
 /* remaining expressions:
+ Drop, Wait 
 	Snew, Cast, Shift
 	Acquire, Accept, Push, Detach, Release
 */

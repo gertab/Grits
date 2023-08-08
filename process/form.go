@@ -198,7 +198,7 @@ func CopyForm(orig Form) Form {
 		p, ok := orig.(*CallForm)
 		if ok {
 			copiedParameters := make([]Name, len(p.parameters))
-			copiedParameters = append(copiedParameters, p.parameters...)
+			copy(copiedParameters, p.parameters)
 			return NewCall(p.functionName, copiedParameters)
 		}
 

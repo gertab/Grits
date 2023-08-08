@@ -14,9 +14,16 @@ type unexpandedProcesses struct {
 
 // Process that is currently being parsed and yet to become a process.Process
 type incompleteProcess struct {
-	Body  process.Form
+	Body  Form
 	Names []process.Name
 	// FunctionDefinitions *[]process.FunctionDefinition
+}
+
+type Form interface {
+	String() string
+	FreeNames() []process.Name
+	Substitute(process.Name, process.Name)
+	Transition(*process.Process, *process.RuntimeEnvironment)
 }
 
 func expandUnexpandedProcesses(u unexpandedProcesses) []process.Process {

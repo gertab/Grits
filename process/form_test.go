@@ -209,6 +209,16 @@ func TestSubstitutions(t *testing.T) {
 	output = append(output, input8)
 	expected = append(expected, result8)
 
+	// Call
+	input9 := NewCall("func_name", []Name{from_c, to_c})
+	input9.Substitute(pay_c, new_pay_c)
+	input9.Substitute(cont_c, new_cont_c)
+	input9.Substitute(from_c, new_from_c)
+	input9.Substitute(self, new_self)
+	result9 := NewCall("func_name", []Name{new_from_c, to_c})
+	output = append(output, input9)
+	expected = append(expected, result9)
+
 	compareOutputProgram(t, output, expected)
 }
 
@@ -309,6 +319,20 @@ func TestCopy(t *testing.T) {
 	assertEqual(t, input8, copy8)
 	copyWithType8.from_c.Ident = "from_c_edited"
 	assertNotEqual(t, input8, copy8)
+
+	// Call
+	input9 := NewCall("func_name", []Name{from_c})
+	copy9 := CopyForm(input9)
+	copyWithType9 := copy9.(*CallForm)
+	copyWithType9.parameters[0].Ident = "from_c"
+	assertEqual(t, input9, copy9)
+	copyWithType9.functionName = "changed_function_name"
+	assertNotEqual(t, input9, copy9)
+	copyWithType9.functionName = "func_name"
+	assertEqual(t, input9, copy9)
+	copyWithType9.parameters[0].Ident = "from_c2"
+	assertNotEqual(t, input9, copy9)
+
 }
 
 func TestFreeNames(t *testing.T) {
@@ -370,6 +394,10 @@ func TestFreeNames(t *testing.T) {
 	// Split
 	input8 := NewSplit(pay_c, cont_c, from_c, end)
 	assertEqualNames(t, input8.FreeNames(), []Name{from_c})
+
+	// Split
+	input9 := NewCall("func_name", []Name{from_c})
+	assertEqualNames(t, input9.FreeNames(), []Name{from_c})
 }
 
 // func TestSimpleToken(t *testing.T) {

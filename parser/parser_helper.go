@@ -32,9 +32,10 @@ func expandProcesses(u unexpandedProcesses) []process.Process {
 	// Todo change this to a split construct:
 	//   <a, b, c, d> <- split ...
 
+	// todo maybe throw list of names in OtherProviders
 	for _, p := range u.procs {
 		for _, n := range p.Names {
-			new_p := process.NewProcess(p.Body, n, process.LINEAR, &u.functions)
+			new_p := process.NewProcess(p.Body, n, []process.Name{}, process.LINEAR, &u.functions)
 			processes = append(processes, *new_p)
 		}
 	}

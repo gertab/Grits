@@ -159,7 +159,8 @@ const (
 	// Special rules for priority messages
 	FWD           // uses Channel1
 	FWD_REPLY     // uses Body, Shape
-	SPLIT_DUP_FWD // uses Channels
+	SPLIT_DUP_FWD // uses Channels todo remove
+	DUP
 )
 
 var RuleString = map[Rule]string{
@@ -171,6 +172,7 @@ var RuleString = map[Rule]string{
 	FWD:           "FWD",
 	FWD_REPLY:     "FWD_REPLY",
 	SPLIT_DUP_FWD: "SPLIT_DUP_FWD",
+	DUP:           "DUP",
 }
 
 type PriorityMessage struct {

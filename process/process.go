@@ -28,14 +28,16 @@ var shapeMap = map[Shape]string{
 type Process struct {
 	Body                Form
 	Provider            Name
+	OtherProviders      []Name
 	Shape               Shape
 	FunctionDefinitions *[]FunctionDefinition
 }
 
-func NewProcess(body Form, provider Name, shape Shape, functionDefinitions *[]FunctionDefinition) *Process {
+func NewProcess(body Form, provider Name, otherProviders []Name, shape Shape, functionDefinitions *[]FunctionDefinition) *Process {
 	return &Process{
 		Body:                body,
 		Provider:            provider,
+		OtherProviders:      otherProviders,
 		Shape:               shape,
 		FunctionDefinitions: functionDefinitions,
 	}
@@ -50,6 +52,10 @@ func (p *Process) OutlineString() string {
 	buf.WriteString(shapeMap[p.Shape])
 	buf.WriteString("[")
 	buf.WriteString(p.Provider.String())
+	if len(p.OtherProviders) > 0 {
+		buf.WriteString(",")
+		buf.WriteString(NamesToString(p.OtherProviders))
+	}
 	buf.WriteString("]")
 	return buf.String()
 

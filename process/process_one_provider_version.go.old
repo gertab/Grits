@@ -5,12 +5,12 @@ import (
 	"strconv"
 )
 
-// Stores the states of each running process.
-// May also reference a controller & a monitor to observe the running state.
-type ProcessConfiguration struct {
-	Processes []Process
-	// ref to controller/monitor
-}
+// // Stores the states of each running process.
+// // May also reference a controller & a monitor to observe the running state.
+// type ProcessConfiguration struct {
+// 	Processes []Process
+// 	// ref to controller/monitor
+// }
 
 type Shape int
 
@@ -39,10 +39,6 @@ func NewProcess(body Form, provider Name, shape Shape, functionDefinitions *[]Fu
 		Shape:               shape,
 		FunctionDefinitions: functionDefinitions,
 	}
-}
-
-func (p *Process) InsertFunctionDefinitions(all *[]FunctionDefinition) {
-	p.FunctionDefinitions = all
 }
 
 func (p *Process) OutlineString() string {

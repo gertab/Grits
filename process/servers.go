@@ -93,7 +93,7 @@ func (m *Monitor) MonitorRuleFinished(process *Process, rule Rule) {
 	provider := process.Provider
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: rule, isDead: false, stopMonitor: false}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, []Name{}, shape, nil), rule: rule, isDead: false, stopMonitor: false}
 }
 
 func (m *Monitor) MonitorProcessTerminated(process *Process) {
@@ -101,7 +101,7 @@ func (m *Monitor) MonitorProcessTerminated(process *Process) {
 	provider := process.Provider
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true, stopMonitor: false}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, []Name{}, shape, nil), isDead: true, stopMonitor: false}
 }
 
 func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {

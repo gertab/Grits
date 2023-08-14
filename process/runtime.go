@@ -41,7 +41,7 @@ func InitializeProcesses(processes []Process) {
 		LOGINFO,
 		LOGPROCESSING,
 		LOGRULE,
-		LOGRULEDETAILS,
+		// LOGRULEDETAILS,
 		LOGMONITOR,
 	}
 

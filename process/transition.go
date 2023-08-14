@@ -127,6 +127,7 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 func TransitionAsProvider(process *Process, providerFunc func(), sendingMessage Message, re *RuntimeEnvironment) {
 
 	if len(process.OtherProviders) > 0 {
+		// Split process if needed
 		performDUPrule(process, re)
 	} else {
 		select {
@@ -146,6 +147,7 @@ func TransitionAsClient(process *Process, clientChan chan Message, clientFunc fu
 	}
 
 	if len(process.OtherProviders) > 0 {
+		// Split process if needed
 		performDUPrule(process, re)
 	} else {
 		select {
@@ -169,11 +171,16 @@ func TransitionAsClient(process *Process, clientChan chan Message, clientFunc fu
 // }
 
 func TransitionInternally(process *Process, internalFunction func(), re *RuntimeEnvironment) {
-	select {
-	case pm := <-process.Provider.PriorityChannel:
-		handlePriorityMessage(process, pm, re)
-	default:
-		internalFunction()
+	if len(process.OtherProviders) > 0 {
+		// Split process if needed
+		performDUPrule(process, re)
+	} else {
+		select {
+		case pm := <-process.Provider.PriorityChannel:
+			handlePriorityMessage(process, pm, re)
+		default:
+			internalFunction()
+		}
 	}
 }
 
@@ -202,63 +209,6 @@ func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeE
 	// TransitionLoop(process, re)
 	process.terminate(re)
 }
-
-// func splitHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
-// 	re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
-
-// 	processFreeNames := process.Body.FreeNames()
-
-// 	// Create an array of arrays containing fresh channels
-// 	// E.g. if we are splitting to two channels, and have 1 free name called a, then
-// 	// we create freshChannels containing:
-// 	//   [][]Names{
-// 	//       [Names]{a', a''},
-// 	//   }
-// 	// where a' and a'' are the new fresh channels that will be substituted in place of a
-// 	freshChannels := make([][]Name, len(processFreeNames))
-
-// 	for i := range freshChannels {
-// 		freshChannels[i] = make([]Name, len(pm.Channels))
-
-// 		for j := range pm.Channels {
-// 			freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
-// 		}
-// 	}
-
-// 	chanString := ""
-// 	for i := range freshChannels {
-// 		chanString += processFreeNames[i].String() + ": {"
-// 		chanString += NamesToString(freshChannels[i])
-// 		chanString += "}; "
-// 	}
-// 	re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP_FWD] NEW Free names: %s\n", chanString)
-
-// 	for i := range pm.Channels {
-// 		// Prepare process to spawn, by substituting all free names with the unique ones just created
-// 		newProcessBody := CopyForm(process.Body)
-// 		for k := range freshChannels {
-// 			newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
-// 		}
-
-// 		// Create and spawn the new processes
-// 		// Set its provider to the channel received in the SPLIT_DUP_FWD request
-// 		newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], []Name{}, process.Shape, process.FunctionDefinitions)
-// 		newSplitProcess.Transition(re)
-// 	}
-
-// 	for i := range processFreeNames {
-// 		// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
-// 		// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
-// 		re.logProcessf(LOGRULE, process, "[SPLIT_DUP_FWD] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
-// 		processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP_FWD, Channels: freshChannels[i]}
-// 	}
-
-// 	re.logProcess(LOGRULE, process, "[SPLIT_DUP_FWD] Rule SPLIT finished (SPLIT -> DUP -> FWD) (p)")
-
-// 	// The process body has been delegated to the freshly spawned processes, so die
-// 	// todo die
-// 	process.terminate(re)
-// }
 
 func handleInvalidPriorityMessage(process *Process, re *RuntimeEnvironment) {
 	re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
@@ -301,7 +251,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		rcvRule := func(message Message) {
 			re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
-			re.logProcessf(LOGRULEDETAILS, process, "Should received message on channel %s, containing message rule RCV\n", f.to_c.String())
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule RCV\n", f.to_c.String())
 			// message := <-f.to_c.Channel
 			// close(f.to_c.Channel)
 			// close(f.to_c.PriorityChannel)
@@ -380,39 +330,37 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of new: %s\n", f.String())
 
-	// newRule := func() {
-	// 	re.logProcess(LOGRULEDETAILS, process, "[new] will create new process")
+	newRule := func() {
+		// This name is indicative only (for debugging), since there shouldn't be more than one process with the same channel name
+		// Although channels may have an ID, processes (i.e. goroutines) are anonymous
+		newChannelIdent := f.continuation_c.Ident
+		// newChannelIdent := ""
 
-	// 	// This name is indicative only (for debugging), since there shouldn't be more than one process with the same channel name
-	// 	// Although channels may have an ID, processes (i.e. goroutines) are anonymous
-	// 	newChannelIdent := f.continuation_c.Ident
-	// 	// newChannelIdent := ""
+		// First create fresh channel (with fake identity of the continuation_c name) to link both processes
+		newChannel := re.CreateFreshChannel(newChannelIdent)
 
-	// 	// First create fresh channel (with fake identity of the continuation_c name) to link both processes
-	// 	newChannel := re.CreateFreshChannel(newChannelIdent)
+		// Substitute reference to this new channel by the actual channel in the current process and new process
+		currentProcessBody := f.continuation_e
+		currentProcessBody.Substitute(f.continuation_c, newChannel)
+		process.Body = currentProcessBody
 
-	// 	// Substitute reference to this new channel by the actual channel in the current process and new process
-	// 	currentProcessBody := f.continuation_e
-	// 	currentProcessBody.Substitute(f.continuation_c, newChannel)
-	// 	process.Body = currentProcessBody
+		// Create structure of new process
+		newProcessBody := f.body
+		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
+		newProcess := NewProcess(newProcessBody, newChannel, []Name{}, LINEAR, process.FunctionDefinitions)
 
-	// 	// Create structure of new process
-	// 	newProcessBody := f.body
-	// 	newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
-	// 	newProcess := NewProcess(newProcessBody, newChannel, LINEAR, process.FunctionDefinitions)
+		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 
-	// 	re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
+		// Spawn and initiate new process
+		newProcess.Transition(re)
 
-	// 	// Spawn and initiate new process
-	// 	newProcess.Transition(re)
+		process.finishedRule(CUT, "[new]", "", re)
+		// re.logProcess(LOGRULE, process, "[new] finished CUT rule")
+		// Continue executing current process
+		TransitionLoop(process, re)
+	}
 
-	// 	process.finishedRule(CUT, "[new]", "", re)
-	// 	// re.logProcess(LOGRULE, process, "[new] finished CUT rule")
-	// 	// Continue executing current process
-	// 	TransitionLoop(process, re)
-	// }
-
-	// TransitionInternally(process, newRule, re)
+	TransitionInternally(process, newRule, re)
 }
 
 func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
@@ -422,34 +370,49 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 // CALL rule
 func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
-	// re.logProcessf(LOGRULEDETAILS, process, "transition of call: %s\n", f.String())
+	re.logProcessf(LOGRULEDETAILS, process, "transition of call: %s\n", f.String())
 
-	// callRule := func() {
-	// 	// Look up function by name and arity
-	// 	arity := len(f.parameters)
-	// 	functionCall := GetFunctionByNameArity(*process.FunctionDefinitions, f.functionName, arity)
+	callRule := func() {
+		// Look up function by name and arity
+		arity := len(f.parameters)
+		functionCall := GetFunctionByNameArity(*process.FunctionDefinitions, f.functionName, arity)
 
-	// 	if functionCall == nil {
-	// 		// No function found in the FunctionDefinitions list
-	// 		re.logProcessf(LOGERROR, process, "Function %s does not exist.\n", f.String())
-	// 		panic("Wrong function call")
-	// 	}
+		if functionCall == nil {
+			// No function found in the FunctionDefinitions list
+			re.logProcessf(LOGERROR, process, "Function %s does not exist.\n", f.String())
+			panic("Wrong function call")
+		}
 
-	// 	// Function found
-	// 	functionCallBody := functionCall.Body
+		// Function found
+		functionCallBody := functionCall.Body
 
-	// 	for i := range functionCall.Parameters {
-	// 		functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
-	// 	}
+		for i := range functionCall.Parameters {
+			functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
+		}
 
-	// 	process.Body = functionCallBody
+		process.Body = functionCallBody
 
-	// 	process.finishedRule(CALL, "[call]", "", re)
+		process.finishedRule(CALL, "[call]", "", re)
 
-	// 	TransitionLoop(process, re)
-	// }
+		TransitionLoop(process, re)
+	}
 
 	// TransitionInternally(process, callRule, re)
+
+	// Always perform CALL before DUP
+	prioritiseCallRule := true
+
+	if len(process.OtherProviders) > 0 && !prioritiseCallRule {
+		// Split process if needed
+		performDUPrule(process, re)
+	} else {
+		select {
+		case pm := <-process.Provider.PriorityChannel:
+			handlePriorityMessage(process, pm, re)
+		default:
+			callRule()
+		}
+	}
 }
 
 func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
@@ -466,7 +429,17 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	fmt.Println(f.String())
 }
 
-// Special cases: Forward and Split
+// func (f *WaitForm) Transition(process *Process, re *RuntimeEnvironment) {
+// 	fmt.Print("transition of wait: ")
+// 	fmt.Println(f.String())
+// }
+
+// func (f *DropForm) Transition(process *Process, re *RuntimeEnvironment) {
+// 	fmt.Print("transition of drop: ")
+// 	fmt.Println(f.String())
+// }
+
+// Special cases: Forward and Split [split is not a special case]
 func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of forward: %s\n", f.String())
 	// todo check priority messages
@@ -534,7 +507,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		splitRule := func() {
 			// todo check that f.to_c == process.Provider
-			re.logProcessf(LOGRULE, process, "[split, client] initiating split for %s\n", f.from_c.String())
+			re.logProcessf(LOGRULE, process, "[split, client] initiating split for %s into %s\n", f.from_c.String(), NamesToString(newSplitNames))
 
 			currentProcessBody := f.continuation_e
 			currentProcessBody.Substitute(f.channel_one, newSplitNames[0])
@@ -557,19 +530,20 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// priorityMessage := PriorityMessage{Action: SPLIT_DUP_FWD, Channels: newSplitNames}
 
 		// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, splitRule, priorityMessage, re)
+		TransitionInternally(process, splitRule, re)
 
-		if len(process.OtherProviders) > 0 {
-			// todo first you need to check whether len(process.OtherProviders) > 0 -- if so, then the process is non-interacting and needs to be split
-			re.logProcessf(LOGERROR, process, "process.OtherProviders = %d\n", len(process.OtherProviders))
-			panic("needs to split first")
-		}
+		// if len(process.OtherProviders) > 0 {
+		// 	// todo first you need to check whether len(process.OtherProviders) > 0 -- if so, then the process is non-interacting and needs to be split
+		// 	re.logProcessf(LOGERROR, process, "process.OtherProviders = %d\n", len(process.OtherProviders))
+		// 	panic("needs to split first")
+		// }
 
-		select {
-		case pm := <-process.Provider.PriorityChannel:
-			handlePriorityMessage(process, pm, re)
-		default:
-			splitRule()
-		}
+		// select {
+		// case pm := <-process.Provider.PriorityChannel:
+		// 	handlePriorityMessage(process, pm, re)
+		// default:
+		// 	splitRule()
+		// }
 	}
 }
 

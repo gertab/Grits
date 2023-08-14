@@ -11,9 +11,11 @@ import (
 type Monitor struct {
 	i int
 	// Monitor receives info from processes on monitorChan
-	monitorChan (chan MonitorUpdate)
-	// Processes report error to monitor on monitorChan
+	monitorChan chan MonitorUpdate
+	// Processes report errors to monitor on monitorChan
 	errorChan chan error
+	// Processes report errors to monitor on monitorChan
+	stopMonitorChan chan bool
 	// Runtime environment contains log info
 	re *RuntimeEnvironment
 	// Keeps a log of all the rules that took place
@@ -25,10 +27,9 @@ type Monitor struct {
 }
 
 type MonitorUpdate struct {
-	process     Process
-	rule        Rule
-	isDead      bool
-	stopMonitor bool
+	process Process
+	rule    Rule
+	isDead  bool
 }
 
 type MonitorRulesLog struct {
@@ -41,9 +42,10 @@ func NewMonitor(re *RuntimeEnvironment) *Monitor {
 	// todo make these buffered
 	monitorChan := make(chan MonitorUpdate)
 	errorChan := make(chan error)
+	stopMonitorChan := make(chan bool)
 	monitorFinishedChan := make(chan bool)
 
-	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 200 * time.Millisecond}
+	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, stopMonitorChan: stopMonitorChan, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 200 * time.Millisecond}
 }
 
 func (m *Monitor) startMonitor(started chan bool) {
@@ -54,6 +56,10 @@ func (m *Monitor) startMonitor(started chan bool) {
 	m.monitorLoop()
 }
 
+// func (m *Monitor) stopMonitor() {
+// 	m.stopMonitorChan <- true
+// }
+
 func (m *Monitor) monitorLoop() {
 	select {
 	case processUpdate := <-m.monitorChan:
@@ -61,14 +67,15 @@ func (m *Monitor) monitorLoop() {
 			// Process is terminated
 			m.re.logMonitorf("Process %s died\n", processUpdate.process.Provider.String())
 			m.deadProcesses = append(m.deadProcesses, processUpdate.process)
-		} else if processUpdate.stopMonitor {
-			// Stops monitoring
-			return
 		} else {
 			// Process finished rule
 			m.re.logMonitorf("Finished %s, %s\n", RuleString[processUpdate.rule], processUpdate.process.String())
 			m.rulesLog = append(m.rulesLog, MonitorRulesLog{Process: processUpdate.process, Rule: processUpdate.rule})
 		}
+
+	case <-m.stopMonitorChan:
+		m.re.logMonitorf("Monitor terminating\n")
+		return
 
 	case error := <-m.errorChan:
 		fmt.Println(error)
@@ -93,7 +100,7 @@ func (m *Monitor) MonitorRuleFinished(process *Process, rule Rule) {
 	provider := process.Provider
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, []Name{}, shape, nil), rule: rule, isDead: false, stopMonitor: false}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, []Name{}, shape, nil), rule: rule, isDead: false}
 }
 
 func (m *Monitor) MonitorProcessTerminated(process *Process) {
@@ -101,7 +108,17 @@ func (m *Monitor) MonitorProcessTerminated(process *Process) {
 	provider := process.Provider
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, []Name{}, shape, nil), isDead: true, stopMonitor: false}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, []Name{}, shape, nil), isDead: true}
+}
+
+func (m *Monitor) MonitorNewProcess(process *Process) {
+	body := CopyForm(process.Body)
+	provider := process.Provider
+	var otherProviders []Name
+	copy(otherProviders, process.OtherProviders)
+	shape := process.Shape
+
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, otherProviders, shape, nil), isDead: false}
 }
 
 func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {

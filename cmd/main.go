@@ -105,13 +105,13 @@ import (
 // 	prc[pid2]: <a, b> <- recv self; close sel
 // 	end`
 
-// const program = ` 	/* Simple SPLIT + SND rule (x 2) */
-// 	let
-// 	in
-// 		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-// 		/*prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; close self*/
-// 		prc[pid2]: send self<pid3, self>
-// 	end`
+const program = ` 	/* Simple SPLIT + SND rule (x 2) */
+	let
+	in
+		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+		/*prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; close self*/
+		prc[pid2]: send self<pid3, self>
+	end`
 
 // const program = ` 	/* SPLIT + SND rule (x 2) */
 // 	let
@@ -122,14 +122,14 @@ import (
 // 		prc[pid3]: <a, b> <- recv self; send b<_wwww, _zzzz>
 // 	end`
 
-const program = ` /* SPLIT + CALL rule */
-		let
-			D1(c) =  <a, b> <- recv c; close a
-		in
-			prc[pid0]: <x1, x2> <- split pid1; close self
-			prc[pid1]: D1(pid2)
-			prc[pid2]: send self<pid3, self>
-		end`
+// const program = ` /* SPLIT + CALL rule */
+// 		let
+// 			D1(c) =  <a, b> <- recv c; close a
+// 		in
+// 			prc[pid0]: <x1, x2> <- split pid1; close self
+// 			prc[pid1]: D1(pid2)
+// 			prc[pid2]: send self<pid3, self>
+// 		end`
 
 // const program = ` /* Call rule */
 // 		let

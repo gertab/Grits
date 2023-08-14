@@ -7,8 +7,11 @@ import (
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) Transition(re *RuntimeEnvironment) {
-	// todo make this atomic
+	// ProcessCount is atomic
 	atomic.AddUint64(&re.ProcessCount, 1)
+
+	// notify monitor about new process
+	re.monitor.MonitorNewProcess(process)
 
 	go TransitionLoop(process, re)
 }
@@ -47,6 +50,7 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 
 func performDUPrule(process *Process, re *RuntimeEnvironment) {
 	if len(process.OtherProviders) == 0 {
+		re.logProcessHighlight(LOGERROR, process, "Cannot duplicate this process")
 		panic("Cannot duplicate this process")
 	}
 	// The process needs to be DUPlicated
@@ -186,7 +190,7 @@ func TransitionInternally(process *Process, internalFunction func(), re *Runtime
 
 func handlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
 	switch pm.Action {
-	case FWD:
+	case FWD_REQUEST:
 		fwdHandlePriorityMessage(process, pm, re)
 	// case SPLIT_DUP_FWD:
 	// 	// todo probably remove
@@ -250,6 +254,8 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// snd to_c<...>
 
 		rcvRule := func(message Message) {
+			// Message is the received message
+
 			re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
 			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule RCV\n", f.to_c.String())
 			// message := <-f.to_c.Channel
@@ -257,6 +263,10 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			// close(f.to_c.PriorityChannel)
 
 			// todo check that rule matches RCV
+			if message.Rule != RCV {
+				re.logProcessHighlight(LOGERROR, process, "expected RCV")
+				panic("expected RCV")
+			}
 
 			new_body := message.ContinuationBody
 			new_body.Substitute(message.Channel1, f.payload_c)
@@ -307,9 +317,12 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		sndRule := func(message Message) {
 			re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")
-			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] proceeding with SND, will receive from %s\n", f.from_c.String())
+			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
 
-			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
+			if message.Rule != SND {
+				re.logProcessHighlight(LOGERROR, process, "expected RCV")
+				panic("expected SND")
+			}
 
 			new_body := f.continuation_e
 			new_body.Substitute(f.payload_c, message.Channel1)
@@ -446,6 +459,8 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	if f.to_c.IsSelf {
 
+		priorityMessage := PriorityMessage{Action: FWD_REQUEST, Channels: []Name{process.Provider}}
+
 		forwardRule := func() {
 			// todo check that f.to_c == process.Provider
 			// f.from_c.Channel <- Message{Rule: FWD, Channel1: process.Provider}
@@ -467,13 +482,12 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			// todo ensure that action is correct
 			if pm.Action != FWD_REPLY {
+				re.logProcessHighlight(LOGERROR, process, "expected FWD_REPLY")
 				panic("expected FWD_REPLY")
 			}
 
 			TransitionLoop(process, re)
 		}
-
-		priorityMessage := PriorityMessage{Action: FWD, Channels: []Name{process.Provider}}
 
 		// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
 		select {

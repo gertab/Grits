@@ -51,16 +51,14 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 	}
 	// The process needs to be DUPlicated
 
-	re.logProcessf(LOGRULE, process, "[DUP] Initiating DUP rule. Will split in %d processes\n", len(process.OtherProviders)+1)
-
 	newProcessNames := process.OtherProviders
 	newProcessNames = append([]Name{process.Provider}, newProcessNames...)
 
-	re.logProcessf(LOGRULEDETAILS, process, "[DUP] %s\n", NamesToString(newProcessNames))
+	re.logProcessf(LOGRULE, process, "[DUP] Initiating DUP rule. Will split in %d processes: %s\n", len(newProcessNames), NamesToString(newProcessNames))
 
 	processFreeNames := process.Body.FreeNames()
 
-	re.logProcessf(LOGRULEDETAILS, process, "[DUP] Free names: %s\n", NamesToString(processFreeNames))
+	// re.logProcessf(LOGRULEDETAILS, process, "[DUP] Free names: %s\n", NamesToString(processFreeNames))
 
 	// Create an array of arrays containing fresh channels
 	// E.g. if we are splitting to two channels, and have 1 free name called a, then
@@ -113,12 +111,13 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 		// Create structure of new forward process
 		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i])
 		newProcess := NewProcess(newProcessBody, freshChannels[i][0], freshChannels[i][1:], LINEAR, process.FunctionDefinitions)
-		re.logProcessHighlightf(LOGRULEDETAILS, process, "[dup] will create new forward process providing on %s, %s: %s\n", freshChannels[i][0].String(), NamesToString(freshChannels[i][1:]), newProcess.String())
+		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process
 		newProcess.Transition(re)
 	}
 
-	process.finishedRule(DUP, "[DUP]", "", re)
+	details := fmt.Sprintf("(Duplicated %s into %s)", process.Provider.String(), NamesToString(newProcessNames))
+	process.finishedRule(DUP, "[DUP]", details, re)
 
 	// todo remove // Current process has been duplicated, so remove the duplication requirements to continue executing its body [i.e. become interactive]
 	// process.OtherProviders = []Name{}
@@ -182,9 +181,9 @@ func handlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvi
 	switch pm.Action {
 	case FWD:
 		fwdHandlePriorityMessage(process, pm, re)
-	case SPLIT_DUP_FWD:
-		// todo probably remove
-		splitHandlePriorityMessage(process, pm, re)
+	// case SPLIT_DUP_FWD:
+	// 	// todo probably remove
+	// 	splitHandlePriorityMessage(process, pm, re)
 	default:
 		handleInvalidPriorityMessage(process, re)
 	}
@@ -204,62 +203,62 @@ func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeE
 	process.terminate(re)
 }
 
-func splitHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
+// func splitHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
+// 	re.logProcessf(LOGRULE, process, "[Priority Msg] Received SPLIT_DUP_FWD request. Will split in %d processes: %s\n", len(pm.Channels), NamesToString(pm.Channels))
 
-	processFreeNames := process.Body.FreeNames()
+// 	processFreeNames := process.Body.FreeNames()
 
-	// Create an array of arrays containing fresh channels
-	// E.g. if we are splitting to two channels, and have 1 free name called a, then
-	// we create freshChannels containing:
-	//   [][]Names{
-	//       [Names]{a', a''},
-	//   }
-	// where a' and a'' are the new fresh channels that will be substituted in place of a
-	freshChannels := make([][]Name, len(processFreeNames))
+// 	// Create an array of arrays containing fresh channels
+// 	// E.g. if we are splitting to two channels, and have 1 free name called a, then
+// 	// we create freshChannels containing:
+// 	//   [][]Names{
+// 	//       [Names]{a', a''},
+// 	//   }
+// 	// where a' and a'' are the new fresh channels that will be substituted in place of a
+// 	freshChannels := make([][]Name, len(processFreeNames))
 
-	for i := range freshChannels {
-		freshChannels[i] = make([]Name, len(pm.Channels))
+// 	for i := range freshChannels {
+// 		freshChannels[i] = make([]Name, len(pm.Channels))
 
-		for j := range pm.Channels {
-			freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
-		}
-	}
+// 		for j := range pm.Channels {
+// 			freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+// 		}
+// 	}
 
-	chanString := ""
-	for i := range freshChannels {
-		chanString += processFreeNames[i].String() + ": {"
-		chanString += NamesToString(freshChannels[i])
-		chanString += "}; "
-	}
-	re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP_FWD] NEW Free names: %s\n", chanString)
+// 	chanString := ""
+// 	for i := range freshChannels {
+// 		chanString += processFreeNames[i].String() + ": {"
+// 		chanString += NamesToString(freshChannels[i])
+// 		chanString += "}; "
+// 	}
+// 	re.logProcessf(LOGRULEDETAILS, process, "[SPLIT_DUP_FWD] NEW Free names: %s\n", chanString)
 
-	for i := range pm.Channels {
-		// Prepare process to spawn, by substituting all free names with the unique ones just created
-		newProcessBody := CopyForm(process.Body)
-		for k := range freshChannels {
-			newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
-		}
+// 	for i := range pm.Channels {
+// 		// Prepare process to spawn, by substituting all free names with the unique ones just created
+// 		newProcessBody := CopyForm(process.Body)
+// 		for k := range freshChannels {
+// 			newProcessBody.Substitute(processFreeNames[k], freshChannels[k][i])
+// 		}
 
-		// Create and spawn the new processes
-		// Set its provider to the channel received in the SPLIT_DUP_FWD request
-		newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], []Name{}, process.Shape, process.FunctionDefinitions)
-		newSplitProcess.Transition(re)
-	}
+// 		// Create and spawn the new processes
+// 		// Set its provider to the channel received in the SPLIT_DUP_FWD request
+// 		newSplitProcess := NewProcess(newProcessBody, pm.Channels[i], []Name{}, process.Shape, process.FunctionDefinitions)
+// 		newSplitProcess.Transition(re)
+// 	}
 
-	for i := range processFreeNames {
-		// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
-		// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
-		re.logProcessf(LOGRULE, process, "[SPLIT_DUP_FWD] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
-		processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP_FWD, Channels: freshChannels[i]}
-	}
+// 	for i := range processFreeNames {
+// 		// Implicitly we are doing SPLIT -> DUP -> FWD procedure in one move
+// 		// send split to channel processFreeNames[i] containing the new channels freshChannels[i]
+// 		re.logProcessf(LOGRULE, process, "[SPLIT_DUP_FWD] Asking %s to split into %s\n", processFreeNames[i].String(), NamesToString(freshChannels[i]))
+// 		processFreeNames[i].PriorityChannel <- PriorityMessage{Action: SPLIT_DUP_FWD, Channels: freshChannels[i]}
+// 	}
 
-	re.logProcess(LOGRULE, process, "[SPLIT_DUP_FWD] Rule SPLIT finished (SPLIT -> DUP -> FWD) (p)")
+// 	re.logProcess(LOGRULE, process, "[SPLIT_DUP_FWD] Rule SPLIT finished (SPLIT -> DUP -> FWD) (p)")
 
-	// The process body has been delegated to the freshly spawned processes, so die
-	// todo die
-	process.terminate(re)
-}
+// 	// The process body has been delegated to the freshly spawned processes, so die
+// 	// todo die
+// 	process.terminate(re)
+// }
 
 func handleInvalidPriorityMessage(process *Process, re *RuntimeEnvironment) {
 	re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
@@ -542,7 +541,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 			currentProcessBody.Substitute(f.channel_two, newSplitNames[1])
 			process.Body = currentProcessBody
 
-			process.finishedRule(SPLIT_DUP_FWD, "[split, client]", "(c)", re)
+			process.finishedRule(SPLIT, "[split, client]", "(c)", re)
 			// re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule (c)")
 
 			// Create structure of new forward process

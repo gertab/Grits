@@ -151,28 +151,32 @@ type Message struct {
 type Rule int
 
 const (
-	SND Rule = iota // uses Channel1 and Channel2
-	RCV             // uses ContinuationBody, Channel1 and Channel2
-	CUT
-	CALL
+	// These can happen when a process is 'interactive' by sending messages
+	SND Rule = iota // uses Channel1 and Channel2 of the Message struct
+	RCV             // uses ContinuationBody, Channel1 and Channel2 of the Message struct
 
+	// These can happen when a process is 'interactive' by transitioning internally
+	CUT
+	SPLIT
+	CALL // (maybe can happen when interactive or not)
+
+	// When a process is 'non-interactive', either the FWD or DUP rules take place
 	// Special rules for priority messages
-	FWD           // uses Channel1
-	FWD_REPLY     // uses Body, Shape
-	SPLIT_DUP_FWD // uses Channels todo remove
+	FWD       // uses Channel1 of the PriorityMessage struct
+	FWD_REPLY // uses Body, Shape of the PriorityMessage struct
 	DUP
 )
 
 var RuleString = map[Rule]string{
-	SND:  "SND",
-	RCV:  "RCV",
-	CUT:  "CUT",
-	CALL: "CALL",
+	SND:   "SND",
+	RCV:   "RCV",
+	CUT:   "CUT",
+	CALL:  "CALL",
+	SPLIT: "SPLIT",
 
-	FWD:           "FWD",
-	FWD_REPLY:     "FWD_REPLY",
-	SPLIT_DUP_FWD: "SPLIT_DUP_FWD",
-	DUP:           "DUP",
+	FWD:       "FWD",
+	FWD_REPLY: "FWD_REPLY",
+	DUP:       "DUP",
 }
 
 type PriorityMessage struct {
@@ -215,11 +219,11 @@ func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...inter
 	}
 }
 
-// Color: Red, Green, Yellow, Blue, Purple, Cyan, Gray
-var colors = []string{"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m"}
-var colorsHl = []string{"\033[101m", "\033[102m", "\033[103m", "\033[104m", "\033[105m", "\033[106m", "\033[107m"}
+// Color: Red ("\033[31m", "\033[101m"), Green, Yellow, Blue, Purple, Cyan, Gray
+var colors = []string{"\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m"}
+var colorsHl = []string{"\033[102m", "\033[103m", "\033[104m", "\033[105m", "\033[106m", "\033[107m"}
 
-const colorsLen = 6 // avoiding gray coz it looks like white
+const colorsLen = 5 // avoiding gray coz it looks like white and red as it resembles error messages
 
 var resetColor = "\033[0m"
 

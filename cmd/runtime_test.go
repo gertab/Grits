@@ -17,10 +17,11 @@ type traceOption struct {
 	deadProcesses int
 }
 
-func TestSimpleToken(t *testing.T) {
+var input string
+var expected []traceOption
+
+func TestSimpleFWDRCV(t *testing.T) {
 	// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
-	var input string
-	var expected []traceOption
 
 	// Case 1: FWD + RCV
 	input = ` 	/* FWD + RCV rule */
@@ -35,7 +36,9 @@ func TestSimpleToken(t *testing.T) {
 		{[]step{{"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
+}
 
+func TestSimpleSND(t *testing.T) {
 	// Case 2: SND
 	input = ` 	/* SND rule */
 	let
@@ -48,7 +51,9 @@ func TestSimpleToken(t *testing.T) {
 		{[]step{{"pid2", process.SND}, {"pid1", process.SND}}, 1},
 	}
 	checkInputRepeatedly(t, input, expected)
+}
 
+func TestSimpleCUTSND(t *testing.T) {
 	// Case 3: CUT + SND
 	input = ` 	/* CUT + SND rule */
 		let
@@ -65,6 +70,9 @@ func TestSimpleToken(t *testing.T) {
 	}
 	checkInputRepeatedly(t, input, expected)
 
+}
+
+func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 	// Case 3: CUT + SND
 	input = `   /* CUT + inner blocking SND + FWD + RCV rule */
 			let
@@ -80,7 +88,6 @@ func TestSimpleToken(t *testing.T) {
 		{[]step{{"pid2", process.FWD}, {"pid2", process.CUT}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
-
 }
 
 func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOption) {

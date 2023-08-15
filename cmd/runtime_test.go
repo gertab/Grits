@@ -67,9 +67,10 @@ func TestSimpleCUTSND(t *testing.T) {
 		{[]step{{"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
 		{[]step{{"x", process.SND}, {"pid2", process.SND}, {"pid1", process.CUT}}, 1},
 		{[]step{{"x", process.SND}, {"pid1", process.CUT}, {"pid2", process.SND}}, 1},
+		{[]step{{"pid2", process.SND}, {"pid1", process.CUT}, {"x", process.SND}}, 1},
+		{[]step{{"pid2", process.SND}, {"x", process.SND}, {"pid1", process.CUT}}, 1},
 	}
 	checkInputRepeatedly(t, input, expected)
-
 }
 
 func TestSimpleCUTSNDFWDRCV(t *testing.T) {
@@ -183,7 +184,7 @@ func stingifySteps(steps []step) string {
 
 func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log []step) {
 	for _, c := range monRulesLog {
-		log = append(log, step{processName: c.Process.Provider.Ident, rule: c.Rule})
+		log = append(log, step{processName: c.Process.Providers[0].Ident, rule: c.Rule})
 	}
 
 	return log

@@ -15,8 +15,8 @@ type unexpandedProcesses struct {
 
 // Process that is currently being parsed and yet to become a process.Process
 type incompleteProcess struct {
-	Body  process.Form
-	Names []process.Name
+	Body      process.Form
+	Providers []process.Name
 	// FunctionDefinitions *[]process.FunctionDefinition
 }
 
@@ -34,8 +34,8 @@ func expandProcesses(u unexpandedProcesses) []process.Process {
 
 	// todo maybe throw list of names in OtherProviders
 	for _, p := range u.procs {
-		for _, n := range p.Names {
-			new_p := process.NewProcess(p.Body, n, []process.Name{}, process.LINEAR, &u.functions)
+		for _, n := range p.Providers {
+			new_p := process.NewProcess(p.Body, []process.Name{n}, process.LINEAR, &u.functions)
 			processes = append(processes, *new_p)
 		}
 	}

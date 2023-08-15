@@ -42,7 +42,7 @@ program :
 		/* collect results in processesRes and functionDefinitionsRes */
 	expression 
 		{
-			philex.(*lexer).processesRes = append(philex.(*lexer).processesRes, incompleteProcess{Body:$1, Names: []process.Name{{Ident: "root", IsSelf: false}}})
+			philex.(*lexer).processesRes = append(philex.(*lexer).processesRes, incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root", IsSelf: false}}})
 		}
 	 | processes 
 		{ 
@@ -57,8 +57,8 @@ program :
 processes : process processes { $$ = append([]incompleteProcess{$1}, $2...) }
 		  | process           { $$ = []incompleteProcess{$1} }; 
 
-process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{Body:$6, Names: $3} }
-		| SPRC LSBRACK names RSBRACK COLON expression { $$ = incompleteProcess{Body:$6, Names: $3} };
+process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{Body:$6, Providers: $3} }
+		| SPRC LSBRACK names RSBRACK COLON expression { $$ = incompleteProcess{Body:$6, Providers: $3} };
 
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }

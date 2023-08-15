@@ -27,17 +27,15 @@ var shapeMap = map[Shape]string{
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
 	Body                Form
-	Provider            Name
-	OtherProviders      []Name
+	Providers           []Name
 	Shape               Shape
 	FunctionDefinitions *[]FunctionDefinition
 }
 
-func NewProcess(body Form, provider Name, otherProviders []Name, shape Shape, functionDefinitions *[]FunctionDefinition) *Process {
+func NewProcess(body Form, providers []Name, shape Shape, functionDefinitions *[]FunctionDefinition) *Process {
 	return &Process{
 		Body:                body,
-		Provider:            provider,
-		OtherProviders:      otherProviders,
+		Providers:           providers,
 		Shape:               shape,
 		FunctionDefinitions: functionDefinitions,
 	}
@@ -51,11 +49,7 @@ func (p *Process) OutlineString() string {
 	var buf bytes.Buffer
 	buf.WriteString(shapeMap[p.Shape])
 	buf.WriteString("[")
-	buf.WriteString(p.Provider.String())
-	if len(p.OtherProviders) > 0 {
-		buf.WriteString(",")
-		buf.WriteString(NamesToString(p.OtherProviders))
-	}
+	buf.WriteString(NamesToString(p.Providers))
 	buf.WriteString("]")
 	return buf.String()
 
@@ -156,22 +150,22 @@ func (n *Name) Substitute(old, new Name) {
 	}
 }
 
-// Returns channel directly or the provider channel in case of channel called self
-func (n *Name) GetChannel(p *Process) chan Message {
-	if n.IsSelf {
-		return p.Provider.Channel
-	} else {
-		return n.Channel
-	}
-}
+// // Returns channel directly or the provider channel in case of channel called self
+// func (n *Name) GetChannel(p *Process) chan Message {
+// 	if n.IsSelf {
+// 		return p.Provider.Channel
+// 	} else {
+// 		return n.Channel
+// 	}
+// }
 
-func (n *Name) GetPriorityChannel(p *Process) chan PriorityMessage {
-	if n.IsSelf {
-		return p.Provider.PriorityChannel
-	} else {
-		return n.PriorityChannel
-	}
-}
+// func (n *Name) GetPriorityChannel(p *Process) chan PriorityMessage {
+// 	if n.IsSelf {
+// 		return p.Provider.PriorityChannel
+// 	} else {
+// 		return n.PriorityChannel
+// 	}
+// }
 
 // Name is channel or value.
 type Label struct {

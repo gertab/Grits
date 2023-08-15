@@ -84,11 +84,12 @@ func (re *RuntimeEnvironment) CreateChannelForEachProcess(processes []Process) [
 	var channels []NameInitialization
 
 	for i := 0; i < len(processes); i++ {
-		old_provider := processes[i].Provider
+		// todo ensure that len(old_provider) >= 0
+		old_provider := processes[i].Providers[0]
 		new_provider := re.CreateFreshChannel(old_provider.Ident)
 
 		// Set new channel as the providing channel for the process
-		processes[i].Provider = new_provider
+		processes[i].Providers[0] = new_provider
 		channels = append(channels, NameInitialization{old_provider, new_provider})
 	}
 
@@ -238,7 +239,10 @@ var resetColor = "\033[0m"
 func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, message string) {
 	if slices.Contains(re.logLevels, level) {
 		if re.color {
-			colorIndex := int(process.Provider.ChannelID) % colorsLen
+			colorIndex := 0
+			if len(process.Providers) > 0 {
+				colorIndex = int(process.Providers[0].ChannelID) % colorsLen
+			}
 			fmt.Printf("%s%s: "+message+"\n%s", colors[colorIndex], process.OutlineString(), resetColor)
 		} else {
 			fmt.Printf("%s: "+message+"\n", process.OutlineString())
@@ -252,7 +256,10 @@ func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, mess
 		data := append([]interface{}{process.OutlineString()}, args...)
 
 		if re.color {
-			colorIndex := int(process.Provider.ChannelID) % colorsLen
+			colorIndex := 0
+			if len(process.Providers) > 0 {
+				colorIndex = int(process.Providers[0].ChannelID) % colorsLen
+			}
 			var buf bytes.Buffer
 			buf.WriteString(colors[colorIndex])
 			buf.WriteString(fmt.Sprintf("%s: "+message, data...))
@@ -269,7 +276,10 @@ func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, mess
 func (re *RuntimeEnvironment) logProcessHighlight(level LogLevel, process *Process, message string) {
 	if slices.Contains(re.logLevels, level) {
 
-		colorIndex := int(process.Provider.ChannelID) % colorsLen
+		colorIndex := 0
+		if len(process.Providers) > 0 {
+			colorIndex = int(process.Providers[0].ChannelID) % colorsLen
+		}
 
 		var buf bytes.Buffer
 		buf.WriteString(colorsHl[colorIndex])
@@ -290,7 +300,10 @@ func (re *RuntimeEnvironment) logProcessHighlightf(level LogLevel, process *Proc
 		if re.color {
 			// todo fix: remove /n (if needed) from message and add it at the end
 
-			colorIndex := int(process.Provider.ChannelID) % colorsLen
+			colorIndex := 0
+			if len(process.Providers) > 0 {
+				colorIndex = int(process.Providers[0].ChannelID) % colorsLen
+			}
 			var buf bytes.Buffer
 			// buf.WriteString(colors[colorIndex])
 			buf.WriteString(colorsHl[colorIndex])

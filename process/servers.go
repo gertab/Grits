@@ -66,7 +66,7 @@ func (m *Monitor) monitorLoop() {
 	case processUpdate := <-m.monitorChan:
 		if processUpdate.isDead {
 			// Process is terminated
-			m.re.logMonitorf("Process %s died\n", processUpdate.process.Provider.String())
+			m.re.logMonitorf("Process %s died\n", processUpdate.process.Providers[0].String())
 			m.deadProcesses = append(m.deadProcesses, processUpdate.process)
 		} else if processUpdate.isRuleDone {
 			// Process finished rule
@@ -98,23 +98,23 @@ func (m *Monitor) GetRulesLog() []MonitorRulesLog {
 func (m *Monitor) MonitorRuleFinished(process *Process, rule Rule) {
 
 	body := CopyForm(process.Body)
-	provider := process.Provider
+	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, []Name{}, shape, nil), rule: rule, isRuleDone: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: rule, isRuleDone: true}
 }
 
 func (m *Monitor) MonitorProcessTerminated(process *Process) {
 	// body := CopyForm(process.Body)
-	provider := process.Provider
+	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, []Name{}, shape, nil), isDead: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true}
 }
 
 func (m *Monitor) MonitorNewProcess(process *Process) {
 	// body := CopyForm(process.Body)
-	// provider := process.Provider
+	// provider := process.Providers
 	// var otherProviders []Name
 	// copy(otherProviders, process.OtherProviders)
 	// shape := process.Shape

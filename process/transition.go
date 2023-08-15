@@ -49,14 +49,13 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 // A process' priority channel is checked for incoming messages. If there are any, the execution of (a-d) may be relegated for later on.
 
 func performDUPrule(process *Process, re *RuntimeEnvironment) {
-	if len(process.OtherProviders) == 0 {
+	if len(process.Providers) == 1 {
 		re.logProcessHighlight(LOGERROR, process, "Cannot duplicate this process")
 		panic("Cannot duplicate this process")
 	}
 	// The process needs to be DUPlicated
 
-	newProcessNames := process.OtherProviders
-	newProcessNames = append([]Name{process.Provider}, newProcessNames...)
+	newProcessNames := process.Providers
 
 	re.logProcessf(LOGRULE, process, "[DUP] Initiating DUP rule. Will split in %d processes: %s\n", len(newProcessNames), NamesToString(newProcessNames))
 
@@ -98,7 +97,7 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 
 		// Create and spawn the new processes
 		// Set its provider to the channel received in the DUP request
-		newDuplicatedProcess := NewProcess(newDuplicatedProcessBody, newProcessNames[i], []Name{}, process.Shape, process.FunctionDefinitions)
+		newDuplicatedProcess := NewProcess(newDuplicatedProcessBody, []Name{newProcessNames[i]}, process.Shape, process.FunctionDefinitions)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] creating new process (%d): %s\n", i, newDuplicatedProcess.String())
 
@@ -114,13 +113,13 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 	for i := range processFreeNames {
 		// Create structure of new forward process
 		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i])
-		newProcess := NewProcess(newProcessBody, freshChannels[i][0], freshChannels[i][1:], LINEAR, process.FunctionDefinitions)
+		newProcess := NewProcess(newProcessBody, freshChannels[i], LINEAR, process.FunctionDefinitions)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process
 		newProcess.Transition(re)
 	}
 
-	details := fmt.Sprintf("(Duplicated %s into %s)", process.Provider.String(), NamesToString(newProcessNames))
+	details := fmt.Sprintf("(Duplicated %s into %s)", process.Providers[0].String(), NamesToString(newProcessNames))
 	process.finishedRule(DUP, "[DUP]", details, re)
 
 	// todo remove // Current process has been duplicated, so remove the duplication requirements to continue executing its body [i.e. become interactive]
@@ -130,14 +129,14 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 
 func TransitionAsProvider(process *Process, providerFunc func(), sendingMessage Message, re *RuntimeEnvironment) {
 
-	if len(process.OtherProviders) > 0 {
+	if len(process.Providers) > 1 {
 		// Split process if needed
 		performDUPrule(process, re)
 	} else {
 		select {
-		case pm := <-process.Provider.PriorityChannel:
+		case pm := <-process.Providers[0].PriorityChannel:
 			handlePriorityMessage(process, pm, re)
-		case process.Provider.Channel <- sendingMessage:
+		case process.Providers[0].Channel <- sendingMessage:
 			// Acting as a provider by sending a message on 'self'
 			providerFunc()
 		}
@@ -150,12 +149,12 @@ func TransitionAsClient(process *Process, clientChan chan Message, clientFunc fu
 		panic("Channel not initialized (attempting to receive on a dead channel)")
 	}
 
-	if len(process.OtherProviders) > 0 {
+	if len(process.Providers) > 1 {
 		// Split process if needed
 		performDUPrule(process, re)
 	} else {
 		select {
-		case pm := <-process.Provider.PriorityChannel:
+		case pm := <-process.Providers[0].PriorityChannel:
 			handlePriorityMessage(process, pm, re)
 		case receivedMessage := <-clientChan:
 			// Acting as a client by consuming a message from some channel
@@ -175,12 +174,12 @@ func TransitionAsClient(process *Process, clientChan chan Message, clientFunc fu
 // }
 
 func TransitionInternally(process *Process, internalFunction func(), re *RuntimeEnvironment) {
-	if len(process.OtherProviders) > 0 {
+	if len(process.Providers) > 1 {
 		// Split process if needed
 		performDUPrule(process, re)
 	} else {
 		select {
-		case pm := <-process.Provider.PriorityChannel:
+		case pm := <-process.Providers[0].PriorityChannel:
 			handlePriorityMessage(process, pm, re)
 		default:
 			internalFunction()
@@ -206,7 +205,7 @@ func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeE
 
 	// process.Provider = pm.Channel1
 	// Reply with the body and shape so that the other process can continue executing
-	process.Provider.PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body, Shape: process.Shape}
+	process.Providers[0].PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body, Shape: process.Shape}
 
 	// close(process.Provider.Channel)
 	// close(process.Provider.PriorityChannel)
@@ -360,7 +359,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// Create structure of new process
 		newProcessBody := f.body
 		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
-		newProcess := NewProcess(newProcessBody, newChannel, []Name{}, LINEAR, process.FunctionDefinitions)
+		newProcess := NewProcess(newProcessBody, []Name{newChannel}, LINEAR, process.FunctionDefinitions)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 
@@ -415,12 +414,12 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 	// Always perform CALL before DUP
 	prioritiseCallRule := true
 
-	if len(process.OtherProviders) > 0 && !prioritiseCallRule {
+	if len(process.Providers) > 1 && !prioritiseCallRule {
 		// Split process if needed
 		performDUPrule(process, re)
 	} else {
 		select {
-		case pm := <-process.Provider.PriorityChannel:
+		case pm := <-process.Providers[0].PriorityChannel:
 			handlePriorityMessage(process, pm, re)
 		default:
 			callRule()
@@ -459,7 +458,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	if f.to_c.IsSelf {
 
-		priorityMessage := PriorityMessage{Action: FWD_REQUEST, Channels: []Name{process.Provider}}
+		priorityMessage := PriorityMessage{Action: FWD_REQUEST, Channels: []Name{process.Providers[0]}}
 
 		forwardRule := func() {
 			// todo check that f.to_c == process.Provider
@@ -491,7 +490,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
 		select {
-		case pm := <-process.Provider.PriorityChannel:
+		case pm := <-process.Providers[0].PriorityChannel:
 			// todo check if this should only happen if len(process.OtherProviders) == 0
 			handlePriorityMessage(process, pm, re)
 		case f.from_c.PriorityChannel <- priorityMessage:
@@ -510,9 +509,9 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// from_cannot be self -- only split other processes
 		re.logProcessHighlight(LOGERROR, process, "should forward on self")
 		// todo panic
-	} else if len(process.OtherProviders) > 0 {
-		// Perform DUP
-		performDUPrule(process, re)
+		// } else if len(process.Provider) > 1 {
+		// 	// Perform DUP
+		// 	performDUPrule(process, re)
 	} else {
 		// Perform SPLIT
 
@@ -533,8 +532,8 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			// Create structure of new forward process
 			newProcessBody := NewForward(Name{IsSelf: true}, f.from_c)
-			newProcess := NewProcess(newProcessBody, newSplitNames[0], newSplitNames[1:], LINEAR, process.FunctionDefinitions)
-			re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s, %s\n", newSplitNames[0].String(), NamesToString(newSplitNames[1:]))
+			newProcess := NewProcess(newProcessBody, newSplitNames, LINEAR, process.FunctionDefinitions)
+			re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 			// Spawn and initiate new forward process
 			newProcess.Transition(re)
 

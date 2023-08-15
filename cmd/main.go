@@ -109,7 +109,6 @@ const program = ` 	/* Simple SPLIT + SND rule (x 2) */
 	let
 	in
 		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-		/*prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; close self*/
 		prc[pid2]: send self<pid3, self>
 	end`
 
@@ -147,21 +146,29 @@ const program = ` 	/* Simple SPLIT + SND rule (x 2) */
 // 		end`
 
 // const program2 = `let
-// 				in
-// 					prc[a]: send self<pid3, self>
-// 					prc[b]: self.labbbel<pid3>
-// 					prc[c]:  < x , y > <- recv r ; send self < pid3 , self >
-// 					prc[d]: send self<pid3, self>
-// 					prc[e]: <x,y> <- recv r; send self<pid3, self>
-// 					prc[f]: send self<pid3, self>
-// 					prc[g]: case casename (
-// 							label1<payloadc> => send self<pid3, self>
-// 							| label2<payloadc> => self.labbbel<pid3>
-// 						)
-// 					prc[h]: x <- new send self<pid3, self>; < x , y > <- recv r ; send self < pid3 , self >
-// 					prc[a]: <pay_c,cont_c> <- recv from_c; close pi5
-// 				end
-// 				`
+//
+//	in
+//		prc[a]: send self<pid3, self>
+//		prc[b]: self.labbbel<pid3>
+//		prc[c]:  < x , y > <- recv r ; send self < pid3 , self >
+//		prc[d]: send self<pid3, self>
+//		prc[e]: <x,y> <- recv r; send self<pid3, self>
+//		prc[f]: send self<pid3, self>
+//		prc[g]: case casename (
+//				label1<payloadc> => send self<pid3, self>
+//				| label2<payloadc> => self.labbbel<pid3>
+//			)
+//		prc[h]: x <- new send self<pid3, self>; < x , y > <- recv r ; send self < pid3 , self >
+//		prc[a]: <pay_c,cont_c> <- recv from_c; close pi5
+//	end
+//	`
+
+// const program = `
+// 	let
+// 	in
+// 		prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+// 		prc[pid2]: send self<pid5, self>
+// 	end`
 
 func main() {
 	// parser.Check()

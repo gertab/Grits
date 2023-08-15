@@ -192,11 +192,11 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log []step) {
 func initProcesses(processes []process.Process) ([]process.Process, []process.MonitorRulesLog, uint64) {
 
 	l := []process.LogLevel{
-		// process.LOGERROR,
-		// process.LOGINFO,
-		// process.LOGPROCESSING,
-		// process.LOGRULE,
-		// process.LOGRULEDETAILS,
+		process.LOGERROR,
+		process.LOGINFO,
+		process.LOGPROCESSING,
+		process.LOGRULE,
+		process.LOGRULEDETAILS,
 	}
 
 	debug := true

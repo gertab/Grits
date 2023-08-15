@@ -27,9 +27,10 @@ type Monitor struct {
 }
 
 type MonitorUpdate struct {
-	process Process
-	rule    Rule
-	isDead  bool
+	process    Process
+	rule       Rule
+	isDead     bool
+	isRuleDone bool
 }
 
 type MonitorRulesLog struct {
@@ -67,7 +68,7 @@ func (m *Monitor) monitorLoop() {
 			// Process is terminated
 			m.re.logMonitorf("Process %s died\n", processUpdate.process.Provider.String())
 			m.deadProcesses = append(m.deadProcesses, processUpdate.process)
-		} else {
+		} else if processUpdate.isRuleDone {
 			// Process finished rule
 			m.re.logMonitorf("Finished %s, %s\n", RuleString[processUpdate.rule], processUpdate.process.String())
 			m.rulesLog = append(m.rulesLog, MonitorRulesLog{Process: processUpdate.process, Rule: processUpdate.rule})
@@ -100,7 +101,7 @@ func (m *Monitor) MonitorRuleFinished(process *Process, rule Rule) {
 	provider := process.Provider
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, []Name{}, shape, nil), rule: rule, isDead: false}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, []Name{}, shape, nil), rule: rule, isRuleDone: true}
 }
 
 func (m *Monitor) MonitorProcessTerminated(process *Process) {
@@ -112,13 +113,13 @@ func (m *Monitor) MonitorProcessTerminated(process *Process) {
 }
 
 func (m *Monitor) MonitorNewProcess(process *Process) {
-	body := CopyForm(process.Body)
-	provider := process.Provider
-	var otherProviders []Name
-	copy(otherProviders, process.OtherProviders)
-	shape := process.Shape
+	// body := CopyForm(process.Body)
+	// provider := process.Provider
+	// var otherProviders []Name
+	// copy(otherProviders, process.OtherProviders)
+	// shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, otherProviders, shape, nil), isDead: false}
+	// m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, otherProviders, shape, nil), isDead: false}
 }
 
 func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {

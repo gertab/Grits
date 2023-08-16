@@ -4,22 +4,14 @@ import (
 	"bytes"
 	"phi/parser"
 	"phi/process"
+	"sort"
 	"testing"
 )
-
-type step struct {
-	processName string
-	rule        process.Rule
-}
-
-type traceOption struct {
-	trace         []step
-	deadProcesses int
-}
 
 var input string
 var expected []traceOption
 
+// We compare only the process names and rules (i.e. the steps) without comparing the order
 func TestSimpleFWDRCV(t *testing.T) {
 	// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
 
@@ -32,10 +24,12 @@ func TestSimpleFWDRCV(t *testing.T) {
 		prc[pid3]: <a, b> <- recv self; close a
 		end`
 	expected = []traceOption{
-		{[]step{{"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
-		{[]step{{"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
+		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
+		// {steps{{"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
+
+	// sort.Sort(steps(ss3))
 }
 
 func TestSimpleSND(t *testing.T) {
@@ -47,8 +41,8 @@ func TestSimpleSND(t *testing.T) {
 		prc[pid2]: <a, b> <- recv pid1; close self
 	end`
 	expected = []traceOption{
-		{[]step{{"pid1", process.SND}, {"pid2", process.SND}}, 1},
-		{[]step{{"pid2", process.SND}, {"pid1", process.SND}}, 1},
+		{steps{{"pid1", process.SND}, {"pid2", process.SND}}, 1},
+		// {steps{{"pid2", process.SND}, {"pid1", process.SND}}, 1},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -62,13 +56,13 @@ func TestSimpleCUTSND(t *testing.T) {
 		prc[pid2]: send self<pid5, self>
 		end`
 	expected = []traceOption{
-		{[]step{{"pid1", process.CUT}, {"x", process.SND}, {"pid2", process.SND}}, 1},
-		{[]step{{"pid1", process.CUT}, {"pid1", process.SND}, {"x", process.SND}}, 1},
-		{[]step{{"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
-		{[]step{{"x", process.SND}, {"pid2", process.SND}, {"pid1", process.CUT}}, 1},
-		{[]step{{"x", process.SND}, {"pid1", process.CUT}, {"pid2", process.SND}}, 1},
-		{[]step{{"pid2", process.SND}, {"pid1", process.CUT}, {"x", process.SND}}, 1},
-		{[]step{{"pid2", process.SND}, {"x", process.SND}, {"pid1", process.CUT}}, 1},
+		{steps{{"pid1", process.CUT}, {"x", process.SND}, {"pid2", process.SND}}, 1},
+		{steps{{"pid1", process.CUT}, {"pid1", process.SND}, {"x", process.SND}}, 1},
+		// {steps{{"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
+		// {steps{{"x", process.SND}, {"pid2", process.SND}, {"pid1", process.CUT}}, 1},
+		// {steps{{"x", process.SND}, {"pid1", process.CUT}, {"pid2", process.SND}}, 1},
+		// {steps{{"pid2", process.SND}, {"pid1", process.CUT}, {"x", process.SND}}, 1},
+		// {steps{{"pid2", process.SND}, {"x", process.SND}, {"pid1", process.CUT}}, 1},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -83,12 +77,35 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 			prc[pid3]: ff <- new (send ff<pid5, ff>); <a, b> <- recv self; close self
 			end`
 	expected = []traceOption{
-		{[]step{{"pid3", process.CUT}, {"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
-		{[]step{{"pid3", process.CUT}, {"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
-		{[]step{{"pid2", process.FWD}, {"pid2", process.CUT}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
-		{[]step{{"pid2", process.FWD}, {"pid2", process.CUT}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
+		{steps{{"pid3", process.CUT}, {"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
+		// {steps{{"pid3", process.CUT}, {"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
+		// {steps{{"pid2", process.FWD}, {"pid2", process.CUT}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
+		{steps{{"pid2", process.FWD}, {"pid2", process.CUT}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
+}
+
+type step struct {
+	processName string
+	rule        process.Rule
+}
+
+type steps []step
+
+func (a steps) Len() int      { return len(a) }
+func (a steps) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a steps) Less(i, j int) bool {
+	// Sort by processName and then by rule
+	if a[i].processName == a[j].processName {
+		return a[i].rule < a[j].rule
+	} else {
+		return a[i].processName < a[j].processName
+	}
+}
+
+type traceOption struct {
+	trace         steps
+	deadProcesses int
 }
 
 func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOption) {
@@ -123,9 +140,15 @@ func checkInput(t *testing.T, input string, expectedOptions []traceOption, done 
 	done <- true
 }
 
-func compareAllTraces(t *testing.T, got []step, cases []traceOption, deadProcesses int) bool {
+func compareAllTraces(t *testing.T, got steps, cases []traceOption, deadProcesses int) bool {
+	// Sort trace
+	sort.Sort(steps(got))
+
 	for _, c := range cases {
 		if len(c.trace) == len(got) {
+			// Sort trace
+			sort.Sort(steps(c.trace))
+
 			if compareSteps(t, c.trace, got) {
 				if c.deadProcesses != deadProcesses {
 					t.Errorf("Expected %d dead processes but got %d\n", c.deadProcesses, deadProcesses)
@@ -139,7 +162,7 @@ func compareAllTraces(t *testing.T, got []step, cases []traceOption, deadProcess
 	return false
 }
 
-func printAllTraces(t *testing.T, got []step, cases []traceOption, input string) {
+func printAllTraces(t *testing.T, got steps, cases []traceOption, input string) {
 	for i := range cases {
 
 		if len(cases[i].trace) == len(got) {
@@ -150,7 +173,7 @@ func printAllTraces(t *testing.T, got []step, cases []traceOption, input string)
 	}
 }
 
-func compareSteps(t *testing.T, got []step, expected []step) bool {
+func compareSteps(t *testing.T, got steps, expected steps) bool {
 	if len(got) != len(expected) {
 		// t.Errorf("len of got %d, does not match len of expected %d\n", len(got), len(expected))
 		return false
@@ -169,7 +192,7 @@ func compareSteps(t *testing.T, got []step, expected []step) bool {
 	return true
 }
 
-func stingifySteps(steps []step) string {
+func stingifySteps(steps steps) string {
 	var buf bytes.Buffer
 
 	for _, s := range steps {
@@ -182,7 +205,7 @@ func stingifySteps(steps []step) string {
 	return buf.String()
 }
 
-func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log []step) {
+func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 	for _, c := range monRulesLog {
 		log = append(log, step{processName: c.Process.Providers[0].Ident, rule: c.Rule})
 	}

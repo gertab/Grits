@@ -85,12 +85,14 @@ func (re *RuntimeEnvironment) CreateChannelForEachProcess(processes []Process) [
 
 	for i := 0; i < len(processes); i++ {
 		// todo ensure that len(old_provider) >= 0
-		old_provider := processes[i].Providers[0]
-		new_provider := re.CreateFreshChannel(old_provider.Ident)
+		for j := 0; j < len(processes[i].Providers); j++ {
+			old_provider := processes[i].Providers[j]
+			new_provider := re.CreateFreshChannel(old_provider.Ident)
 
-		// Set new channel as the providing channel for the process
-		processes[i].Providers[0] = new_provider
-		channels = append(channels, NameInitialization{old_provider, new_provider})
+			// Set new channel as the providing channel for the process
+			processes[i].Providers[j] = new_provider
+			channels = append(channels, NameInitialization{old_provider, new_provider})
+		}
 	}
 
 	return channels

@@ -34,10 +34,10 @@ func expandProcesses(u unexpandedProcesses) []process.Process {
 
 	// todo maybe throw list of names in OtherProviders
 	for _, p := range u.procs {
-		for _, n := range p.Providers {
-			new_p := process.NewProcess(p.Body, []process.Name{n}, process.LINEAR, &u.functions)
-			processes = append(processes, *new_p)
-		}
+		// for _, n := range p.Providers {
+		new_p := process.NewProcess(p.Body, p.Providers, process.LINEAR, &u.functions)
+		processes = append(processes, *new_p)
+		// }
 	}
 
 	// The next step is to get rid of all the macros

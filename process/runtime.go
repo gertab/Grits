@@ -41,7 +41,7 @@ func InitializeProcesses(processes []Process) {
 		LOGINFO,
 		LOGPROCESSING,
 		LOGRULE,
-		// LOGRULEDETAILS,
+		LOGRULEDETAILS,
 		LOGMONITOR,
 	}
 
@@ -138,7 +138,7 @@ func (re *RuntimeEnvironment) SubstituteNameInitialization(processes []Process, 
 func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 	for _, p := range processes {
 		p_uniq := p
-		p_uniq.Transition(re)
+		p_uniq.SpawnThenTransition(re)
 	}
 }
 
@@ -192,9 +192,9 @@ var RuleString = map[Rule]string{
 type PriorityMessage struct {
 	Action Action
 	// Possible payload types, depending on the action
-	Channels []Name
-	Body     Form
-	Shape    Shape
+	Providers []Name
+	Body      Form
+	Shape     Shape
 }
 
 type NameInitialization struct {

@@ -112,6 +112,22 @@ func (m *Monitor) MonitorProcessTerminated(process *Process) {
 	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true}
 }
 
+func (m *Monitor) MonitorProcessForwarded(process *Process) {
+	// body := CopyForm(process.Body)
+	provider := process.Providers
+	shape := process.Shape
+
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true}
+}
+
+// func (m *Monitor) ForwardProcessFinished(process *Process) {
+// 	body := CopyForm(process.Body)
+// 	provider := process.Providers
+// 	shape := process.Shape
+
+// 	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: FWD, isRuleDone: true}
+// }
+
 func (m *Monitor) MonitorNewProcess(process *Process) {
 	// body := CopyForm(process.Body)
 	// provider := process.Providers

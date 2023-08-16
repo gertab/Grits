@@ -6,7 +6,7 @@ import (
 )
 
 // Initiates new processes [new processes are spawned here]
-func (process *Process) Transition(re *RuntimeEnvironment) {
+func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 	// ProcessCount is atomic
 	atomic.AddUint64(&re.ProcessCount, 1)
 
@@ -37,6 +37,25 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 	if re.debug {
 		// Update monitor
 		re.monitor.MonitorProcessTerminated(process)
+	}
+}
+
+func (process *Process) terminateForward(re *RuntimeEnvironment) {
+	re.logProcess(LOGRULEDETAILS, process, "process will change by forwarding its provider")
+
+	if re.debug {
+		// Update monitor
+		re.monitor.MonitorRuleFinished(process, FWD)
+	}
+}
+
+func (process *Process) terminateAndRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
+
+	if re.debug {
+		// Update monitor
+		// todo change
+		re.monitor.MonitorProcessForwarded(process)
 	}
 }
 
@@ -103,7 +122,7 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 
 		// Need to spawn the new duplicated processes except the first one (since it's already running in its own thread)
 		if i > 0 {
-			newDuplicatedProcess.Transition(re)
+			newDuplicatedProcess.SpawnThenTransition(re)
 		} else {
 			process = newDuplicatedProcess
 		}
@@ -116,7 +135,7 @@ func performDUPrule(process *Process, re *RuntimeEnvironment) {
 		newProcess := NewProcess(newProcessBody, freshChannels[i], LINEAR, process.FunctionDefinitions)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process
-		newProcess.Transition(re)
+		newProcess.SpawnThenTransition(re)
 	}
 
 	details := fmt.Sprintf("(Duplicated %s into %s)", process.Providers[0].String(), NamesToString(newProcessNames))
@@ -200,23 +219,43 @@ func handlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvi
 }
 
 func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", pm.Channels[0].String())
-	// Close current channel and switch to new one
+	re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", NamesToString(pm.Providers))
+	// todo remove Close current channel and switch to new one
 
-	// process.Provider = pm.Channel1
-	// Reply with the body and shape so that the other process can continue executing
-	process.Providers[0].PriorityChannel <- PriorityMessage{Action: FWD_REPLY, Body: process.Body, Shape: process.Shape}
+	// todo ensure that action is correct
+	if pm.Action != FWD_REQUEST {
+		re.logProcessHighlight(LOGERROR, process, "expected FWD_REQUEST")
+		panic("expected FWD_REQUEST")
+	}
 
-	// close(process.Provider.Channel)
-	// close(process.Provider.PriorityChannel)
-	// TransitionLoop(process, re)
-	process.terminate(re)
+	// Notify that the process will change providers (i.e. the process.Providers will die and be replaced by pm.Providers)
+	process.terminateAndRename(process.Providers, pm.Providers, re)
+
+	// the process.Providers can no longer be used, so close them
+	// todo check if they are being closed anywhere else
+	closeProviders(process.Providers)
+
+	// Change the providers to the one being forwarded to
+	process.Providers = pm.Providers
+
+	TransitionLoop(process, re)
 }
 
 func handleInvalidPriorityMessage(process *Process, re *RuntimeEnvironment) {
 	re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 	// todo panic
 	panic("Received incorrect priority message")
+}
+
+func closeProviders(providers []Name) {
+	for _, p := range providers {
+		if p.Channel != nil {
+			close(p.Channel)
+		}
+		if p.PriorityChannel != nil {
+			close(p.PriorityChannel)
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////
@@ -364,7 +403,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 
 		// Spawn and initiate new process
-		newProcess.Transition(re)
+		newProcess.SpawnThenTransition(re)
 
 		process.finishedRule(CUT, "[new]", "", re)
 		// re.logProcess(LOGRULE, process, "[new] finished CUT rule")
@@ -458,34 +497,11 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	if f.to_c.IsSelf {
 
-		priorityMessage := PriorityMessage{Action: FWD_REQUEST, Channels: []Name{process.Providers[0]}}
+		priorityMessage := PriorityMessage{Action: FWD_REQUEST, Providers: process.Providers}
 
 		forwardRule := func() {
-			// todo check that f.to_c == process.Provider
-			// f.from_c.Channel <- Message{Rule: FWD, Channel1: process.Provider}
 			re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to priority channel %s\n", f.from_c.String())
-
-			// Get reply containing body and shape to continue executing
-			pm := <-f.from_c.PriorityChannel
-			// todo assert that
-			// re.logProcess(LOGRULE, process, "[forward, client] finished FWD rule")
-			process.finishedRule(FWD, "[forward, client]", "", re)
-
-			// todo terminate goroutine. inform monitor
-			// channel providing on fwd should not be closed, however this process dies
-			// process.terminate(re)
-			// process.terminate(re)
-
-			process.Body = pm.Body
-			process.Shape = pm.Shape
-
-			// todo ensure that action is correct
-			if pm.Action != FWD_REPLY {
-				re.logProcessHighlight(LOGERROR, process, "expected FWD_REPLY")
-				panic("expected FWD_REPLY")
-			}
-
-			TransitionLoop(process, re)
+			process.terminateForward(re)
 		}
 
 		// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
@@ -535,7 +551,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 			newProcess := NewProcess(newProcessBody, newSplitNames, LINEAR, process.FunctionDefinitions)
 			re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 			// Spawn and initiate new forward process
-			newProcess.Transition(re)
+			newProcess.SpawnThenTransition(re)
 
 			TransitionLoop(process, re)
 		}

@@ -24,6 +24,22 @@ import (
 // 	prc[pid3]: <a, b> <- recv self; close a
 // 	end`
 
+const program = ` 	/* FWD + SND rule */
+	let
+	in
+	prc[pid1]: <a, b> <- recv pid2; close a
+	prc[pid2]: fwd self pid3
+	// prc[pid3]: fwd self pid4
+	prc[pid3]: send self<pid5, self>
+	end`
+
+// const program = ` 	/* Simple SPLIT + SND rule (x 2) */
+// 	let
+// 	in
+// 		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+// 		prc[pid2]: send self<pid3, self>
+// 	end`
+
 // const program = ` 	/* FWD + SND rule */
 // 	let
 // 	in
@@ -67,12 +83,12 @@ import (
 // 		prc[pid2]: <a, b> <- recv a; close self
 // `
 
-const program = ` 	/* CUT + SND rule */
-	let
-	in
-	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
-	prc[pid2]: send self<pid5, self>
-	end`
+// const program = ` 	/* CUT + SND rule */
+// 	let
+// 	in
+// 	prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+// 	prc[pid2]: send self<pid5, self>
+// 	end`
 
 // const program = ` 	/* CUT + SND rule */
 // 	let
@@ -113,25 +129,18 @@ const program = ` 	/* CUT + SND rule */
 // 	end`
 
 // const program = ` 	/* CUT + inner blocking SND + FWD + RCV rule */
-// 					let
-// 					in
-// 					prc[pid1]: send pid2<pid5, self>
-// 					prc[pid2]: fwd self pid3
-// 					prc[pid3]: x <- new (send x<pid5, x>); <a, b> <- recv self; close self
-// 					end`
+// 		let
+// 		in
+// 		prc[pid1]: send pid2<pid5, self>
+// 		prc[pid2]: fwd self pid3
+// 		prc[pid3]: ff <- new (send ff<pid5, ff>); <a, b> <- recv self; close self
+// 	end`
 
 // const program = ` 	/* CUT + RCV rule */
 // 	let
 // 	in
 // 	prc[pid1]: x <- new (send pid2<pid5, self>); close self
 // 	prc[pid2]: <a, b> <- recv self; close sel
-// 	end`
-
-// const program = ` 	/* Simple SPLIT + SND rule (x 2) */
-// 	let
-// 	in
-// 		prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-// 		prc[pid2]: send self<pid3, self>
 // 	end`
 
 // const program = ` 	/* SPLIT + SND rule (x 2) */

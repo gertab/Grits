@@ -207,6 +207,8 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		sndRule := func() {
 			re.logProcess(LOGRULEDETAILS, process, "[send, provider] finished sending on self")
+			// todo Although here we say the process finished executing (and died),
+			// the rule SND is not guaranteed to be done, since it depends on the other side as well
 			process.finishedRule(SND, "[send, provider]", "(p)", re)
 			process.terminate(re)
 		}
@@ -435,6 +437,12 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		handlePriorityMessage(process, pm, re)
 	case f.from_c.PriorityChannel <- priorityMessage:
 		forwardRule()
+		// case message := <-f.from_c.Channel:
+		// 	re.logProcessHighlightf(LOGRULE, process, "[forward, client] !!!!!!!!!  %s\n", f.from_c.String())
+
+		// 	for _, j := range process.Providers {
+		// 		j.Channel <- message
+		// 	}
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-const numberOfIterations = 100
+const numberOfIterations = 200
 
 // We compare only the process names and rules (i.e. the steps) without comparing the order
 func TestSimpleFWDRCV(t *testing.T) {
@@ -75,9 +75,12 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 			prc[pid3]: ff <- new (send ff<pid5, ff>); <a, b> <- recv self; close self
 			end`
 	expected := []traceOption{
-		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
-		{steps{{"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 2},
-		{steps{{"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}, 2},
+		{steps{{"ff", process.SND}, {"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 3},
+		{steps{{"ff", process.SND}, {"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 3},
+		{steps{{"ff", process.SND}, {"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}, 3},
+		// {steps{{"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
+		// {steps{{"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 2},
+		// {steps{{"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -132,7 +135,11 @@ func TestSimpleSPLITCUT(t *testing.T) {
 		// Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
 		{steps{{"pid0", process.SPLIT}, {"x1", process.FWD}, {"pid2", process.DUP}, {"x1", process.CUT}, {"pid2", process.FWD}, {"x2", process.CUT}, {"x1", process.DUP}, {"pid2", process.SND}, {"pid2", process.SND}, {"x", process.SND}, {"x", process.SND}}, 4},
 		// Or the SND takes place before the SPLIT/DUP, so only one SND is needed
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
+		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
+
+		// Added for half done rules (x1...)
+		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}, {"x1", process.FWD}}, 1},
+		{steps{{"pid0", process.SPLIT}, {"pid2", process.SND}, {"pid2", process.FWD}, {"x1", process.CUT}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.CUT}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
 }

@@ -106,6 +106,10 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	// Create new channel and assign a name to it
 	mChan := make(chan Message)
 	pmChan := make(chan PriorityMessage)
+
+	// // todo see hwo to eventually change to buffered
+	// mChan := make(chan Message, 1000)
+	// pmChan := make(chan PriorityMessage, 1000)
 	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan, IsSelf: false}
 }
 

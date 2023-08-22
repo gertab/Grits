@@ -36,6 +36,7 @@ func setupAPI() {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
+	log.Printf("Webserver listening on localhost%s/ws", *addr)
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
@@ -220,10 +221,10 @@ type RequestMessage struct {
 
 // ReplyMessage type can only be "processes_updated", "rules_updated" or "error"
 type ReplyMessage struct {
-	Type         string                `json:"type"`
-	Payload      []process.ProcessInfo `json:"payload,omitempty"`
-	Rules        []process.RuleInfo    `json:"rules,omitempty"`
-	ErrorMessage string                `json:"error_message,omitempty"`
+	Type         string                     `json:"type"`
+	Payload      process.ProcessesStructure `json:"payload,omitempty"`
+	Rules        []process.RuleInfo         `json:"rules,omitempty"`
+	ErrorMessage string                     `json:"error_message,omitempty"`
 }
 
 // Example of a ReplyMessage in JSON format:

@@ -133,7 +133,7 @@ func (m *Monitor) updateSubscriberProcesses() {
 
 		v := make([]ProcessInfo, 0, len(m.processIDToProcess))
 
-		// Send list of processes
+		// Prepare list of processes
 		for id, value := range m.processIDToProcess {
 			providers := make([]string, 0, len(value.Providers))
 
@@ -143,7 +143,20 @@ func (m *Monitor) updateSubscriberProcesses() {
 
 			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String()})
 		}
-		m.subscriber.ProcessesSubscriberChan <- v
+
+		// Prepare list of links between processes
+
+		links := []Link{}
+		for pID_source, process := range m.processIDToProcess {
+			for _, freeName := range process.Body.FreeNames() {
+				pID_destination, exists := m.providersToProcessID[freeName]
+				if exists {
+					links = append(links, Link{strconv.Itoa(pID_source), strconv.Itoa(pID_destination)})
+				}
+			}
+		}
+
+		m.subscriber.ProcessesSubscriberChan <- ProcessesStructure{ProcessInfo: v, Links: links}
 	}
 }
 
@@ -260,15 +273,26 @@ func (m *Monitor) MonitorProcessForwarded(process *Process) {
 	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true}
 }
 
+// Information to interact with the webserver
 type SubscriberInfo struct {
-	ProcessesSubscriberChan chan []ProcessInfo
+	ProcessesSubscriberChan chan ProcessesStructure
 	RulesSubscriberChan     chan []RuleInfo
+}
+
+type ProcessesStructure struct {
+	ProcessInfo []ProcessInfo `json:"processes"`
+	Links       []Link        `json:"links"`
 }
 
 type ProcessInfo struct {
 	ID        string   `json:"id"`
 	Providers []string `json:"providers"`
 	Body      string   `json:"body"`
+}
+
+type Link struct {
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
 }
 
 type RuleInfo struct {
@@ -278,7 +302,7 @@ type RuleInfo struct {
 }
 
 func NewSubscriberInfo() *SubscriberInfo {
-	processSubscriberChan := make(chan []ProcessInfo, 100)
+	processSubscriberChan := make(chan ProcessesStructure, 100)
 	ruleSubscriberChan := make(chan []RuleInfo, 100)
 	return &SubscriberInfo{ProcessesSubscriberChan: processSubscriberChan, RulesSubscriberChan: ruleSubscriberChan}
 }

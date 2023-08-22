@@ -197,15 +197,14 @@ const program = ` 	/* FWD + RCV rule */
 // 	end`
 
 func main() {
-	// parser.Check()
-
+	// Execute from file
 	// processes := parser.ParseFile("parser/input.test")
 	// program := "send to_c<pay_c,cont_c>"
 
+	// Execute directly from string
 	// processes := parser.ParseString(program)
 	// process.InitializeProcesses(processes, nil)
 
+	// Run via API
 	setupAPI()
-	// // Serve on port :8080, fudge yeah hardcoded port
-	// log.Fatal(http.ListenAndServe(":8080", nil))
 }

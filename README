@@ -17,7 +17,7 @@ There are three main components.
   - `process/servers.go`: Sets up the concurrent servers (e.g. a monitor) that monitor or control the execution of the processes. Used to inform the web-server about the state of each process.
 
 ### Some examples
-
+There are some examples in the `cmd/examples` folder.
  
 ### Other information
 

@@ -1,11 +1,4 @@
-/* Send a label to make a choice. 
-   Issue: The body of process pid2 becomes messy quickly.
-*/
+/* SND rule */
 
-let
-in
-    prc[pid1]: self.label_ok<pid3>
-    prc[pid2]: case pid1 (  label_ok<cont_pid>      => wait cont_pid; close self
-                          | label_not_ok<cont_pid> => close self  )
-    prc[pid3]: close self
-end
+prc[pid1]: send self<pid3, self>
+prc[pid2]: <a, b> <- recv pid1; close self

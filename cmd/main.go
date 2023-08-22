@@ -201,12 +201,18 @@ import (
 //	`
 
 const program = `
-	let
-	in
-		prc[pid1] : send self<pid3, self>
-		prc[pid2] : <a, b> <- recv pid1; wait a; close self
-		prc[pid3] : close self
-	end`
+			/* Send a channel but use function calls and forwarding. */
+			let
+				func1(next_pid) = send self< next_pid, self>
+			in
+				prc[pid1]: <a, b> <- recv pid2; wait a; close self
+				prc[pid2]: fwd self pid3
+				prc[pid3]: fwd self pid4
+				prc[pid4]: func1(pid5)
+				prc[pid5]: close self
+			end
+
+			`
 
 func main() {
 	// Execute from file

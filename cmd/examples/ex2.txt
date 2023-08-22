@@ -1,0 +1,9 @@
+/* Send channels (pid3, pid1) to another process
+    by via a receive on self. Then pid3 dies. */
+
+let
+in
+    prc[pid1] : send pid2<pid3, self>
+    prc[pid2] : <a, b> <- recv self; wait a; close self
+    prc[pid3] : close self
+end

@@ -1,0 +1,8 @@
+   /* Splitting a process */
+let
+    D2(d) = <a, b> <- recv d; close self
+in
+    prc[pid0]: <x, y> <- split pid3; close self
+    prc[pid1]: send self <xx, yy>
+    prc[pid3]: D2(pid1)
+end

@@ -1,0 +1,7 @@
+    /* Spawn (i.e. cut) a new process which then send a channel. */
+    let
+    in
+      prc[pid1]: x <- new (send pid2 <a, x>); close self
+      prc[pid2]: fwd self pid3
+      prc[pid3]: <x, y> <- recv self; close y
+    end

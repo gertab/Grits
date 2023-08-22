@@ -1,0 +1,17 @@
+/* Send a channel but use function calls and forwarding.
+       Issue: Needs to scale well. */
+let
+    func_forward1(next_pid) = fwd self next_pid
+in
+    prc[root]: <x, y> <- recv aaa; close self
+    prc[aaa]: func_forward1(bbb)
+    prc[bbb]: func_forward1(ccc)
+    prc[ccc]: func_forward1(ddd)
+    prc[ddd]: func_forward1(eee)
+    prc[eee]: func_forward1(fff)
+    prc[fff]: func_forward1(ggg)
+    prc[ggg]: func_forward1(hhh)
+    prc[hhh]: func_forward1(other2)
+    prc[other2]: send self <aa, bb>
+    prc[aa]: close self
+end

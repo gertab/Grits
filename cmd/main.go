@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+	"phi/parser"
+	"phi/process"
+)
+
 // const program = ` /* SND rule */
 // 		prc[pid1]: send self<pid3, self>
 // 		prc[pid2]: <a, b> <- recv pid1; close self
@@ -10,14 +16,19 @@ package main
 // 		prc[pid2]: <a, b> <- recv self; close self
 // 	`
 
-const program = ` 	/* FWD + RCV rule */
-	let
-	in
-	prc[pid1]: send pid2<pid5, self>
-	prc[pid2]: fwd self pid3
-	// prc[pid3]: fwd self pid4
-	prc[pid3]: <a, b> <- recv self; close a
-	end`
+// const program = ` /* CLS rule */
+// 		prc[pid1]: wait pid2; print self
+// 		prc[pid2]: close self
+// 	`
+
+// const program = ` 	/* FWD + RCV rule */
+// 	let
+// 	in
+// 	prc[pid1]: send pid2<pid5, self>
+// 	prc[pid2]: fwd self pid3
+// 	// prc[pid3]: fwd self pid4
+// 	prc[pid3]: <a, b> <- recv self; close a
+// 	end`
 
 // const program = ` 	/* FWD + SND rule */
 // 	let
@@ -189,25 +200,26 @@ const program = ` 	/* FWD + RCV rule */
 //	end
 //	`
 
-// const program = `
-// 	let
-// 	in
-// 		prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
-// 		prc[pid2]: send self<pid5, self>
-// 	end`
+const program = `
+	let
+	in
+		prc[pid1] : send self<pid3, self>
+		prc[pid2] : <a, b> <- recv pid1; wait a; close self
+		prc[pid3] : close self
+	end`
 
 func main() {
 	// Execute from file
 	// processes := parser.ParseFile("parser/input.test")
 	// program := "send to_c<pay_c,cont_c>"
 
-	// // Execute directly from string
-	// processes, err := parser.ParseString(program)
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// 	return
-	// }
-	// process.InitializeProcesses(processes, nil)
+	// Execute directly from string
+	processes, err := parser.ParseString(program)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	process.InitializeProcesses(processes, nil)
 
 	// Run via API
 	setupAPI()

@@ -24,6 +24,16 @@ func assertEqual(t *testing.T, i1, i2 process.Form) {
 	}
 }
 
+func parseGetBody(input string) process.Form {
+	body, err := ParseString(input)
+
+	if err != nil {
+		return nil
+	}
+
+	return body[0].Body
+}
+
 func TestBasicForms(t *testing.T) {
 	var output, expected []process.Form
 	to_c := process.Name{Ident: "to_c", IsSelf: false}
@@ -33,42 +43,42 @@ func TestBasicForms(t *testing.T) {
 	end := process.NewClose(process.Name{IsSelf: true})
 
 	input := "send to_c<pay_c,cont_c>"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewSend(to_c, pay_c, cont_c))
 
 	input = "<pay_c,cont_c> <- recv from_c; close self"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewReceive(pay_c, cont_c, from_c, end))
-	i1 := ParseString(input)[0].Body
-	i2 := ParseString(input)[0].Body
+	i1 := parseGetBody(input)
+	i2 := parseGetBody(input)
 	assertEqual(t, i1, i2)
 
 	input = "case from_c ( \n   label1<pay_c> => close self\n)"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewCase(from_c, []*process.BranchForm{process.NewBranch(process.Label{L: "label1"}, pay_c, end)}))
 
 	input = "case from_c ( \n   label1<pay_c> => close self\n | label2<pay_c> => close self\n)"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewCase(from_c, []*process.BranchForm{process.NewBranch(process.Label{L: "label1"}, pay_c, end), process.NewBranch(process.Label{L: "label2"}, pay_c, end)}))
 
 	input = "to_c.label1<cont_c>"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewSelect(to_c, process.Label{L: "label1"}, cont_c))
 
 	input = "cont_c <- new (close self); close self"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewNew(cont_c, end, end))
 
 	input = "close from_c"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewClose(from_c))
 
 	input = "fwd to_c from_c"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewForward(to_c, from_c))
 
 	input = "<pay_c,cont_c> <- split from_c; close self"
-	output = append(output, ParseString(input)[0].Body)
+	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewSplit(pay_c, cont_c, from_c, end))
 
 	compareOutputProgram(t, output, expected)

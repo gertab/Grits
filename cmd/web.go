@@ -107,6 +107,7 @@ const (
 var (
 	newline = []byte{'\n'}
 	space   = []byte{' '}
+	tab     = []byte{'\t'}
 )
 
 var upgrader = websocket.Upgrader{
@@ -128,10 +129,8 @@ type Client struct {
 	// Buffered channel of outbound messages.
 	send chan []byte
 
-	// re            *process.RuntimeEnvironment
+	// Contains the channels to receive[/send] information from[/to] the monitor
 	subscriberInfo *process.SubscriberInfo
-	// processes := parser.ParseString(program)
-	// process.InitializeProcesses(processes)
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -155,45 +154,91 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+		// todo preserve the newlines
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		message = bytes.TrimSpace(bytes.Replace(message, tab, space, -1))
 		c.handleRequest(string(message))
 		// c.hub.broadcast <- message
 	}
 }
 
-func (c *Client) handleMonitorUpdates() {
+func (c *Client) handleMonitorProcessUpdates() {
 	for {
 		if c.subscriberInfo == nil {
-			log.Println("processUpdate is nil")
+			log.Println("Webserver: processUpdate is nil")
 			return
 		}
 
-		log.Println("Listening for process updates")
-
-		updatedProcesses := <-c.subscriberInfo.ProcessesStringChan
+		updatedProcesses := <-c.subscriberInfo.ProcessesSubscriberChan
 
 		reply := &ReplyMessage{Type: "processes_updated", Payload: updatedProcesses}
-		log.Println("RECEIVED process updates")
+		log.Println("Webserver: Received process updates")
 
-		c.send <- []byte("NEWWWWWW")
-		// e.SetEscapeHTML(false)
-		// e.Encode(statement)
 		// reply_json, err := json.Marshal(reply)
 		reply_json, err := reply.JSON()
 
 		if err == nil {
+			// Send reply to the client through writePump
 			c.send <- []byte(reply_json)
 		}
-		// for _, p := range updatedProcesses {
-		// 	c.send <- []byte(json.Marshal(updatedProcesses))
-		// }
+	}
+}
+func (c *Client) handleMonitorRuleUpdates() {
+	for {
+		if c.subscriberInfo == nil {
+			log.Println("Webserver: processUpdate is nil")
+			return
+		}
+
+		updatedRules := <-c.subscriberInfo.RulesSubscriberChan
+
+		reply := &ReplyMessage{Type: "rules_updated", Rules: updatedRules}
+		log.Println("Webserver: Received rule updates")
+
+		// reply_json, err := json.Marshal(reply)
+		reply_json, err := reply.JSON()
+
+		if err == nil {
+			// Send reply to the client through writePump
+			c.send <- []byte(reply_json)
+		}
 	}
 }
 
-type ReplyMessage struct {
-	Type    string                `json:"type"`
-	Payload []process.ProcessInfo `json:"payload"`
+// ReplyMessage type can only be "compile_program"
+type RequestMessage struct {
+	Type             string `json:"type"`
+	ProgramToCompile string `json:"program_to_compile"`
 }
+
+// Example of a RequestMessage in JSON format
+// {
+//     "type": "compile_program",
+//     "program_to_compile": "prc[pid1]: send self<pid3, self>
+// 						      prc[pid2]: <a, b> <- recv pid1; close self"
+// }
+
+// ReplyMessage type can only be "processes_updated", "rules_updated" or "error"
+type ReplyMessage struct {
+	Type         string                `json:"type"`
+	Payload      []process.ProcessInfo `json:"payload,omitempty"`
+	Rules        []process.RuleInfo    `json:"rules,omitempty"`
+	ErrorMessage string                `json:"error_message,omitempty"`
+}
+
+// Example of a ReplyMessage in JSON format:
+// {
+//     "type": "processes_updated",
+//     "payload": [
+//         {
+//             "id": "3",
+//             "providers": [
+//                 "pid2[3]"
+//             ],
+//             "body": "<a,b> <- recv pidfwdddd[2]; close self"
+//         }
+//     ]
+// }
 
 func (t *ReplyMessage) JSON() ([]byte, error) {
 	buffer := &bytes.Buffer{}
@@ -203,30 +248,48 @@ func (t *ReplyMessage) JSON() ([]byte, error) {
 	return buffer.Bytes(), err
 }
 
-type RequestMessage struct {
-	Type             string `json:"type"`
-	ProgramToCompile string `json:"program_to_compile"`
+func (c *Client) sendError(errorMessage string) {
+	reply := &ReplyMessage{Type: "error", ErrorMessage: errorMessage}
+	// reply_json, err := json.Marshal(reply)
+	reply_json, err := reply.JSON()
+
+	if err == nil {
+		// Send reply to the client through writePump
+		c.send <- []byte(reply_json)
+	}
 }
 
 func (c *Client) handleRequest(message string) {
 	request := RequestMessage{}
 
-	json.Unmarshal([]byte(message), &request)
+	log.Println("received request:", string(message))
 
-	log.Println(request.Type)
-	log.Println(request.ProgramToCompile)
+	err := json.Unmarshal([]byte(message), &request)
+	if err != nil {
+		log.Println("Couldn't process json format of request", err)
+
+		c.sendError(err.Error())
+		return
+	}
 
 	if request.Type == "compile_program" {
 		log.Println("compiling program")
 
 		c.subscriberInfo = process.NewSubscriberInfo()
 
-		go c.handleMonitorUpdates()
+		go c.handleMonitorProcessUpdates()
+		go c.handleMonitorRuleUpdates()
 
-		processes := parser.ParseString(request.ProgramToCompile)
+		processes, err := parser.ParseString(request.ProgramToCompile)
+
+		if err != nil {
+			c.sendError(err.Error())
+			return
+		}
+
 		process.InitializeProcesses(processes, c.subscriberInfo)
-
-		// c.send <- []byte(processes)
+	} else {
+		c.sendError("Invalid request type")
 	}
 }
 

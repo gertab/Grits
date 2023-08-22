@@ -89,11 +89,12 @@ func (m *Monitor) monitorLoop() {
 			m.re.logMonitorf("Finished %s, %s\n", RuleString[processUpdate.rule], processUpdate.process.String())
 			m.rulesLog = append(m.rulesLog, MonitorRulesLog{Process: processUpdate.process, Rule: processUpdate.rule})
 			m.updateProcessToList(&processUpdate.process)
+			m.updateSubscriberRules()
 		} else if processUpdate.isRuleDoneBeforeRename {
 			// Process finished rule but do not update the process list
 			m.re.logMonitorf("Finished %s, %s\n", RuleString[processUpdate.rule], processUpdate.process.String())
 			m.rulesLog = append(m.rulesLog, MonitorRulesLog{Process: processUpdate.process, Rule: processUpdate.rule})
-			// m.updateProcessToList(&processUpdate.process)
+			m.updateSubscriberRules()
 		} else if processUpdate.updatedProcess {
 			// Process updated form
 			m.re.logMonitorf("Updated %s, %s\n", processUpdate.process.String())
@@ -108,7 +109,7 @@ func (m *Monitor) monitorLoop() {
 		}
 
 		// Send updated structure to subscriber
-		m.updateSubscriber()
+		m.updateSubscriberProcesses()
 
 	case <-m.stopMonitorChan:
 		m.re.logMonitorf("Monitor terminating\n")
@@ -126,12 +127,13 @@ func (m *Monitor) monitorLoop() {
 	m.monitorLoop()
 }
 
-func (m *Monitor) updateSubscriber() {
+func (m *Monitor) updateSubscriberProcesses() {
 	// Send list of processes to the subscriber
 	if m.subscriber != nil {
 
 		v := make([]ProcessInfo, 0, len(m.processIDToProcess))
 
+		// Send list of processes
 		for id, value := range m.processIDToProcess {
 			providers := make([]string, 0, len(value.Providers))
 
@@ -139,10 +141,28 @@ func (m *Monitor) updateSubscriber() {
 				providers = append(providers, provider.String())
 			}
 
-			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.String()})
-			// v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String()})
+			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String()})
 		}
-		m.subscriber.ProcessesStringChan <- v
+		m.subscriber.ProcessesSubscriberChan <- v
+	}
+}
+
+func (m *Monitor) updateSubscriberRules() {
+	// Send list of rules to the subscriber
+	if m.subscriber != nil {
+
+		v := make([]RuleInfo, 0, len(m.rulesLog))
+
+		for i, value := range m.rulesLog {
+			providers := make([]string, 0, len(value.Process.Providers))
+
+			for _, provider := range value.Process.Providers {
+				providers = append(providers, provider.String())
+			}
+
+			v = append(v, RuleInfo{ID: strconv.Itoa(i), Providers: providers, Rule: RuleString[value.Rule]})
+		}
+		m.subscriber.RulesSubscriberChan <- v
 	}
 }
 
@@ -241,7 +261,8 @@ func (m *Monitor) MonitorProcessForwarded(process *Process) {
 }
 
 type SubscriberInfo struct {
-	ProcessesStringChan chan []ProcessInfo
+	ProcessesSubscriberChan chan []ProcessInfo
+	RulesSubscriberChan     chan []RuleInfo
 }
 
 type ProcessInfo struct {
@@ -250,9 +271,16 @@ type ProcessInfo struct {
 	Body      string   `json:"body"`
 }
 
+type RuleInfo struct {
+	ID        string   `json:"id"`
+	Providers []string `json:"providers"`
+	Rule      string   `json:"rule"`
+}
+
 func NewSubscriberInfo() *SubscriberInfo {
-	processStringChan := make(chan []ProcessInfo)
-	return &SubscriberInfo{ProcessesStringChan: processStringChan}
+	processSubscriberChan := make(chan []ProcessInfo, 100)
+	ruleSubscriberChan := make(chan []RuleInfo, 100)
+	return &SubscriberInfo{ProcessesSubscriberChan: processSubscriberChan, RulesSubscriberChan: ruleSubscriberChan}
 }
 
 // func (m *Monitor) ForwardProcessFinished(process *Process) {

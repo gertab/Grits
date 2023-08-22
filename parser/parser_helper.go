@@ -67,18 +67,19 @@ func ParseFile(fileName string) []process.Process {
 	return expandedProcesses
 }
 
-func ParseString(program string) []process.Process {
+func ParseString(program string) ([]process.Process, error) {
 	r := strings.NewReader(program)
 
 	prc, err := Parse(r)
 
 	if err != nil {
 		fmt.Println(err)
-		panic("Parsing error!")
+		// panic("Parsing error!")
+		return nil, err
 	}
 
 	expandedProcesses := expandProcesses(prc)
-	return expandedProcesses
+	return expandedProcesses, nil
 }
 
 func Check() {

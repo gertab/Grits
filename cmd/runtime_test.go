@@ -216,7 +216,14 @@ func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOpt
 }
 
 func checkInput(t *testing.T, input string, expectedOptions []traceOption, done chan bool) {
-	processes := parser.ParseString(input)
+	processes, err := parser.ParseString(input)
+
+	if err != nil {
+		t.Errorf("Error during parsing")
+		done <- true
+
+		return
+	}
 	deadProcesses, rulesLog, _ := initProcesses(processes)
 	stepsGot := convertRulesLog(rulesLog)
 

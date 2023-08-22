@@ -50,7 +50,7 @@ func expandProcesses(u unexpandedProcesses) []process.Process {
 	return processes
 }
 
-func ParseFile(fileName string) []process.Process {
+func ParseFile(fileName string) ([]process.Process, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		panic(err)
@@ -60,11 +60,12 @@ func ParseFile(fileName string) []process.Process {
 
 	if err != nil {
 		fmt.Println(err)
-		panic("Parsing error!")
+		// panic("Parsing error!")
+		return nil, err
 	}
 
 	expandedProcesses := expandProcesses(prc)
-	return expandedProcesses
+	return expandedProcesses, nil
 }
 
 func ParseString(program string) ([]process.Process, error) {
@@ -83,7 +84,7 @@ func ParseString(program string) ([]process.Process, error) {
 }
 
 func Check() {
-	processes := ParseFile("parser/input.test")
+	processes, _ := ParseFile("parser/input.test")
 
 	for _, p := range processes {
 		fmt.Println(p.Body.String())

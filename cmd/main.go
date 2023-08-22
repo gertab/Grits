@@ -201,8 +201,12 @@ func main() {
 	// processes := parser.ParseFile("parser/input.test")
 	// program := "send to_c<pay_c,cont_c>"
 
-	// Execute directly from string
-	// processes := parser.ParseString(program)
+	// // Execute directly from string
+	// processes, err := parser.ParseString(program)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	return
+	// }
 	// process.InitializeProcesses(processes, nil)
 
 	// Run via API

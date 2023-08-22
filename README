@@ -1,0 +1,57 @@
+
+
+### General Folder Structure
+```
+phi/
+├─ cmd/
+├─ parser/
+├─ process/
+```
+There are three main components.  
+- The `cmd` folder contains the entry point to either execute code from a file/string (`main.go`), or initiate a web-server (`web.go`) to compile and execute a program using an external interface.  
+- The `parser` folder contains the parser *package* which processes a string and outputs a list of processes, ready to be executed.
+- The `process` folder contains the *process* package which executes some given processes. It has several components:
+  - `process/runtime.go`: Entry point for the runtime environment. Sets up the processes, channels and monitors and initiates the execution.
+  - `process/form.go`: Contains the different forms that a process can take. Referred to as the abstract syntax tree of the processes.
+  - `process/transition.go`: Defines how each form should execute.
+  - `process/servers.go`: Sets up the concurrent servers (e.g. a monitor) that monitor or control the execution of the processes. Used to inform the web-server about the state of each process.
+
+
+
+ 
+### Other information
+
+To slow down execution speed: 
+Set the delay property of the `RuntimeEnvironment` to a longer duration, e.g. `1000 * time.Millisecond`.
+
+Features not currently implemented:  
+- [ ] Controller server to choose which transition do do
+
+## Developing the interface (Matthieu)
+
+### Useful Links
+  * D3.js: http://d3js.org/
+
+## Goals 
+
+Similar projects:
+
+http://www.emanueledosualdo.com/stargazer/?gist=6e54093b297c0f9df01d0c82f65b89f6
+
+https://github.com/bzhan/mars/tree/master/hhlpy
+
+Useful features to have:
+- [ ] Use network/hierarchy in D3 to display all the processes and the links between them
+- [ ] Update the nodes as they execute and change
+- [ ] Show the list of rules that have executed
+- [ ] Implement a code editor that offers some existing examples (similar to [this](http://www.emanueledosualdo.com/stargazer/?gist=6e54093b297c0f9df01d0c82f65b89f6))
+- [ ] Keep order of tree (e.g. if child -> parent -> grand-parent)
+- [ ] Handle a forest of trees (instead of just a single tree)
+- [ ] Offer different options, e.g. hide bodies and name (just show dot) -- to be able to scale for a large amount of processes -- (what if there a 1000 processes?)
+<!-- - [ ] processes of different kinds should look different (e.g. shared processes vs linear ones) -->
+<!-- - [ ] Regarding the controller actions - highlight which process will be affected -->
+
+
+Make sure to handle new/dead processes appropriately, rather than redrawing the whole canvas at each request (checkout enter/exit features).
+
+Possible D3 features to consider: Force simulation/draggable processes

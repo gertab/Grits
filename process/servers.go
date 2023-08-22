@@ -61,7 +61,18 @@ func NewMonitor(re *RuntimeEnvironment, subscriberInfo *SubscriberInfo) *Monitor
 	providersToProcessID := make(map[Name]int)
 	processIDToProcess := make(map[int]*Process)
 
-	return &Monitor{i: 0, monitorChan: monitorChan, errorChan: errorChan, stopMonitorChan: stopMonitorChan, subscriber: subscriberInfo, monitorFinished: monitorFinishedChan, re: re, inactiveTimer: 300 * time.Millisecond, providersToProcessID: providersToProcessID, processIDToProcess: processIDToProcess, processID: 0}
+	return &Monitor{
+		i:                    0,
+		monitorChan:          monitorChan,
+		errorChan:            errorChan,
+		stopMonitorChan:      stopMonitorChan,
+		subscriber:           subscriberInfo,
+		monitorFinished:      monitorFinishedChan,
+		re:                   re,
+		inactiveTimer:        300 * time.Millisecond,
+		providersToProcessID: providersToProcessID,
+		processIDToProcess:   processIDToProcess,
+		processID:            0}
 }
 
 func (m *Monitor) startMonitor(started chan bool) {
@@ -118,7 +129,7 @@ func (m *Monitor) monitorLoop() {
 	case error := <-m.errorChan:
 		fmt.Println(error)
 
-	case <-time.After(m.inactiveTimer):
+	case <-time.After(m.inactiveTimer + m.re.delay):
 		m.re.logMonitorf("Monitor inactive, terminating\n")
 		m.monitorFinished <- true
 		return
@@ -128,7 +139,7 @@ func (m *Monitor) monitorLoop() {
 }
 
 func (m *Monitor) updateSubscriberProcesses() {
-	// Send list of processes to the subscriber
+	// Send list of processes and links to the subscriber
 	if m.subscriber != nil {
 
 		v := make([]ProcessInfo, 0, len(m.processIDToProcess))
@@ -145,7 +156,6 @@ func (m *Monitor) updateSubscriberProcesses() {
 		}
 
 		// Prepare list of links between processes
-
 		links := []Link{}
 		for pID_source, process := range m.processIDToProcess {
 			for _, freeName := range process.Body.FreeNames() {

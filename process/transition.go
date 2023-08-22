@@ -3,6 +3,7 @@ package process
 import (
 	"fmt"
 	"sync/atomic"
+	"time"
 )
 
 // Initiates new processes [new processes are spawned here]
@@ -18,7 +19,14 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 
 // Entry point for each process transition
 func TransitionLoop(process *Process, re *RuntimeEnvironment) {
+
 	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
+
+	// To slow down the execution speed
+	time.Sleep(re.delay)
+
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
+
 	process.Body.Transition(process, re)
 }
 

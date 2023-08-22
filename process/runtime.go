@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/exp/slices"
 )
@@ -28,6 +29,8 @@ type RuntimeEnvironment struct {
 	monitor *Monitor
 	// Controller info
 	controller *Controller
+	// Slow execution speed
+	delay time.Duration
 }
 
 func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvironment {
@@ -45,7 +48,15 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo) *Runti
 		LOGMONITOR,
 	}
 
-	re := &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l}
+	re := &RuntimeEnvironment{
+		ProcessCount:        0,
+		debugChannelCounter: 0,
+		debug:               true,
+		color:               true,
+		logLevels:           l,
+		delay:               1000 * time.Millisecond,
+		// delay: 0,
+	}
 
 	re.logf(LOGINFO, "Initializing %d processes\n", len(processes))
 
@@ -67,8 +78,6 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo) *Runti
 	re.StartTransitions(processes)
 
 	re.WaitForMonitorToFinish()
-
-	// time.Sleep(5 * time.Second)
 
 	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
 

@@ -72,8 +72,8 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewCase($2, $4) }
 		   | /* new */ name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression 
 		   			{ $$ = process.NewNew($1, $5, $8) }
-		   | /* new */ name LEFT_ARROW NEW expression SEQUENCE expression 
-		   			{ $$ = process.NewNew($1, $4, $6) }
+		   | /* call */ LABEL LPAREN names RPAREN
+		   			{ $$ = process.NewCall($1, $3) }
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
 		   | /* forward */ FORWARD name name
@@ -84,10 +84,12 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewCall($1, []process.Name{}) }
 		   | /* call */ LABEL LPAREN names RPAREN
 		   			{ $$ = process.NewCall($1, $3) }
+		   | /* wait */ WAIT name SEQUENCE expression
+		   			{ $$ = process.NewWait($2, $4) }
 					/* used for shared processes */
 					/* for debugging */
 /* remaining expressions:
- Drop, Wait 
+ Drop, 
 	Snew, Cast, Shift
 	Acquire, Accept, Push, Detach, Release
 */

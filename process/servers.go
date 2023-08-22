@@ -90,6 +90,7 @@ func (m *Monitor) startMonitor(started chan bool) {
 func (m *Monitor) monitorLoop() {
 	select {
 	case processUpdate := <-m.monitorChan:
+
 		if processUpdate.isDead {
 			// Process is terminated
 			m.re.logMonitorf("Process %s died\n", processUpdate.process.Providers[0].String())

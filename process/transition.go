@@ -19,13 +19,10 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 
 // Entry point for each process transition
 func TransitionLoop(process *Process, re *RuntimeEnvironment) {
-
 	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.delay)
-
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 
 	process.Body.Transition(process, re)
 }
@@ -426,14 +423,48 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 }
 
 func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of close: ")
-	fmt.Println(f.String())
+	re.logProcessf(LOGRULEDETAILS, process, "transition of close: %s\n", f.String())
+
+	if f.from_c.IsSelf {
+		// CLS rule (provider)
+		// close self
+
+		message := Message{Rule: CLS}
+
+		clsRule := func() {
+			re.logProcess(LOGRULEDETAILS, process, "[close, provider] finished sending on self")
+			// the rule CLS is not guaranteed to be done, since it depends on the other side as well
+			process.finishedRule(CLS, "[close, provider]", "(p)", re)
+			process.terminate(re)
+		}
+
+		TransitionBySending(process, process.Providers[0].Channel, clsRule, message, re)
+	}
 }
 
-// func (f *WaitForm) Transition(process *Process, re *RuntimeEnvironment) {
-// 	fmt.Print("transition of wait: ")
-// 	fmt.Println(f.String())
-// }
+func (f *WaitForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of wait: %s\n", f.String())
+
+	clsRule := func(message Message) {
+		// CLS rule (client)
+		// wait to_c; ...
+
+		re.logProcess(LOGRULE, process, "[wait, client] starting CLS rule")
+		re.logProcessf(LOGRULEDETAILS, process, "[wait, client] Received message on channel %s, containing rule: %s\n", f.to_c.String(), RuleString[message.Rule])
+
+		if message.Rule != CLS {
+			re.logProcessHighlight(LOGERROR, process, "expected CLS")
+			panic("expected CLS")
+		}
+
+		process.Body = f.continuation_e
+
+		process.finishedRule(CLS, "[wait, client]", "c", re)
+		TransitionLoop(process, re)
+	}
+
+	TransitionByReceiving(process, f.to_c.Channel, clsRule, re)
+}
 
 // func (f *DropForm) Transition(process *Process, re *RuntimeEnvironment) {
 // 	fmt.Print("transition of drop: ")

@@ -120,6 +120,13 @@ func EqualForm(form1, form2 Form) bool {
 			}
 			return true
 		}
+	case *WaitForm:
+		f1, ok1 := form1.(*WaitForm)
+		f2, ok2 := form2.(*WaitForm)
+
+		if ok1 && ok2 {
+			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
 
 	}
 
@@ -171,11 +178,6 @@ func CopyForm(orig Form) Form {
 		if ok {
 			return NewClose(p.from_c)
 		}
-	case *PrintForm:
-		p, ok := orig.(*PrintForm)
-		if ok {
-			return NewClose(p.name_c)
-		}
 	case *NewForm:
 		p, ok := orig.(*NewForm)
 		if ok {
@@ -201,7 +203,18 @@ func CopyForm(orig Form) Form {
 			copy(copiedParameters, p.parameters)
 			return NewCall(p.functionName, copiedParameters)
 		}
-
+	case *WaitForm:
+		p, ok := orig.(*WaitForm)
+		if ok {
+			body := CopyForm(p.continuation_e)
+			return NewWait(p.to_c, body)
+		}
+	// Debug
+	case *PrintForm:
+		p, ok := orig.(*PrintForm)
+		if ok {
+			return NewPrint(p.name_c)
+		}
 	}
 
 	// todo panic
@@ -603,6 +616,39 @@ func (p *CallForm) FreeNames() []Name {
 	for i := range p.parameters {
 		fn = appendIfNotSelf(p.parameters[i], fn)
 	}
+	return fn
+}
+
+// New: continuation_c <- new (body); continuation_e
+type WaitForm struct {
+	to_c           Name
+	continuation_e Form
+}
+
+func NewWait(to_c Name, continuation_e Form) *WaitForm {
+	return &WaitForm{
+		to_c:           to_c,
+		continuation_e: continuation_e}
+}
+
+func (p *WaitForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("wait ")
+	buf.WriteString(p.to_c.String())
+	buf.WriteString("; ")
+	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *WaitForm) Substitute(old, new Name) {
+	p.to_c.Substitute(old, new)
+	p.continuation_e.Substitute(old, new)
+}
+
+func (p *WaitForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.to_c, fn)
+	fn = mergeTwoNamesList(fn, p.continuation_e.FreeNames())
 	return fn
 }
 

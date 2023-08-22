@@ -110,6 +110,11 @@ func TestBasicTokens(t *testing.T) {
 	output = append(output, input10.String())
 	expected = append(expected, "<pay_c,cont_c> <- split from_c; close self")
 
+	// Wait
+	input11 := NewWait(to_c, end)
+	output = append(output, input11.String())
+	expected = append(expected, "wait to_c; close self")
+
 	compareOutput(t, output, expected)
 }
 
@@ -218,6 +223,14 @@ func TestSubstitutions(t *testing.T) {
 	result9 := NewCall("func_name", []Name{new_from_c, to_c})
 	output = append(output, input9)
 	expected = append(expected, result9)
+
+	// Wait
+	input10 := NewWait(to_c, end)
+	input10.Substitute(to_c, new_to_c)
+	input10.Substitute(self, new_self)
+	result11 := NewWait(new_to_c, end)
+	output = append(output, input10)
+	expected = append(expected, result11)
 
 	compareOutputProgram(t, output, expected)
 }

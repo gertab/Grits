@@ -31,6 +31,24 @@ func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *Runti
 	}
 }
 
+// Used when a process will be terminated, however its provider will be used (to rename) another process
+// E.g. in the case of RCV, when the 'send' client dies, its provider channels are used for the continuation of the other process
+func (process *Process) finishedRuleBeforeRenamed(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
+
+	if re.debug {
+		// Update monitor
+		re.monitor.MonitorRuleFinishedBeforeRenamed(process, rule)
+	}
+}
+
+func (process *Process) processRenamed(re *RuntimeEnvironment) {
+	if re.debug {
+		// Update monitor
+		re.monitor.MonitorProcessRenamed(process)
+	}
+}
+
 func (process *Process) terminate(re *RuntimeEnvironment) {
 	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
 
@@ -49,7 +67,7 @@ func (process *Process) terminateForward(re *RuntimeEnvironment) {
 	}
 }
 
-func (process *Process) terminateAndRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
+func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
 
 	if re.debug {
@@ -162,7 +180,7 @@ func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeE
 	}
 
 	// Notify that the process will change providers (i.e. the process.Providers will die and be replaced by pm.Providers)
-	process.terminateAndRename(process.Providers, pm.Providers, re)
+	process.terminateBeforeRename(process.Providers, pm.Providers, re)
 
 	// the process.Providers can no longer be used, so close them
 	// todo check if they are being closed anywhere else
@@ -232,8 +250,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
 			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule RCV\n", f.to_c.String())
 
-			process.finishedRule(RCV, "[send, client]", "(c)", re)
-
+			process.finishedRuleBeforeRenamed(RCV, "[send, client]", "(c)", re)
 			// Although the process dies, its provider will be used as the client's provider
 			process.renamed(process.Providers, []Name{f.to_c}, re)
 		}
@@ -261,12 +278,13 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			new_body.Substitute(f.continuation_c, Name{IsSelf: true})
 
 			process.finishedRule(RCV, "[receive, provider]", "(p)", re)
-
 			// Terminate the current provider to replace them with the one being received
-			process.terminateAndRename(process.Providers, []Name{message.Channel2}, re)
+			process.terminateBeforeRename(process.Providers, []Name{message.Channel2}, re)
 
 			process.Body = new_body
 			process.Providers = []Name{message.Channel2}
+			// process.finishedRule(RCV, "[receive, provider]", "(p)", re)
+			process.processRenamed(re)
 
 			TransitionLoop(process, re)
 		}
@@ -290,9 +308,10 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			new_body.Substitute(f.continuation_c, message.Channel2)
 
 			// re.logProcess(LOGRULE, process, "[receive, client] finished SND rule (c)")
-			process.finishedRule(SND, "[receive, client]", "(c)", re)
 
 			process.Body = new_body
+
+			process.finishedRule(SND, "[receive, client]", "(c)", re)
 			TransitionLoop(process, re)
 		}
 

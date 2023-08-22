@@ -1,10 +1,5 @@
 package main
 
-import (
-	"phi/parser"
-	"phi/process"
-)
-
 // const program = ` /* SND rule */
 // 		prc[pid1]: send self<pid3, self>
 // 		prc[pid2]: <a, b> <- recv pid1; close self
@@ -15,23 +10,23 @@ import (
 // 		prc[pid2]: <a, b> <- recv self; close self
 // 	`
 
-// const program = ` 	/* FWD + RCV rule */
-// 	let
-// 	in
-// 	prc[pid1]: send pid2<pid5, self>
-// 	prc[pid2]: fwd self pid3
-// 	// prc[pid3]: fwd self pid4
-// 	prc[pid3]: <a, b> <- recv self; close a
-// 	end`
-
-const program = ` 	/* FWD + SND rule */
+const program = ` 	/* FWD + RCV rule */
 	let
 	in
-	prc[pid1]: <a, b> <- recv pid2; close a
+	prc[pid1]: send pid2<pid5, self>
 	prc[pid2]: fwd self pid3
 	// prc[pid3]: fwd self pid4
-	prc[pid3]: send self<pid5, self>
+	prc[pid3]: <a, b> <- recv self; close a
 	end`
+
+// const program = ` 	/* FWD + SND rule */
+// 	let
+// 	in
+// 	prc[pid1]: <a, b> <- recv pid2; close a
+// 	prc[pid2]: fwd self pid3
+// 	// prc[pid3]: fwd self pid4
+// 	prc[pid3]: send self<pid5, self>
+// 	end`
 
 // const program = ` 	/* Simple SPLIT + SND rule (x 2) */
 // 	let
@@ -206,6 +201,11 @@ func main() {
 
 	// processes := parser.ParseFile("parser/input.test")
 	// program := "send to_c<pay_c,cont_c>"
-	processes := parser.ParseString(program)
-	process.InitializeProcesses(processes)
+
+	// processes := parser.ParseString(program)
+	// process.InitializeProcesses(processes, nil)
+
+	setupAPI()
+	// // Serve on port :8080, fudge yeah hardcoded port
+	// log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -35,7 +35,7 @@ func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvi
 }
 
 // Entry point for execution
-func InitializeProcesses(processes []Process) {
+func InitializeProcesses(processes []Process, subscriber *SubscriberInfo) *RuntimeEnvironment {
 	l := []LogLevel{
 		LOGERROR,
 		LOGINFO,
@@ -56,7 +56,7 @@ func InitializeProcesses(processes []Process) {
 	if re.debug {
 		started := make(chan bool)
 
-		re.InitializeMonitor(started)
+		re.InitializeMonitor(started, subscriber)
 		re.InitializeController(started)
 
 		// Ensure that both servers are running
@@ -71,6 +71,8 @@ func InitializeProcesses(processes []Process) {
 	// time.Sleep(5 * time.Second)
 
 	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
+
+	return re
 }
 
 func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
@@ -113,9 +115,9 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan, IsSelf: false}
 }
 
-func (re *RuntimeEnvironment) InitializeMonitor(started chan bool) {
+func (re *RuntimeEnvironment) InitializeMonitor(started chan bool, subscriber *SubscriberInfo) {
 	// Declare new monitor
-	re.monitor = NewMonitor(re)
+	re.monitor = NewMonitor(re, subscriber)
 
 	// Start monitor on new thread
 	go re.monitor.startMonitor(started)

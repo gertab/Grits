@@ -10,7 +10,4 @@ in
               label1<payloadc> => send self<pid3, self>
             | label2<payloadc> => self.labbbel<pid3>
         )
-    prc[h]: x <- new send self<pid3, self>; < x , y > <- recv r ; send self < pid3 , self >
-    prc[a]: <pay_c,cont_c> <- recv from_c; close pi5
-
 end

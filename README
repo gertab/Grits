@@ -48,8 +48,7 @@ Useful features to have:
 - [ ] Keep order of tree (e.g. if child -> parent -> grand-parent)
 - [ ] Handle a forest of trees (instead of just a single tree)
 - [ ] Offer different options, e.g. hide bodies and name (just show dot) -- to be able to scale for a large amount of processes -- (what if there a 1000 processes?)
-<!-- - [ ] processes of different kinds should look different (e.g. shared processes vs linear ones) -->
-<!-- - [ ] Regarding the controller actions - highlight which process will be affected -->
+- [ ] (?) process highlighting
 
 
 Make sure to handle new/dead processes appropriately, rather than redrawing the whole canvas at each request (checkout enter/exit features).

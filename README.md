@@ -109,6 +109,8 @@ Similar projects:
 
 http://www.emanueledosualdo.com/stargazer/?gist=6e54093b297c0f9df01d0c82f65b89f6
 
+https://www.nomos-lang.org/admin/interface
+
 https://github.com/bzhan/mars/tree/master/hhlpy
 
 Useful features to have:

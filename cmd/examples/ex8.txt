@@ -1,0 +1,4 @@
+/* RCV (x 3) through one FWD */
+prc[pidA, pidB, pidC]: send pid1<a, self> 
+prc[pid1]: fwd self pid2
+prc[pid2]: <a, b> <- recv self; close self

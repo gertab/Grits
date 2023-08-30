@@ -37,7 +37,7 @@ The web-server accepts connections via websockets on `ws://localhost:8081/ws`. I
 {
     "type": "compile_program",
     "program_to_compile": 
-        "prc[pid1]: send self<pid3, self>>
+        "prc[pid1]: send self<pid3, self>
          prc[pid2]: <a, b> <- recv pid1; close self"
 }
 ```

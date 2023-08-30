@@ -1,8 +1,9 @@
 package main
 
-const program = ` /* SND rule */
-			prc[pid1]: <a, b> <- recv pid2; close self
-			prc[pid2]: send self<pid3, self>
+const program = ` /* RCV (x 3) through one FWD */
+prc[pidA, pidB, pidC]: send pid1<a, self> 
+prc[pid1]: fwd self pid2
+prc[pid2]: <a, b> <- recv self; close self
     `
 
 // const program = ` /* RCV rule */

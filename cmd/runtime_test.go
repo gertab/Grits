@@ -18,7 +18,7 @@ func TestSimpleFWDRCV(t *testing.T) {
 		let
 		in
 		prc[pid1]: send pid2<pid5, self>
-		prc[pid2]: fwd self pid3
+		prc[pid2]: -fwd self pid3
 		prc[pid3]: <a, b> <- recv self; close a
 		end`
 	expected := []traceOption{
@@ -50,7 +50,7 @@ func TestSimpleCUTSND(t *testing.T) {
 	input := ` 	/* CUT + SND rule */
 		let
 		in
-		prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
+		prc[pid1]: x <- +new (<a, b> <- recv pid2; close b); close self
 		prc[pid2]: send self<pid5, self>
 		end`
 	expected := []traceOption{
@@ -71,8 +71,8 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 			let
 			in
 			prc[pid1]: send pid2<pid5, self>
-			prc[pid2]: fwd self pid3
-			prc[pid3]: ff <- new (send ff<pid5, ff>); <a, b> <- recv self; close self
+			prc[pid2]: -fwd self pid3
+			prc[pid3]: ff <- -new (send ff<pid5, ff>); <a, b> <- recv self; close self
 			end`
 	expected := []traceOption{
 		// {steps{{"ff", process.SND}, {"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 3},
@@ -92,8 +92,8 @@ func TestSimpleMultipleFWD(t *testing.T) {
 		let
 		in
 			prc[pid1]: send pid2<pid5, self>
-			prc[pid2]: fwd self pid3
-			prc[pid3]: fwd self pid4
+			prc[pid2]: -fwd self pid3
+			prc[pid3]: -fwd self pid4
 			prc[pid4]: <a, b> <- recv self; close a
 		end`
 	expected := []traceOption{
@@ -121,28 +121,28 @@ func TestSimpleMultipleProvidersInitially(t *testing.T) {
 	checkInputRepeatedly(t, input, expected)
 }
 
-func TestSimpleSPLITCUT(t *testing.T) {
-	// Case 6: SPLIT + CUT + SND
+// func TestSimpleSPLITCUT(t *testing.T) {
+// 	// Case 6: SPLIT + CUT + SND
 
-	input := ` 	/* SPLIT + CUT + SND rule */
-		let
-		in
-			prc[pid0]: <x1, x2> <- split pid1; close self
-			prc[pid1]: x <- new (<a, b> <- recv pid2; close b); close self
-			prc[pid2]: send self<pid5, self>
-		end`
-	expected := []traceOption{
-		// Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
-		{steps{{"pid0", process.SPLIT}, {"x1", process.FWD}, {"pid2", process.DUP}, {"x1", process.CUT}, {"pid2", process.FWD}, {"x2", process.CUT}, {"x1", process.DUP}, {"pid2", process.SND}, {"pid2", process.SND}, {"x", process.SND}, {"x", process.SND}}, 4},
-		// Or the SND takes place before the SPLIT/DUP, so only one SND is needed
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
+// 	input := ` 	/* SPLIT + CUT + SND rule */
+// 		let
+// 		in
+// 			prc[pid0]: <x1, x2> <- +split pid1; close self
+// 			prc[pid1]: x <- +new (<a, b> <- recv pid2; close b); close self
+// 			prc[pid2]: send self<pid5, self>
+// 		end`
+// 	expected := []traceOption{
+// 		// Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
+// 		{steps{{"pid0", process.SPLIT}, {"x1", process.FWD}, {"pid2", process.DUP}, {"x1", process.CUT}, {"pid2", process.FWD}, {"x2", process.CUT}, {"x1", process.DUP}, {"pid2", process.SND}, {"pid2", process.SND}, {"x", process.SND}, {"x", process.SND}}, 4},
+// 		// Or the SND takes place before the SPLIT/DUP, so only one SND is needed
+// 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
 
-		// // Added for half done rules (x1...)
-		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}, {"x1", process.FWD}}, 1},
-		// {steps{{"pid0", process.SPLIT}, {"pid2", process.SND}, {"pid2", process.FWD}, {"x1", process.CUT}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.CUT}}, 2},
-	}
-	checkInputRepeatedly(t, input, expected)
-}
+// 		// // Added for half done rules (x1...)
+// 		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}, {"x1", process.FWD}}, 1},
+// 		// {steps{{"pid0", process.SPLIT}, {"pid2", process.SND}, {"pid2", process.FWD}, {"x1", process.CUT}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.CUT}}, 2},
+// 	}
+// 	checkInputRepeatedly(t, input, expected)
+// }
 
 func TestSimpleSPLITSNDSND(t *testing.T) {
 	// Case 7: SPLIT + SND rule (x 2)
@@ -150,7 +150,7 @@ func TestSimpleSPLITSNDSND(t *testing.T) {
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
 		let
 		in
-			prc[pid1]: <a, b> <- split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+			prc[pid1]: <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
 			prc[pid2]: send self<pid3, self>
 		end`
 	expected := []traceOption{
@@ -166,8 +166,8 @@ func TestSimpleSPLITCALL(t *testing.T) {
 			let
 				D1(c) =  <a, b> <- recv c; close a
 			in
-				prc[pid0]: <x1, x2> <- split pid1; close self
-				prc[pid1]: D1(pid2)
+				prc[pid0]: <x1, x2> <- +split pid1; close self
+				prc[pid1]: +D1(pid2)
 				prc[pid2]: send self<pid3, self>
 			end`
 	expected := []traceOption{

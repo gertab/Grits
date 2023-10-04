@@ -94,5 +94,6 @@ func isUnderscore(ch rune) bool {
 }
 
 func isNameSymbols(ch rune) bool {
-	return ch == '_' || ch == '-'
+	return ch == '_'
+	//  || ch == '-'
 }

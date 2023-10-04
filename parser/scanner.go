@@ -126,6 +126,10 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 		return PIPE, string(ch), startPos, endPos
 	case ',':
 		return COMMA, string(ch), startPos, endPos
+	case '+':
+		return POL_POSITIVE, string(ch), startPos, endPos
+	case '-':
+		return POL_NEGATIVE, string(ch), startPos, endPos
 	}
 
 	if s.consumeIfComment(ch) {

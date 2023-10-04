@@ -91,7 +91,7 @@ func TestBasicTokens(t *testing.T) {
 	expected = append(expected, "to_c.label1<cont_c>")
 
 	// New
-	input7 := NewNew(cont_c, end, end)
+	input7 := NewNew(cont_c, end, end, POSITIVE)
 	output = append(output, input7.String())
 	expected = append(expected, "cont_c <- new (close self); close self")
 
@@ -101,12 +101,12 @@ func TestBasicTokens(t *testing.T) {
 	expected = append(expected, "close from_c")
 
 	// Forward
-	input9 := NewForward(to_c, from_c)
+	input9 := NewForward(to_c, from_c, POSITIVE)
 	output = append(output, input9.String())
 	expected = append(expected, "fwd to_c from_c")
 
 	// Split
-	input10 := NewSplit(pay_c, cont_c, from_c, end)
+	input10 := NewSplit(pay_c, cont_c, from_c, end, POSITIVE)
 	output = append(output, input10.String())
 	expected = append(expected, "<pay_c,cont_c> <- split from_c; close self")
 
@@ -181,10 +181,10 @@ func TestSubstitutions(t *testing.T) {
 	expected = append(expected, result4)
 
 	// New
-	input5 := NewNew(cont_c, end, end)
+	input5 := NewNew(cont_c, end, end, POSITIVE)
 	input5.Substitute(cont_c, new_cont_c)
 	input5.Substitute(self, new_self)
-	result5 := NewNew(cont_c, end, end)
+	result5 := NewNew(cont_c, end, end, POSITIVE)
 	output = append(output, input5)
 	expected = append(expected, result5)
 
@@ -197,30 +197,30 @@ func TestSubstitutions(t *testing.T) {
 	expected = append(expected, result6)
 
 	// Forward
-	input7 := NewForward(to_c, from_c)
+	input7 := NewForward(to_c, from_c, POSITIVE)
 	input7.Substitute(from_c, new_from_c)
 	input7.Substitute(to_c, new_to_c)
-	result7 := NewForward(new_to_c, new_from_c)
+	result7 := NewForward(new_to_c, new_from_c, POSITIVE)
 	output = append(output, input7)
 	expected = append(expected, result7)
 
 	// Split
-	input8 := NewSplit(pay_c, cont_c, from_c, end)
+	input8 := NewSplit(pay_c, cont_c, from_c, end, POSITIVE)
 	input8.Substitute(pay_c, new_pay_c)
 	input8.Substitute(cont_c, new_cont_c)
 	input8.Substitute(from_c, new_from_c)
 	input8.Substitute(self, new_self)
-	result8 := NewSplit(pay_c, cont_c, new_from_c, new_end)
+	result8 := NewSplit(pay_c, cont_c, new_from_c, new_end, POSITIVE)
 	output = append(output, input8)
 	expected = append(expected, result8)
 
 	// Call
-	input9 := NewCall("func_name", []Name{from_c, to_c})
+	input9 := NewCall("func_name", []Name{from_c, to_c}, POSITIVE)
 	input9.Substitute(pay_c, new_pay_c)
 	input9.Substitute(cont_c, new_cont_c)
 	input9.Substitute(from_c, new_from_c)
 	input9.Substitute(self, new_self)
-	result9 := NewCall("func_name", []Name{new_from_c, to_c})
+	result9 := NewCall("func_name", []Name{new_from_c, to_c}, POSITIVE)
 	output = append(output, input9)
 	expected = append(expected, result9)
 
@@ -298,7 +298,7 @@ func TestCopy(t *testing.T) {
 	assertNotEqual(t, input4, copy4)
 
 	// New
-	input5 := NewNew(cont_c, end, end)
+	input5 := NewNew(cont_c, end, end, POSITIVE)
 	copy5 := CopyForm(input5)
 	copyWithType5 := copy5.(*NewForm)
 	copyWithType5.continuation_c.Ident = "cont_c"
@@ -316,7 +316,7 @@ func TestCopy(t *testing.T) {
 	assertNotEqual(t, input6, copy6)
 
 	// Forward
-	input7 := NewForward(to_c, from_c)
+	input7 := NewForward(to_c, from_c, POSITIVE)
 	copy7 := CopyForm(input7)
 	copyWithType7 := copy7.(*ForwardForm)
 	copyWithType7.from_c.Ident = "from_c"
@@ -325,7 +325,7 @@ func TestCopy(t *testing.T) {
 	assertNotEqual(t, input7, copy7)
 
 	// Split
-	input8 := NewSplit(pay_c, cont_c, from_c, end)
+	input8 := NewSplit(pay_c, cont_c, from_c, end, POSITIVE)
 	copy8 := CopyForm(input8)
 	copyWithType8 := copy8.(*SplitForm)
 	copyWithType8.from_c.Ident = "from_c"
@@ -334,7 +334,7 @@ func TestCopy(t *testing.T) {
 	assertNotEqual(t, input8, copy8)
 
 	// Call
-	input9 := NewCall("func_name", []Name{from_c})
+	input9 := NewCall("func_name", []Name{from_c}, POSITIVE)
 	copy9 := CopyForm(input9)
 	copyWithType9 := copy9.(*CallForm)
 	copyWithType9.parameters[0].Ident = "from_c"
@@ -387,10 +387,10 @@ func TestFreeNames(t *testing.T) {
 	assertEqualNames(t, input4.FreeNames(), []Name{to_c, cont_c})
 
 	// New
-	input5 := NewNew(cont_c, end, end)
+	input5 := NewNew(cont_c, end, end, POSITIVE)
 	assertEqualNames(t, input5.FreeNames(), []Name{})
 
-	input5other := NewNew(cont_c, input3, end)
+	input5other := NewNew(cont_c, input3, end, POSITIVE)
 	assertEqualNames(t, input5other.FreeNames(), []Name{from_c, to_c})
 
 	// Close
@@ -398,18 +398,18 @@ func TestFreeNames(t *testing.T) {
 	assertEqualNames(t, input6.FreeNames(), []Name{from_c})
 
 	// Forward
-	input7 := NewForward(to_c, from_c)
+	input7 := NewForward(to_c, from_c, POSITIVE)
 	assertEqualNames(t, input7.FreeNames(), []Name{to_c, from_c})
 
-	input7other := NewForward(self, from_c)
+	input7other := NewForward(self, from_c, POSITIVE)
 	assertEqualNames(t, input7other.FreeNames(), []Name{from_c})
 
 	// Split
-	input8 := NewSplit(pay_c, cont_c, from_c, end)
+	input8 := NewSplit(pay_c, cont_c, from_c, end, POSITIVE)
 	assertEqualNames(t, input8.FreeNames(), []Name{from_c})
 
 	// Split
-	input9 := NewCall("func_name", []Name{from_c})
+	input9 := NewCall("func_name", []Name{from_c}, POSITIVE)
 	assertEqualNames(t, input9.FreeNames(), []Name{from_c})
 }
 

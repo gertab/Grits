@@ -532,7 +532,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule (c)")
 
 		// Create structure of new forward process
-		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c)
+		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, process.Body.Polarity())
 		newProcess := NewProcess(newProcessBody, newSplitNames, LINEAR, process.FunctionDefinitions)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 		// Spawn and initiate new forward process
@@ -622,7 +622,7 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 	// Create and launch the forward processes to connect the free names (which will implicitly force a chain of further duplications)
 	for i := range processFreeNames {
 		// Create structure of new forward process
-		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i])
+		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i], process.Body.Polarity())
 		newProcess := NewProcess(newProcessBody, freshChannels[i], LINEAR, process.FunctionDefinitions)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process

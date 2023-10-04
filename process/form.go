@@ -13,7 +13,16 @@ type Form interface {
 	FreeNames() []Name
 	Substitute(Name, Name)
 	Transition(*Process, *RuntimeEnvironment)
+	Polarity() Polarity
 }
+
+type Polarity int
+
+const (
+	POSITIVE Polarity = iota
+	NEGATIVE
+	UNKNOWN
+)
 
 // Check equality between different forms
 func EqualForm(form1, form2 Form) bool {
@@ -29,21 +38,21 @@ func EqualForm(form1, form2 Form) bool {
 		f2, ok2 := form2.(*SendForm)
 
 		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && f1.payload_c.Equal(f2.payload_c) && f1.to_c.Equal(f2.to_c)
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.payload_c.Equal(f2.payload_c) && f1.to_c.Equal(f2.to_c) && f1.Polarity() == f2.Polarity()
 		}
 	case *ReceiveForm:
 		f1, ok1 := form1.(*ReceiveForm)
 		f2, ok2 := form2.(*ReceiveForm)
 
 		if ok1 && ok2 {
-			return f1.payload_c.Equal(f2.payload_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+			return f1.payload_c.Equal(f2.payload_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
 		}
 	case *SelectForm:
 		f1, ok1 := form1.(*SelectForm)
 		f2, ok2 := form2.(*SelectForm)
 
 		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.label.Equal(f2.label)
+			return f1.to_c.Equal(f2.to_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.label.Equal(f2.label) && f1.Polarity() == f2.Polarity()
 		}
 	case *CaseForm:
 		f1, ok1 := form1.(*CaseForm)
@@ -56,49 +65,49 @@ func EqualForm(form1, form2 Form) bool {
 				}
 			}
 
-			return f1.from_c.Equal(f2.from_c)
+			return f1.from_c.Equal(f2.from_c) && f1.Polarity() == f2.Polarity()
 		}
 	case *BranchForm:
 		f1, ok1 := form1.(*BranchForm)
 		f2, ok2 := form2.(*BranchForm)
 
 		if ok1 && ok2 {
-			return f1.label.Equal(f2.label) && f1.payload_c.Equal(f2.payload_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+			return f1.label.Equal(f2.label) && f1.payload_c.Equal(f2.payload_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
 		}
 	case *CloseForm:
 		f1, ok1 := form1.(*CloseForm)
 		f2, ok2 := form2.(*CloseForm)
 
 		if ok1 && ok2 {
-			return f1.from_c.Equal(f2.from_c)
+			return f1.from_c.Equal(f2.from_c) && f1.Polarity() == f2.Polarity()
 		}
 	case *PrintForm:
 		f1, ok1 := form1.(*PrintForm)
 		f2, ok2 := form2.(*PrintForm)
 
 		if ok1 && ok2 {
-			return f1.name_c.Equal(f2.name_c)
+			return f1.name_c.Equal(f2.name_c) && f1.Polarity() == f2.Polarity()
 		}
 	case *NewForm:
 		f1, ok1 := form1.(*NewForm)
 		f2, ok2 := form2.(*NewForm)
 
 		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e)
+			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
 		}
 	case *ForwardForm:
 		f1, ok1 := form1.(*ForwardForm)
 		f2, ok2 := form2.(*ForwardForm)
 
 		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c)
+			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c) && f1.Polarity() == f2.Polarity()
 		}
 	case *SplitForm:
 		f1, ok1 := form1.(*SplitForm)
 		f2, ok2 := form2.(*SplitForm)
 
 		if ok1 && ok2 {
-			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
 		}
 	case *CallForm:
 		f1, ok1 := form1.(*CallForm)
@@ -118,14 +127,15 @@ func EqualForm(form1, form2 Form) bool {
 					return false
 				}
 			}
-			return true
+			// true
+			return f1.Polarity() == f2.Polarity()
 		}
 	case *WaitForm:
 		f1, ok1 := form1.(*WaitForm)
 		f2, ok2 := form2.(*WaitForm)
 
 		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
 		}
 
 	}
@@ -183,25 +193,25 @@ func CopyForm(orig Form) Form {
 		if ok {
 			body := CopyForm(p.body)
 			cont := CopyForm(p.continuation_e)
-			return NewNew(p.continuation_c, body, cont)
+			return NewNew(p.continuation_c, body, cont, p.polarity)
 		}
 	case *ForwardForm:
 		p, ok := orig.(*ForwardForm)
 		if ok {
-			return NewForward(p.to_c, p.from_c)
+			return NewForward(p.to_c, p.from_c, p.polarity)
 		}
 	case *SplitForm:
 		p, ok := orig.(*SplitForm)
 		if ok {
 			cont := CopyForm(p.continuation_e)
-			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont)
+			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont, p.polarity)
 		}
 	case *CallForm:
 		p, ok := orig.(*CallForm)
 		if ok {
 			copiedParameters := make([]Name, len(p.parameters))
 			copy(copiedParameters, p.parameters)
-			return NewCall(p.functionName, copiedParameters)
+			return NewCall(p.functionName, copiedParameters, p.polarity)
 		}
 	case *WaitForm:
 		p, ok := orig.(*WaitForm)
@@ -269,6 +279,15 @@ func (p *SendForm) FreeNames() []Name {
 	return fn
 }
 
+// Polarity of a send process can be inferred directly from itself
+func (p *SendForm) Polarity() Polarity {
+	if p.to_c.IsSelf {
+		return POSITIVE
+	} else {
+		return NEGATIVE
+	}
+}
+
 // Receive: <payload_c, continuation_c> <- recv from_c; P
 type ReceiveForm struct {
 	payload_c      Name
@@ -316,6 +335,15 @@ func (p *ReceiveForm) FreeNames() []Name {
 	return fn
 }
 
+// Polarity of a receive process can be inferred directly from itself
+func (p *ReceiveForm) Polarity() Polarity {
+	if p.from_c.IsSelf {
+		return NEGATIVE
+	} else {
+		return POSITIVE
+	}
+}
+
 // Select: to_c.label<continuation_c>
 type SelectForm struct {
 	to_c           Name
@@ -354,11 +382,21 @@ func (p *SelectForm) FreeNames() []Name {
 	return fn
 }
 
+func (p *SelectForm) Polarity() Polarity {
+	if p.to_c.IsSelf {
+		return POSITIVE
+	} else {
+		return NEGATIVE
+	}
+}
+
 // Branch: label<payload_c> => continuation_e
+// The Branch Form is technically not a top-level form, but used as a sub-form by the case construct
 type BranchForm struct {
 	label          Label
 	payload_c      Name
 	continuation_e Form
+	polarity       Polarity
 }
 
 func NewBranch(label Label, payload_c Name, continuation_e Form) *BranchForm {
@@ -404,6 +442,14 @@ func (p *BranchForm) FreeNames() []Name {
 	return fn
 }
 
+func (p *BranchForm) Polarity() Polarity {
+	return p.polarity
+}
+
+func (p *BranchForm) SetPolarity(polarity Polarity) {
+	p.polarity = polarity
+}
+
 // Case: case from_c ( branches )
 type CaseForm struct {
 	from_c   Name
@@ -411,10 +457,24 @@ type CaseForm struct {
 }
 
 func NewCase(from_c Name, branches []*BranchForm) *CaseForm {
+	// Set polarity of the branches to match the case construct
+	polarity := UNKNOWN
+
+	if from_c.IsSelf {
+		polarity = NEGATIVE
+	} else {
+		polarity = POSITIVE
+	}
+
+	for i := range branches {
+		branches[i].SetPolarity(polarity)
+	}
+
 	return &CaseForm{
 		from_c:   from_c,
 		branches: branches}
 }
+
 func (p *CaseForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("case ")
@@ -442,18 +502,28 @@ func (p *CaseForm) FreeNames() []Name {
 	return fn
 }
 
+func (p *CaseForm) Polarity() Polarity {
+	if p.from_c.IsSelf {
+		return NEGATIVE
+	} else {
+		return POSITIVE
+	}
+}
+
 // New: continuation_c <- new (body); continuation_e
 type NewForm struct {
 	continuation_c Name
 	body           Form
 	continuation_e Form
+	polarity       Polarity
 }
 
-func NewNew(continuation_c Name, body, continuation_e Form) *NewForm {
+func NewNew(continuation_c Name, body, continuation_e Form, polarity Polarity) *NewForm {
 	return &NewForm{
 		continuation_c: continuation_c,
 		body:           body,
-		continuation_e: continuation_e}
+		continuation_e: continuation_e,
+		polarity:       polarity}
 }
 
 func (p *NewForm) String() string {
@@ -483,6 +553,10 @@ func (p *NewForm) FreeNames() []Name {
 	return fn
 }
 
+func (p *NewForm) Polarity() Polarity {
+	return p.polarity
+}
+
 // Close: close from_c
 type CloseForm struct {
 	from_c Name
@@ -509,14 +583,19 @@ func (p *CloseForm) FreeNames() []Name {
 	return fn
 }
 
-// Forward: fwd to_c from_c
-type ForwardForm struct {
-	to_c   Name
-	from_c Name
+func (p *CloseForm) Polarity() Polarity {
+	return POSITIVE
 }
 
-func NewForward(to_c, from_c Name) *ForwardForm {
-	return &ForwardForm{to_c: to_c, from_c: from_c}
+// Forward: fwd to_c from_c
+type ForwardForm struct {
+	to_c     Name
+	from_c   Name
+	polarity Polarity
+}
+
+func NewForward(to_c, from_c Name, polarity Polarity) *ForwardForm {
+	return &ForwardForm{to_c: to_c, from_c: from_c, polarity: polarity}
 }
 
 func (p *ForwardForm) String() string {
@@ -540,20 +619,26 @@ func (p *ForwardForm) FreeNames() []Name {
 	return fn
 }
 
-// Split: <payload_c, continuation_c> <- recv from_c; P
+func (p *ForwardForm) Polarity() Polarity {
+	return p.polarity
+}
+
+// Split: <channel_one, channel_two> <- recv from_c; P
 type SplitForm struct {
 	channel_one    Name
 	channel_two    Name
 	from_c         Name
 	continuation_e Form
+	polarity       Polarity
 }
 
-func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form) *SplitForm {
+func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form, polarity Polarity) *SplitForm {
 	return &SplitForm{
 		channel_one:    channel_one,
 		channel_two:    channel_two,
 		from_c:         from_c,
-		continuation_e: continuation_e}
+		continuation_e: continuation_e,
+		polarity:       polarity}
 }
 func (p *SplitForm) String() string {
 	var buf bytes.Buffer
@@ -586,14 +671,22 @@ func (p *SplitForm) FreeNames() []Name {
 	return fn
 }
 
-// Call: fwd to_c from_c
+func (p *SplitForm) Polarity() Polarity {
+	return p.polarity
+}
+
+// Call: func(param1, ...)
 type CallForm struct {
 	functionName string
 	parameters   []Name
+	polarity     Polarity
 }
 
-func NewCall(functionName string, parameters []Name) *CallForm {
-	return &CallForm{functionName: functionName, parameters: parameters}
+func NewCall(functionName string, parameters []Name, polarity Polarity) *CallForm {
+	return &CallForm{
+		functionName: functionName,
+		parameters:   parameters,
+		polarity:     polarity}
 }
 
 func (p *CallForm) String() string {
@@ -619,7 +712,11 @@ func (p *CallForm) FreeNames() []Name {
 	return fn
 }
 
-// New: continuation_c <- new (body); continuation_e
+func (p *CallForm) Polarity() Polarity {
+	return p.polarity
+}
+
+// Wait: wait to_c; P
 type WaitForm struct {
 	to_c           Name
 	continuation_e Form
@@ -652,6 +749,10 @@ func (p *WaitForm) FreeNames() []Name {
 	return fn
 }
 
+func (p *WaitForm) Polarity() Polarity {
+	return POSITIVE
+}
+
 // Print: print name_c
 // Used to print channel name for debugging purposes
 type PrintForm struct {
@@ -677,6 +778,10 @@ func (p *PrintForm) FreeNames() []Name {
 	var fn []Name
 	fn = appendIfNotSelf(p.name_c, fn)
 	return fn
+}
+
+func (p *PrintForm) Polarity() Polarity {
+	return UNKNOWN
 }
 
 // Utility functions

@@ -24,6 +24,12 @@ const (
 	UNKNOWN
 )
 
+var polarityMap = map[Polarity]string{
+	POSITIVE: "+ve",
+	NEGATIVE: "-ve",
+	UNKNOWN:  "Unknown",
+}
+
 // Check equality between different forms
 func EqualForm(form1, form2 Form) bool {
 	a := reflect.TypeOf(form1)

@@ -153,7 +153,7 @@ func (m *Monitor) updateSubscriberProcesses() {
 				providers = append(providers, provider.String())
 			}
 
-			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String()})
+			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String(), Polarity: polarityMap[value.Body.Polarity()]})
 		}
 
 		// Prepare list of links between processes
@@ -299,6 +299,7 @@ type ProcessInfo struct {
 	ID        string   `json:"id"`
 	Providers []string `json:"providers"`
 	Body      string   `json:"body"`
+	Polarity  string   `json:"polarity"`
 }
 
 type Link struct {

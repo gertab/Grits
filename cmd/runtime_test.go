@@ -5,10 +5,14 @@ import (
 	"phi/parser"
 	"phi/process"
 	"sort"
+	"sync"
 	"testing"
 )
 
 const numberOfIterations = 200
+
+// Invalidate all cache
+// go clean -testcache
 
 // We compare only the process names and rules (i.e. the steps) without comparing the order
 func TestSimpleFWDRCV(t *testing.T) {
@@ -23,6 +27,25 @@ func TestSimpleFWDRCV(t *testing.T) {
 		end`
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
+		// {steps{{"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
+	}
+	checkInputRepeatedly(t, input, expected)
+
+	// sort.Sort(steps(ss3))
+}
+
+func TestSimpleFWDSND(t *testing.T) {
+	// go test -timeout 30s -run ^TestSimpleFWDSND$ phi/cmd
+	// Case 1: FWD + SND
+	input := ` 	/* FWD + RCV rule */
+		let
+		in
+		prc[pid1]: <a, b> <- recv pid2; close a
+		prc[pid2]: +fwd self pid3
+		prc[pid3]: send self<pid5, self>
+			end`
+	expected := []traceOption{
+		{steps{{"pid2", process.FWD}, {"pid2", process.SND}, {"pid1", process.SND}}, 2},
 		// {steps{{"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
@@ -333,14 +356,14 @@ func initProcesses(processes []process.Process) ([]process.Process, []process.Mo
 	re.SubstituteNameInitialization(processes, channels)
 
 	if debug {
-		started := make(chan bool)
+		startedWg := new(sync.WaitGroup)
+		startedWg.Add(2)
 
-		re.InitializeMonitor(started, nil)
-		re.InitializeController(started)
+		re.InitializeMonitor(startedWg, nil)
+		re.InitializeController(startedWg)
 
 		// Ensure that both servers are running
-		<-started
-		<-started
+		startedWg.Wait()
 	}
 
 	re.StartTransitions(processes)

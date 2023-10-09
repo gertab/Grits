@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"golang.org/x/exp/slices"
@@ -75,10 +76,11 @@ func NewMonitor(re *RuntimeEnvironment, subscriberInfo *SubscriberInfo) *Monitor
 		processID:            0}
 }
 
-func (m *Monitor) startMonitor(started chan bool) {
+func (m *Monitor) startMonitor(startedWg *sync.WaitGroup) {
 	m.re.log(LOGINFO, "Monitor alive, waiting to receive...")
 
-	started <- true
+	// Notify parent that the monitor has started
+	startedWg.Done()
 
 	m.monitorLoop()
 }
@@ -109,7 +111,7 @@ func (m *Monitor) monitorLoop() {
 			m.updateSubscriberRules()
 		} else if processUpdate.updatedProcess {
 			// Process updated form
-			m.re.logMonitorf("Updated %s, %s\n", processUpdate.process.String())
+			m.re.logMonitorf("Updated %s\n", processUpdate.process.String())
 			// m.rulesLog = append(m.rulesLog, MonitorRulesLog{Process: processUpdate.process, Rule: processUpdate.rule})
 			m.updateProcessToList(&processUpdate.process)
 		} else if processUpdate.newProcess {
@@ -359,8 +361,8 @@ func NewController(re *RuntimeEnvironment) *Controller {
 	return &Controller{i: 0, controllerNewActionChan: controllerChan, re: re}
 }
 
-func (m *Controller) startController(started chan bool) {
+func (m *Controller) startController(startedWg *sync.WaitGroup) {
 	m.re.log(LOGINFO, "Controller alive, waiting to receive...")
 
-	started <- true
+	startedWg.Done()
 }

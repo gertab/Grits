@@ -3,6 +3,7 @@ package process
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -65,14 +66,14 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo) *Runti
 	re.SubstituteNameInitialization(processes, channels)
 
 	if re.debug {
-		started := make(chan bool)
+		startedWg := new(sync.WaitGroup)
+		startedWg.Add(2)
 
-		re.InitializeMonitor(started, subscriber)
-		re.InitializeController(started)
+		re.InitializeMonitor(startedWg, subscriber)
+		re.InitializeController(startedWg)
 
 		// Ensure that both servers are running
-		<-started
-		<-started
+		startedWg.Wait()
 	}
 
 	re.StartTransitions(processes)
@@ -124,20 +125,20 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan, IsSelf: false}
 }
 
-func (re *RuntimeEnvironment) InitializeMonitor(started chan bool, subscriber *SubscriberInfo) {
+func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subscriber *SubscriberInfo) {
 	// Declare new monitor
 	re.monitor = NewMonitor(re, subscriber)
 
 	// Start monitor on new thread
-	go re.monitor.startMonitor(started)
+	go re.monitor.startMonitor(startedWg)
 }
 
-func (re *RuntimeEnvironment) InitializeController(started chan bool) {
+func (re *RuntimeEnvironment) InitializeController(startedWg *sync.WaitGroup) {
 	// Declare new controller
 	re.controller = NewController(re)
 
 	// Start controller on new thread
-	go re.controller.startController(started)
+	go re.controller.startController(startedWg)
 }
 
 // Used after initialization to substitute known names to the actual channel

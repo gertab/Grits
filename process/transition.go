@@ -6,6 +6,14 @@ import (
 	"time"
 )
 
+//  |              /|\
+//  |               |
+//  |               |
+//  -ve (ok-ish)    +ve (problematic)
+//  |               |
+//  |               |
+// \|/              |
+
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 	// ProcessCount is atomic
@@ -109,6 +117,7 @@ func TransitionBySending(process *Process, toChan chan Message, continuationFunc
 		process.performDUPrule(re)
 	} else {
 		select {
+		// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
 		case pm := <-process.Providers[0].PriorityChannel:
 			handlePriorityMessage(process, pm, re)
 		case toChan <- sendingMessage:
@@ -129,6 +138,8 @@ func TransitionByReceiving(process *Process, clientChan chan Message, processMes
 		process.performDUPrule(re)
 	} else {
 		select {
+		// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
+
 		case pm := <-process.Providers[0].PriorityChannel:
 			handlePriorityMessage(process, pm, re)
 		case receivedMessage := <-clientChan:
@@ -224,6 +235,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	if f.to_c.IsSelf {
 		// SND rule (provider)
+		// +ve
 		// snd self<...>
 
 		message := Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}
@@ -239,6 +251,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 		TransitionBySending(process, process.Providers[0].Channel, sndRule, message, re)
 	} else {
 		// RCV rule (client)
+		// -ve
 		// snd to_c<...>
 
 		if !f.continuation_c.IsSelf {
@@ -269,6 +282,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	if f.from_c.IsSelf {
 		// RCV rule (provider)
+		// -ve
 
 		rcvRule := func(message Message) {
 			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished sending on self")
@@ -297,6 +311,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 		TransitionByReceiving(process, process.Providers[0].Channel, rcvRule, re)
 	} else {
 		// SND rule (client)
+		// +ve
 		// todo ask for controller permission
 
 		sndRule := func(message Message) {
@@ -490,6 +505,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
 	select {
+	// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
 	case pm := <-process.Providers[0].PriorityChannel:
 		// todo check if this should only happen if len(process.OtherProviders) == 0
 		handlePriorityMessage(process, pm, re)

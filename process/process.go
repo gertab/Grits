@@ -41,10 +41,11 @@ func NewProcess(body Form, providers []Name, shape Shape, functionDefinitions *[
 	}
 }
 
-func (p *Process) InsertFunctionDefinitions(all *[]FunctionDefinition) {
-	p.FunctionDefinitions = all
-}
+// func (p *Process) InsertFunctionDefinitions(all *[]FunctionDefinition) {
+// 	p.FunctionDefinitions = all
+// }
 
+// Returns the stringified process structure, e.g. prc[pid1]
 func (p *Process) OutlineString() string {
 	var buf bytes.Buffer
 	buf.WriteString(shapeMap[p.Shape])
@@ -52,9 +53,9 @@ func (p *Process) OutlineString() string {
 	buf.WriteString(NamesToString(p.Providers))
 	buf.WriteString("]")
 	return buf.String()
-
 }
 
+// Returns the full stringified process, e.g. prc[pid1]: send a<b,c,>
 func (p *Process) String() string {
 	var buf bytes.Buffer
 	buf.WriteString(p.OutlineString())
@@ -149,23 +150,6 @@ func (n *Name) Substitute(old, new Name) {
 		}
 	}
 }
-
-// // Returns channel directly or the provider channel in case of channel called self
-// func (n *Name) GetChannel(p *Process) chan Message {
-// 	if n.IsSelf {
-// 		return p.Provider.Channel
-// 	} else {
-// 		return n.Channel
-// 	}
-// }
-
-// func (n *Name) GetPriorityChannel(p *Process) chan PriorityMessage {
-// 	if n.IsSelf {
-// 		return p.Provider.PriorityChannel
-// 	} else {
-// 		return n.PriorityChannel
-// 	}
-// }
 
 // Name is channel or value.
 type Label struct {

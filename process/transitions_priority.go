@@ -19,84 +19,17 @@ package process
 // 	// notify monitor about new process
 // 	re.monitor.MonitorNewProcess(process)
 
-// 	go TransitionLoop(process, re)
+// 	go process.transitionLoop(re)
 // }
 
 // // Entry point for each process transition
-// func TransitionLoop(process *Process, re *RuntimeEnvironment) {
+// func (process *Process) transitionLoop(re *RuntimeEnvironment) {
 // 	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", polarityMap[process.Body.Polarity()], process.Body.String())
 
 // 	// To slow down the execution speed
 // 	time.Sleep(re.delay)
 
 // 	process.Body.Transition(process, re)
-// }
-
-// func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
-// 	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
-
-// 	if re.debug {
-// 		// Update monitor
-// 		re.monitor.MonitorRuleFinished(process, rule)
-// 	}
-// }
-
-// // Used when a process will be terminated, however its provider will be used (to rename) another process
-// // E.g. in the case of RCV, when the 'send' client dies, its provider channels are used for the continuation of the other process
-// func (process *Process) finishedRuleBeforeRenamed(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
-// 	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
-
-// 	if re.debug {
-// 		// Update monitor
-// 		re.monitor.MonitorRuleFinishedBeforeRenamed(process, rule)
-// 	}
-// }
-
-// func (process *Process) processRenamed(re *RuntimeEnvironment) {
-// 	if re.debug {
-// 		// Update monitor
-// 		re.monitor.MonitorProcessRenamed(process)
-// 	}
-// }
-
-// func (process *Process) terminate(re *RuntimeEnvironment) {
-// 	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
-
-// 	if re.debug {
-// 		// Update monitor
-// 		re.monitor.MonitorProcessTerminated(process)
-// 	}
-// }
-
-// func (process *Process) terminateForward(re *RuntimeEnvironment) {
-// 	re.logProcess(LOGRULEDETAILS, process, "process will change by forwarding its provider")
-
-// 	if re.debug {
-// 		// Update monitor
-// 		re.monitor.MonitorRuleFinished(process, FWD)
-// 	}
-// }
-
-// func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
-// 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
-
-// 	if re.debug {
-// 		// Update monitor
-// 		// todo change
-// 		re.monitor.MonitorProcessForwarded(process)
-// 	}
-// }
-
-// func (process *Process) renamed(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
-// 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
-
-// 	// Although the old providers should be closed (i.e. die), the process itself does not die. It lives on using the new provider names.
-
-// 	// if re.debug {
-// 	// 	// Update monitor
-// 	// 	// todo change
-// 	// 	re.monitor.MonitorProcessForwarded(process)
-// 	// }
 // }
 
 // // When a process starts transitioning, a process chooses to transition as one of these forms:
@@ -199,7 +132,7 @@ package process
 // 	// Change the providers to the one being forwarded to
 // 	process.Providers = pm.Providers
 
-// 	TransitionLoop(process, re)
+// 	process.transitionLoop(re)
 // }
 
 // func handleInvalidPriorityMessage(process *Process, re *RuntimeEnvironment) {
@@ -296,7 +229,7 @@ package process
 // 			// process.finishedRule(RCV, "[receive, provider]", "(p)", re)
 // 			process.processRenamed(re)
 
-// 			TransitionLoop(process, re)
+// 			process.transitionLoop(re)
 // 		}
 
 // 		TransitionByReceiving(process, process.Providers[0].Channel, rcvRule, re)
@@ -322,7 +255,7 @@ package process
 // 			process.Body = new_body
 
 // 			process.finishedRule(SND, "[receive, client]", "(c)", re)
-// 			TransitionLoop(process, re)
+// 			process.transitionLoop(re)
 // 		}
 
 // 		TransitionByReceiving(process, f.from_c.Channel, sndRule, re)
@@ -360,7 +293,7 @@ package process
 // 		process.finishedRule(CUT, "[new]", "", re)
 // 		// re.logProcess(LOGRULE, process, "[new] finished CUT rule")
 // 		// Continue executing current process
-// 		TransitionLoop(process, re)
+// 		process.transitionLoop(re)
 // 	}
 
 // 	TransitionInternally(process, newRule, re)
@@ -397,7 +330,7 @@ package process
 
 // 		process.finishedRule(CALL, "[call]", "", re)
 
-// 		TransitionLoop(process, re)
+// 		process.transitionLoop(re)
 // 	}
 
 // 	// TransitionInternally(process, callRule, re)
@@ -465,7 +398,7 @@ package process
 // 		process.Body = f.continuation_e
 
 // 		process.finishedRule(CLS, "[wait, client]", "c", re)
-// 		TransitionLoop(process, re)
+// 		process.transitionLoop(re)
 // 	}
 
 // 	TransitionByReceiving(process, f.to_c.Channel, clsRule, re)
@@ -543,7 +476,7 @@ package process
 // 		// Spawn and initiate new forward process
 // 		newProcess.SpawnThenTransition(re)
 
-// 		TransitionLoop(process, re)
+// 		process.transitionLoop(re)
 // 	}
 
 // 	// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, splitRule, priorityMessage, re)
@@ -639,11 +572,92 @@ package process
 
 // 	// todo remove // Current process has been duplicated, so remove the duplication requirements to continue executing its body [i.e. become interactive]
 // 	// process.OtherProviders = []Name{}
-// 	TransitionLoop(process, re)
+// 	process.transitionLoop(re)
 // }
 
 // // Debug
 // func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
 // 	fmt.Print("transition of print: ")
 // 	fmt.Println(f.String())
+// }
+
+// // To keep the log/monitor update with the currently running processes and the transition rules
+// // being performed, there are the following functions:
+// //
+// //	->  finishedRule/3
+// //	->  finishedRuleBeforeRenamed/4
+// //	->  processRenamed/1
+// //	->  terminate/1
+// //	->  terminateForward/1
+// //	->  terminateBeforeRename/21
+// //	->  renamed/1
+
+// func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
+// 	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
+
+// 	if re.debug {
+// 		// Update monitor
+// 		re.monitor.MonitorRuleFinished(process, rule)
+// 	}
+// }
+
+// // Used when a process will be terminated, however its provider will be used (to rename) another process
+// // E.g. in the case of RCV, when the 'send' client dies, its provider channels are used for the continuation of the other process
+// func (process *Process) finishedRuleBeforeRenamed(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
+// 	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
+
+// 	if re.debug {
+// 		// Update monitor
+// 		re.monitor.MonitorRuleFinishedBeforeRenamed(process, rule)
+// 	}
+// }
+
+// // Process did not finish executing but will be taken over
+// func (process *Process) processRenamed(re *RuntimeEnvironment) {
+// 	if re.debug {
+// 		// Update monitor
+// 		re.monitor.MonitorProcessRenamed(process)
+// 	}
+// }
+
+// // Process will terminate
+// func (process *Process) terminate(re *RuntimeEnvironment) {
+// 	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
+
+// 	if re.debug {
+// 		// Update monitor
+// 		re.monitor.MonitorProcessTerminated(process)
+// 	}
+// }
+
+// // A forward process will terminate, but its providers will be used by other processes being forwarded
+// func (process *Process) terminateForward(re *RuntimeEnvironment) {
+// 	re.logProcess(LOGRULEDETAILS, process, "process will change by forwarding its provider")
+
+// 	if re.debug {
+// 		// Update monitor
+// 		re.monitor.MonitorRuleFinished(process, FWD)
+// 	}
+// }
+
+// func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
+// 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
+
+// 	if re.debug {
+// 		// Update monitor
+// 		// todo change
+// 		re.monitor.MonitorProcessForwarded(process)
+// 	}
+// }
+
+// func (process *Process) renamed(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
+// 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
+
+// 	// Although the old providers should be closed (i.e. die), the process itself does not die. It lives on using the new provider names.
+
+// 	// if re.debug {
+// 	// 	// Update monitor
+// 	// 	// todo change
+// 	// 	re.monitor.MonitorProcessForwarded(process)
+// 	// }
 // }

@@ -116,13 +116,13 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	atomic.AddUint64(&re.debugChannelCounter, 1)
 
 	// Create new channel and assign a name to it
-	mChan := make(chan Message)
-	pmChan := make(chan PriorityMessage)
+	// mChan := make(chan Message)
+	// pmChan := make(chan PriorityMessage)
 
 	// // todo see hwo to eventually change to buffered
-	// mChan := make(chan Message, 1000)
+	mChan := make(chan Message, 1000)
 	// pmChan := make(chan PriorityMessage, 1000)
-	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan, IsSelf: false}
+	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, IsSelf: false}
 }
 
 func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subscriber *SubscriberInfo) {
@@ -163,6 +163,7 @@ type Message struct {
 	// Possible payload types, depending on the rule
 	Channel1         Name
 	Channel2         Name
+	Providers        []Name
 	ContinuationBody Form
 	Label            Label
 }
@@ -184,14 +185,17 @@ const (
 	// Special rules for priority messages
 	FWD // uses Channel1 of the PriorityMessage struct
 	DUP
+
+	// Other actions
+	FWD_REQUEST
 )
 
-type Action int
+// type Action int
 
-const (
-	FWD_REQUEST Action = 100 // uses Channel1 of the PriorityMessage struct
-	// FWD_REPLY                // uses Body, Shape of the PriorityMessage struct
-)
+// const (
+// 	FWD_REQUEST Action = 100 // uses Channel1 of the PriorityMessage struct
+// 	// FWD_REPLY                // uses Body, Shape of the PriorityMessage struct
+// )
 
 var RuleString = map[Rule]string{
 	SND:   "SND",
@@ -204,15 +208,17 @@ var RuleString = map[Rule]string{
 	FWD: "FWD",
 	// FWD_REPLY: "FWD_REPLY",
 	DUP: "DUP",
+
+	FWD_REQUEST: "FWD_REQUEST",
 }
 
-type PriorityMessage struct {
-	Action Action
-	// Possible payload types, depending on the action
-	Providers []Name
-	Body      Form
-	Shape     Shape
-}
+// type PriorityMessage struct {
+// 	Action Action
+// 	// Possible payload types, depending on the action
+// 	Providers []Name
+// 	Body      Form
+// 	Shape     Shape
+// }
 
 type NameInitialization struct {
 	old Name

@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// send a
 //  |              /|\
 //  |               |
 //  |               |
@@ -13,6 +14,7 @@ import (
 //  |               |
 //  |               |
 // \|/              |
+// recv self
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
@@ -118,7 +120,7 @@ func TransitionBySending(process *Process, toChan chan Message, continuationFunc
 	} else {
 		select {
 		// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
-		case pm := <-process.Providers[0].PriorityChannel:
+		case pm := <-process.Providers[0].Channel:
 			handlePriorityMessage(process, pm, re)
 		case toChan <- sendingMessage:
 			// Sending a message to toChan
@@ -137,14 +139,22 @@ func TransitionByReceiving(process *Process, clientChan chan Message, processMes
 		// Split process if needed
 		process.performDUPrule(re)
 	} else {
+
 		select {
 		// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
 
-		case pm := <-process.Providers[0].PriorityChannel:
-			handlePriorityMessage(process, pm, re)
+		// case pm := <-process.Providers[0].PriorityChannel:
+		// 	handlePriorityMessage(process, pm, re)
 		case receivedMessage := <-clientChan:
+			// may be priority message
+
 			// Acting as a client by consuming a message from some channel
-			processMessageFunc(receivedMessage)
+
+			if receivedMessage.Rule == FWD_REQUEST {
+				fwdHandlePriorityMessage(process, receivedMessage, re)
+			} else {
+				processMessageFunc(receivedMessage)
+			}
 		}
 	}
 }
@@ -164,17 +174,20 @@ func TransitionInternally(process *Process, internalFunction func(), re *Runtime
 		// Split process if needed
 		process.performDUPrule(re)
 	} else {
-		select {
-		case pm := <-process.Providers[0].PriorityChannel:
-			handlePriorityMessage(process, pm, re)
-		default:
-			internalFunction()
-		}
+		// select {
+		// Internal transitions do not check if there are any FWD_REQUEST messages,
+		// so SPLIT/NEW/... take precedence over FWD
+		// case pm := <-process.Providers[0].Channel:
+		// 	// todo this is problematic -- we may receive normal message or fwd messages
+		// 	handlePriorityMessage(process, pm, re)
+		// default:
+		internalFunction()
+		// }
 	}
 }
 
-func handlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
-	switch pm.Action {
+func handlePriorityMessage(process *Process, pm Message, re *RuntimeEnvironment) {
+	switch pm.Rule {
 	case FWD_REQUEST:
 		fwdHandlePriorityMessage(process, pm, re)
 	// case SPLIT_DUP_FWD:
@@ -185,12 +198,12 @@ func handlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvi
 	}
 }
 
-func fwdHandlePriorityMessage(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
+func fwdHandlePriorityMessage(process *Process, pm Message, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", NamesToString(pm.Providers))
 	// todo remove Close current channel and switch to new one
 
 	// todo ensure that action is correct
-	if pm.Action != FWD_REQUEST {
+	if pm.Rule != FWD_REQUEST {
 		re.logProcessHighlight(LOGERROR, process, "expected FWD_REQUEST")
 		panic("expected FWD_REQUEST")
 	}
@@ -219,9 +232,9 @@ func closeProviders(providers []Name) {
 		if p.Channel != nil {
 			close(p.Channel)
 		}
-		if p.PriorityChannel != nil {
-			close(p.PriorityChannel)
-		}
+		// if p.PriorityChannel != nil {
+		// 	close(p.PriorityChannel)
+		// }
 	}
 }
 
@@ -288,7 +301,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished sending on self")
 
 			if message.Rule != RCV {
-				re.logProcessHighlight(LOGERROR, process, "expected RCV")
+				re.logProcessHighlightf(LOGERROR, process, "expected RCV, found %s\n", RuleString[message.Rule])
 				panic("expected RCV")
 			}
 
@@ -319,7 +332,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
 
 			if message.Rule != SND {
-				re.logProcessHighlight(LOGERROR, process, "expected RCV")
+				re.logProcessHighlight(LOGERROR, process, "expected SND")
 				panic("expected SND")
 			}
 
@@ -419,12 +432,12 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// Split process if needed
 		process.performDUPrule(re)
 	} else {
-		select {
-		case pm := <-process.Providers[0].PriorityChannel:
-			handlePriorityMessage(process, pm, re)
-		default:
-			callRule()
-		}
+		// select {
+		// case pm := <-process.Providers[0].PriorityChannel:
+		// handlePriorityMessage(process, pm, re)
+		// default:
+		callRule()
+		// }
 	}
 }
 
@@ -496,28 +509,40 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		panic("should forward on self")
 	}
 
-	priorityMessage := PriorityMessage{Action: FWD_REQUEST, Providers: process.Providers}
+	message := Message{Rule: FWD_REQUEST, Providers: process.Providers}
 
 	forwardRule := func() {
 		re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to priority channel %s\n", f.from_c.String())
 		process.terminateForward(re)
 	}
 
-	// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
-	select {
-	// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
-	case pm := <-process.Providers[0].PriorityChannel:
-		// todo check if this should only happen if len(process.OtherProviders) == 0
-		handlePriorityMessage(process, pm, re)
-	case f.from_c.PriorityChannel <- priorityMessage:
-		forwardRule()
-		// case message := <-f.from_c.Channel:
-		// 	re.logProcessHighlightf(LOGRULE, process, "[forward, client] !!!!!!!!!  %s\n", f.from_c.String())
+	if f.Polarity() == NEGATIVE {
+		// -ve
+		// least problematic
+		// ACTIVE
 
-		// 	for _, j := range process.Providers {
-		// 		j.Channel <- message
-		// 	}
+		// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
+		select {
+		// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
+		// case pm := <-process.Providers[0].Channel:
+		// 	// todo check if this should only happen if len(process.OtherProviders) == 0
+		// 	handlePriorityMessage(process, pm, re)
+		case f.from_c.Channel <- message:
+			forwardRule()
+			// case message := <-f.from_c.Channel:
+			// 	re.logProcessHighlightf(LOGRULE, process, "[forward, client] !!!!!!!!!  %s\n", f.from_c.String())
+
+			// 	for _, j := range process.Providers {
+			// 		j.Channel <- message
+			// 	}
+		}
+	} else {
+		// +ve
+		// problematic
+		// PASSIVE - wait to receive on the from_c and then do something else
+
 	}
+
 }
 
 func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {

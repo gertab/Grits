@@ -184,11 +184,11 @@ const (
 
 	// When a process is 'non-interactive', either the FWD or DUP rules take place
 	// Special rules for priority messages
-	FWD // uses Channel1 of the PriorityMessage struct
+	// FWD // uses Channel1 of the PriorityMessage struct
 	DUP
 
 	// Other actions
-	FWD_MESSAGE
+	FWD
 )
 
 type Action int
@@ -206,11 +206,9 @@ var RuleString = map[Rule]string{
 	CALL:  "CALL",
 	SPLIT: "SPLIT",
 
-	FWD: "FWD",
-	// FWD_REPLY: "FWD_REPLY",
 	DUP: "DUP",
 
-	FWD_MESSAGE: "FWD_MSG",
+	FWD: "FWD",
 }
 
 type PriorityMessage struct {

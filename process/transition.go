@@ -101,16 +101,6 @@ func TransitionByReceiving(process *Process, clientChan chan Message, processMes
 	}
 }
 
-// func TransitionAsSpecialForm(process *Process, priorityChannel chan PriorityMessage, specialFormFunc func(), sendingPriorityMessage PriorityMessage, re *RuntimeEnvironment) {
-// 	// Certain forms (e.g. forward and split forms) send their command on the priority channel, never utilizing their main provider channel
-// 	select {
-// 	case pm := <-process.Provider.PriorityChannel:
-// 		handlePriorityMessage(process, pm, re)
-// 	case priorityChannel <- sendingPriorityMessage:
-// 		specialFormFunc()
-// 	}
-// }
-
 func TransitionInternally(process *Process, internalFunction func(), re *RuntimeEnvironment) {
 	if len(process.Providers) > 1 {
 		// Split process if needed
@@ -173,9 +163,13 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of send: %s\n", f.String())
 
 	if f.to_c.IsSelf {
-		// SND rule (provider)
-		// +ve
-		// snd self<...>
+		// SND rule (provider, +ve)
+		//
+		//  <...> <- recv self; ...
+		//	 /|\
+		//    |
+		//    |
+		// [send to_c <...>]
 
 		message := Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}
 
@@ -189,9 +183,13 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		TransitionBySending(process, process.Providers[0].Channel, sndRule, message, re)
 	} else {
-		// RCV rule (client)
-		// -ve
-		// snd to_c<...>
+		// RCV rule (client, -ve)
+		//
+		// [send to_c <payload_c, self>]
+		//    |
+		//    |
+		//   \|/
+		// <...> <- recv self; ...
 
 		if !f.continuation_c.IsSelf {
 			// todo error
@@ -220,8 +218,13 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of receive: %s\n", f.String())
 
 	if f.from_c.IsSelf {
-		// RCV rule (provider)
-		// -ve
+		// RCV rule (provider, -ve)
+		//
+		// [send to_c <payload_c, self>]
+		//    |
+		//    |
+		//   \|/
+		// <...> <- recv self; ...
 
 		rcvRule := func(message Message) {
 			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished sending on self")
@@ -249,9 +252,14 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		TransitionByReceiving(process, process.Providers[0].Channel, rcvRule, re)
 	} else {
-		// SND rule (client)
-		// +ve
+		// SND rule (client, +ve)
 		// todo ask for controller permission
+		//
+		//  [<...> <- recv self; ...]
+		//	 /|\
+		//    |
+		//    |
+		// send to_c <...>
 
 		sndRule := func(message Message) {
 			re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")

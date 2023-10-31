@@ -72,6 +72,9 @@ type Name struct {
 	IsSelf bool
 	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
 	Channel chan Message
+	// Polarity
+	// todo: currently not being set/used, but might be useful to use it
+	Polarity Polarity
 	// Used for priority commands (e.g. fwd, split, ...)
 	PriorityChannel chan PriorityMessage
 	// Channel ID is a unique id for each channel
@@ -132,6 +135,7 @@ func (n *Name) Substitute(old, new Name) {
 		n.Channel = new.Channel
 		n.IsSelf = new.IsSelf
 		n.PriorityChannel = new.PriorityChannel
+		n.Polarity = new.Polarity
 		if new.Ident != "" {
 			// not sure if this works
 			n.Ident = new.Ident
@@ -146,6 +150,7 @@ func (n *Name) Substitute(old, new Name) {
 			n.Channel = new.Channel
 			n.ChannelID = new.ChannelID
 			n.IsSelf = new.IsSelf
+			n.Polarity = new.Polarity
 			n.PriorityChannel = new.PriorityChannel
 		}
 	}

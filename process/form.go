@@ -13,6 +13,7 @@ type Form interface {
 	FreeNames() []Name
 	Substitute(Name, Name)
 	Transition(*Process, *RuntimeEnvironment)
+	TransitionNP(*Process, *RuntimeEnvironment) /* transition without polarities */
 	Polarity() Polarity
 }
 

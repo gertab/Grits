@@ -75,7 +75,7 @@ type Name struct {
 	// Polarity
 	// todo: currently not being set/used, but might be useful to use it
 	Polarity Polarity
-	// Used for control commands (e.g. fwd, split, ...)
+	// Used for control commands (i.e. fwd, split, ...)
 	ControlChannel chan ControlMessage
 	// Channel ID is a unique id for each channel
 	// Used only for debugging, since setting the ChannelID is a slow (& synchronous) operation

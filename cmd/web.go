@@ -288,7 +288,7 @@ func (c *Client) handleRequest(message string) {
 			return
 		}
 
-		process.InitializeProcesses(processes, c.subscriberInfo)
+		process.InitializeProcesses(processes, c.subscriberInfo, nil)
 	} else {
 		c.sendError("Invalid request type")
 	}

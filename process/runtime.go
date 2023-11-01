@@ -32,14 +32,28 @@ type RuntimeEnvironment struct {
 	controller *Controller
 	// Slow execution speed
 	delay time.Duration
+	// Chooses how the transitions are performed ([non-]polarized [a]synchronous)
+	execution_version RE_Version
 }
 
+type RE_Version int
+
+const (
+	/* polarized + async */
+	NORMAL_ASYNC RE_Version = iota
+	/* polarized + sync */
+	NORMAL_SYNC
+	/* non-polarized forwards + sync */
+	NON_POLARIZED_SYNC
+	// NON_POLARIZED_ASYNC /* problematic */
+)
+
 func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvironment {
-	return &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l}
+	return &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l, execution_version: NORMAL_ASYNC}
 }
 
 // Entry point for execution
-func InitializeProcesses(processes []Process, subscriber *SubscriberInfo) *RuntimeEnvironment {
+func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *RuntimeEnvironment) *RuntimeEnvironment {
 	l := []LogLevel{
 		LOGERROR,
 		LOGINFO,
@@ -49,14 +63,17 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo) *Runti
 		LOGMONITOR,
 	}
 
-	re := &RuntimeEnvironment{
-		ProcessCount:        0,
-		debugChannelCounter: 0,
-		debug:               true,
-		color:               true,
-		logLevels:           l,
-		delay:               1000 * time.Millisecond,
-		// delay: 0,
+	if re == nil {
+		re = &RuntimeEnvironment{
+			ProcessCount:        0,
+			debugChannelCounter: 0,
+			debug:               true,
+			color:               true,
+			logLevels:           l,
+			delay:               1000 * time.Millisecond,
+			execution_version:   NORMAL_SYNC,
+			// delay: 0,
+		}
 	}
 
 	re.logf(LOGINFO, "Initializing %d processes\n", len(processes))
@@ -116,10 +133,24 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	atomic.AddUint64(&re.debugChannelCounter, 1)
 
 	// Create new channel and assign a name to it
-	mChan := make(chan Message)
-	// todo add check to only initialize pmChan if needed (when using the control version method)
-	// todo create only if using the non-polarized version
-	pmChan := make(chan ControlMessage)
+	var mChan chan Message
+	switch re.execution_version {
+
+	case NORMAL_ASYNC:
+		mChan = make(chan Message, 1)
+	case NORMAL_SYNC:
+		mChan = make(chan Message)
+	case NON_POLARIZED_SYNC:
+		mChan = make(chan Message)
+	}
+
+	// Control channel is only used in the non-polarized version
+	var pmChan chan ControlMessage
+
+	if re.execution_version == NON_POLARIZED_SYNC {
+		pmChan = make(chan ControlMessage)
+		// Not needed in the case of NORMAL_ASYNC or NORMAL_SYNC
+	}
 
 	// // todo see hwo to eventually change to buffered
 	// mChan := make(chan Message, 1000)
@@ -156,7 +187,15 @@ func (re *RuntimeEnvironment) SubstituteNameInitialization(processes []Process, 
 func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 	for _, p := range processes {
 		p_uniq := p
-		p_uniq.SpawnThenTransition(re)
+
+		switch re.execution_version {
+		case NORMAL_ASYNC:
+			p_uniq.SpawnThenTransition(re)
+		case NORMAL_SYNC:
+			p_uniq.SpawnThenTransition(re)
+		case NON_POLARIZED_SYNC:
+			p_uniq.SpawnThenTransitionNP(re)
+		}
 	}
 }
 

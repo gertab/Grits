@@ -1,0 +1,10 @@
+/* Shift/Cast */
+
+prc[pid1] : cast pid2<self>
+prc[pid2] : a <- shift self; wait pid3; close a
+prc[pid3] : close self
+
+
+prc[pid5] : a <- shift pid4; wait a; close self
+prc[pid4] : cast self<pid6>
+prc[pid6] : close self

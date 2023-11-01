@@ -1,6 +1,9 @@
 package process
 
 /*
+ * This NP version of the transition presents a transition semantics without the need for polarities. I.e. forwards act the same irrelevant of whether they are positive or negative.
+ * This works by attaching a control channel to each name (in additional to the normal channel)
+ *
  * This is the version which uses parallel channels (i.e. PriorityMessage channel) to pass FWD requests.
  * Works in a synchronous setting (using unbuffered channels), but fails in an asynchronous one (buffered channels).
  */

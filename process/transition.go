@@ -465,6 +465,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		// Blocks until it received a message
 		message := <-f.from_c.Channel
+		re.logProcessf(LOGRULE, process, "[forward, +ve] received message on %s. Will become a %s \n", f.from_c.String(), RuleString[message.Rule])
 
 		oldProviders := process.Providers[0]
 
@@ -536,6 +537,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule (c)")
 
 		// Create structure of new forward process
+		// todo instead of process.Body.Polarity() maybe we can set a fixed polarity
 		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, process.Body.Polarity())
 		newProcess := NewProcess(newProcessBody, newSplitNames, LINEAR, process.FunctionDefinitions)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
@@ -642,7 +644,7 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 }
 
 func (f *CastForm) Transition(process *Process, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULEDETAILS, process, "transition of send: %s\n", f.String())
+	re.logProcessf(LOGRULEDETAILS, process, "transition of cast: %s\n", f.String())
 
 	if f.to_c.IsSelf {
 		// CST rule (provider, +ve)

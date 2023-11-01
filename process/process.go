@@ -75,8 +75,8 @@ type Name struct {
 	// Polarity
 	// todo: currently not being set/used, but might be useful to use it
 	Polarity Polarity
-	// Used for priority commands (e.g. fwd, split, ...)
-	PriorityChannel chan PriorityMessage
+	// Used for control commands (e.g. fwd, split, ...)
+	ControlChannel chan ControlMessage
 	// Channel ID is a unique id for each channel
 	// Used only for debugging, since setting the ChannelID is a slow (& synchronous) operation
 	ChannelID uint64
@@ -134,7 +134,7 @@ func (n *Name) Substitute(old, new Name) {
 		// If a channel is initialized, then compare using the channel value
 		n.Channel = new.Channel
 		n.IsSelf = new.IsSelf
-		n.PriorityChannel = new.PriorityChannel
+		n.ControlChannel = new.ControlChannel
 		n.Polarity = new.Polarity
 		if new.Ident != "" {
 			// not sure if this works
@@ -151,7 +151,7 @@ func (n *Name) Substitute(old, new Name) {
 			n.ChannelID = new.ChannelID
 			n.IsSelf = new.IsSelf
 			n.Polarity = new.Polarity
-			n.PriorityChannel = new.PriorityChannel
+			n.ControlChannel = new.ControlChannel
 		}
 	}
 }

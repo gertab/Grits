@@ -4,7 +4,7 @@ package process
  * This NP version of the transition presents a transition semantics without the need for polarities. I.e. forwards act the same irrelevant of whether they are positive or negative.
  * This works by attaching a control channel to each name (in additional to the normal channel)
  *
- * This is the version which uses parallel channels (i.e. PriorityMessage channel) to pass FWD requests.
+ * This is the version which uses parallel channels (i.e. ControlMessage channel) to pass FWD requests.
  * Works in a synchronous setting (using unbuffered channels), but fails in an asynchronous one (buffered channels).
  */
 
@@ -38,10 +38,10 @@ func (process *Process) transitionLoopNP(re *RuntimeEnvironment) {
 // When a process starts transitioning, a process chooses to transition as one of these forms:
 //   (a) a provider     -> tries to send the final result (on the self/provider channel)
 //   (b) a client       -> retrieves any pending messages (on the self/provider channel) and consumes them
-//   (c) a special form (i.e. forward/split) -> sends a priority message on an external channel
+//   (c) a special form (i.e. forward/split) -> sends a control message on an external channel
 //   (d) internally     -> transitions immediately without sending/receiving messages
 //
-// A process' priority channel is checked for incoming messages. If there are any, the execution of (a-d) may be relegated for later on.
+// A process' control channel is checked for incoming messages. If there are any, the execution of (a-d) may be relegated for later on.
 
 func TransitionBySendingNP(process *Process, toChan chan Message, continuationFunc func(), sendingMessage Message, re *RuntimeEnvironment) {
 
@@ -50,8 +50,8 @@ func TransitionBySendingNP(process *Process, toChan chan Message, continuationFu
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].PriorityChannel:
-			handlePriorityMessageNP(process, pm, re)
+		case pm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, pm, re)
 		case toChan <- sendingMessage:
 			// Sending a message to toChan
 			continuationFunc()
@@ -70,8 +70,8 @@ func TransitionByReceivingNP(process *Process, clientChan chan Message, processM
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].PriorityChannel:
-			handlePriorityMessageNP(process, pm, re)
+		case pm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, pm, re)
 		case receivedMessage := <-clientChan:
 			// Acting as a client by consuming a message from some channel
 			processMessageFunc(receivedMessage)
@@ -79,12 +79,12 @@ func TransitionByReceivingNP(process *Process, clientChan chan Message, processM
 	}
 }
 
-// func TransitionAsSpecialForm(process *Process, priorityChannel chan PriorityMessage, specialFormFunc func(), sendingPriorityMessage PriorityMessage, re *RuntimeEnvironment) {
-// 	// Certain forms (e.g. forward and split forms) send their command on the priority channel, never utilizing their main provider channel
+// func TransitionAsSpecialForm(process *Process, controlChannel chan ControlMessage, specialFormFunc func(), sendingControlMessage ControlMessage, re *RuntimeEnvironment) {
+// 	// Certain forms (e.g. forward and split forms) send their command on the control channel, never utilizing their main provider channel
 // 	select {
-// 	case pm := <-process.Provider.PriorityChannel:
-// 		handlePriorityMessageNP(process, pm, re)
-// 	case priorityChannel <- sendingPriorityMessage:
+// 	case pm := <-process.Provider.ControlChannel:
+// 		handleControlMessageNP(process, pm, re)
+// 	case controlChannel <- sendingControlMessage:
 // 		specialFormFunc()
 // 	}
 // }
@@ -95,28 +95,28 @@ func TransitionInternallyNP(process *Process, internalFunction func(), re *Runti
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].PriorityChannel:
-			handlePriorityMessageNP(process, pm, re)
+		case pm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, pm, re)
 		default:
 			internalFunction()
 		}
 	}
 }
 
-func handlePriorityMessageNP(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
+func handleControlMessageNP(process *Process, pm ControlMessage, re *RuntimeEnvironment) {
 	switch pm.Action {
 	case FWD_REQUEST:
-		fwdhandlePriorityMessageNP(process, pm, re)
+		fwdhandleControlMessageNP(process, pm, re)
 	// case SPLIT_DUP_FWD:
 	// 	// todo probably remove
-	// 	splithandlePriorityMessageNP(process, pm, re)
+	// 	splithandleControlMessageNP(process, pm, re)
 	default:
-		handleInvalidPriorityMessageNP(process, re)
+		handleInvalidControlMessageNP(process, re)
 	}
 }
 
-func fwdhandlePriorityMessageNP(process *Process, pm PriorityMessage, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULEDETAILS, process, "[Priority Msg] Received FWD request. Continuing as %s\n", NamesToString(pm.Providers))
+func fwdhandleControlMessageNP(process *Process, pm ControlMessage, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "[Control Msg] Received FWD request. Continuing as %s\n", NamesToString(pm.Providers))
 	// todo remove Close current channel and switch to new one
 
 	// todo ensure that action is correct
@@ -138,10 +138,10 @@ func fwdhandlePriorityMessageNP(process *Process, pm PriorityMessage, re *Runtim
 	process.transitionLoopNP(re)
 }
 
-func handleInvalidPriorityMessageNP(process *Process, re *RuntimeEnvironment) {
+func handleInvalidControlMessageNP(process *Process, re *RuntimeEnvironment) {
 	re.logProcessHighlight(LOGRULEDETAILS, process, "RECEIVED something else --- fix\n")
 	// todo panic
-	panic("Received incorrect priority message")
+	panic("Received incorrect control message")
 }
 
 func closeProvidersNP(providers []Name) {
@@ -149,8 +149,8 @@ func closeProvidersNP(providers []Name) {
 		if p.Channel != nil {
 			close(p.Channel)
 		}
-		if p.PriorityChannel != nil {
-			close(p.PriorityChannel)
+		if p.ControlChannel != nil {
+			close(p.ControlChannel)
 		}
 	}
 }
@@ -346,8 +346,8 @@ func (f *CallForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].PriorityChannel:
-			handlePriorityMessageNP(process, pm, re)
+		case pm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, pm, re)
 		default:
 			callRule()
 		}
@@ -422,19 +422,19 @@ func (f *ForwardForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		panic("should forward on self")
 	}
 
-	priorityMessage := PriorityMessage{Action: FWD_REQUEST, Providers: process.Providers}
+	controlMessage := ControlMessage{Action: FWD_REQUEST, Providers: process.Providers}
 
 	forwardRule := func() {
-		re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to priority channel %s\n", f.from_c.String())
+		re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to control channel %s\n", f.from_c.String())
 		process.terminateForward(re)
 	}
 
-	// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, forwardRule, priorityMessage, re)
+	// TransitionAsSpecialForm(process, f.from_c.ControlChannel, forwardRule, controlMessage, re)
 	select {
-	case pm := <-process.Providers[0].PriorityChannel:
+	case pm := <-process.Providers[0].ControlChannel:
 		// todo check if this should only happen if len(process.OtherProviders) == 0
-		handlePriorityMessageNP(process, pm, re)
-	case f.from_c.PriorityChannel <- priorityMessage:
+		handleControlMessageNP(process, pm, re)
+	case f.from_c.ControlChannel <- controlMessage:
 		forwardRule()
 		// case message := <-f.from_c.Channel:
 		// 	re.logProcessHighlightf(LOGRULE, process, "[forward, client] !!!!!!!!!  %s\n", f.from_c.String())
@@ -482,7 +482,7 @@ func (f *SplitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		process.transitionLoopNP(re)
 	}
 
-	// TransitionAsSpecialForm(process, f.from_c.PriorityChannel, splitRule, priorityMessage, re)
+	// TransitionAsSpecialForm(process, f.from_c.ControlChannel, splitRule, controlMessage, re)
 	TransitionInternallyNP(process, splitRule, re)
 
 	// if len(process.OtherProviders) > 0 {
@@ -492,8 +492,8 @@ func (f *SplitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	// }
 
 	// select {
-	// case pm := <-process.Provider.PriorityChannel:
-	// 	handlePriorityMessageNP(process, pm, re)
+	// case pm := <-process.Provider.ControlChannel:
+	// 	handleControlMessageNP(process, pm, re)
 	// default:
 	// 	splitRule()
 	// }

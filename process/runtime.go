@@ -117,13 +117,14 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 
 	// Create new channel and assign a name to it
 	mChan := make(chan Message)
-	// todo add check to only initialize pmChan if needed (when using the priority version method)
-	pmChan := make(chan PriorityMessage)
+	// todo add check to only initialize pmChan if needed (when using the control version method)
+	// todo create only if using the non-polarized version
+	pmChan := make(chan ControlMessage)
 
 	// // todo see hwo to eventually change to buffered
 	// mChan := make(chan Message, 1000)
-	// pmChan := make(chan PriorityMessage, 1000)
-	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, PriorityChannel: pmChan, IsSelf: false}
+	// pmChan := make(chan ControlMessage, 1000)
+	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, ControlChannel: pmChan, IsSelf: false}
 }
 
 func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subscriber *SubscriberInfo) {
@@ -185,8 +186,8 @@ const (
 	CALL // (maybe can happen when interactive or not)
 
 	// When a process is 'non-interactive', either the FWD or DUP rules take place
-	// Special rules for priority messages
-	// FWD // uses Channel1 of the PriorityMessage struct
+	// Special rules for control messages
+	// FWD // uses Channel1 of the ControlMessage struct
 	DUP
 
 	// Other actions
@@ -196,8 +197,8 @@ const (
 type Action int
 
 const (
-	FWD_REQUEST Action = 100 // uses Channel1 of the PriorityMessage struct
-	// FWD_REPLY                // uses Body, Shape of the PriorityMessage struct
+	FWD_REQUEST Action = 100 // uses Channel1 of the ControlMessage struct
+	// FWD_REPLY                // uses Body, Shape of the ControlMessage struct
 )
 
 var RuleString = map[Rule]string{
@@ -215,7 +216,7 @@ var RuleString = map[Rule]string{
 	FWD: "FWD",
 }
 
-type PriorityMessage struct {
+type ControlMessage struct {
 	Action Action
 	// Possible payload types, depending on the action
 	Providers []Name

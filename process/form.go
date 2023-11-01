@@ -143,6 +143,20 @@ func EqualForm(form1, form2 Form) bool {
 		if ok1 && ok2 {
 			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
 		}
+	case *CastForm:
+		f1, ok1 := form1.(*CastForm)
+		f2, ok2 := form2.(*CastForm)
+
+		if ok1 && ok2 {
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.to_c.Equal(f2.to_c) && f1.Polarity() == f2.Polarity()
+		}
+	case *ShiftForm:
+		f1, ok1 := form1.(*ShiftForm)
+		f2, ok2 := form2.(*ShiftForm)
+
+		if ok1 && ok2 {
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
+		}
 
 	}
 
@@ -224,6 +238,17 @@ func CopyForm(orig Form) Form {
 		if ok {
 			body := CopyForm(p.continuation_e)
 			return NewWait(p.to_c, body)
+		}
+	case *CastForm:
+		p, ok := orig.(*CastForm)
+		if ok {
+			return NewCast(p.to_c, p.continuation_c)
+		}
+	case *ShiftForm:
+		p, ok := orig.(*ShiftForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewShift(p.continuation_c, p.from_c, cont)
 		}
 	// Debug
 	case *PrintForm:
@@ -757,6 +782,100 @@ func (p *WaitForm) FreeNames() []Name {
 
 func (p *WaitForm) Polarity() Polarity {
 	return POSITIVE
+}
+
+// Cast: cast to_c<continuation_c>
+type CastForm struct {
+	to_c           Name
+	continuation_c Name
+}
+
+func NewCast(to_c, continuation_c Name) *CastForm {
+	return &CastForm{
+		to_c:           to_c,
+		continuation_c: continuation_c}
+}
+
+func (p *CastForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("cast ")
+	buf.WriteString(p.to_c.String())
+	buf.WriteString("<")
+	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(">")
+	return buf.String()
+}
+
+func (p *CastForm) Substitute(old, new Name) {
+	p.to_c.Substitute(old, new)
+	p.continuation_c.Substitute(old, new)
+}
+
+// Free names, excluding self references
+func (p *CastForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.to_c, fn)
+	fn = appendIfNotSelf(p.continuation_c, fn)
+	return fn
+}
+
+// Polarity of a send process can be inferred directly from itself
+func (p *CastForm) Polarity() Polarity {
+	if p.to_c.IsSelf {
+		return POSITIVE
+	} else {
+		return NEGATIVE
+	}
+}
+
+// Shift: continuation_c <- shift from_c; P
+type ShiftForm struct {
+	continuation_c Name
+	from_c         Name
+	continuation_e Form
+}
+
+func NewShift(continuation_c, from_c Name, continuation_e Form) *ShiftForm {
+	return &ShiftForm{
+		continuation_c: continuation_c,
+		from_c:         from_c,
+		continuation_e: continuation_e}
+}
+
+func (p *ShiftForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(" <- shift ")
+	buf.WriteString(p.from_c.String())
+	buf.WriteString("; ")
+	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *ShiftForm) Substitute(old, new Name) {
+	if old != p.continuation_c {
+		// continuation_c: continuation_c,
+		p.from_c.Substitute(old, new)
+		p.continuation_e.Substitute(old, new)
+	}
+}
+
+func (p *ShiftForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.from_c, fn)
+	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.continuation_c)
+	// continuation_e_excluding_bound_names = removeBoundName(continuation_e_excluding_bound_names, p.continuation_c)
+	fn = mergeTwoNamesList(fn, continuation_e_excluding_bound_names)
+	return fn
+}
+
+// Polarity of a receive process can be inferred directly from itself
+func (p *ShiftForm) Polarity() Polarity {
+	if p.from_c.IsSelf {
+		return NEGATIVE
+	} else {
+		return POSITIVE
+	}
 }
 
 // Print: print name_c

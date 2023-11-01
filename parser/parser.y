@@ -104,6 +104,11 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewSplit($2, $4, $9, $11, process.NEGATIVE) }
 		   | /* wait */ WAIT name SEQUENCE expression
 		   			{ $$ = process.NewWait($2, $4) }
+		   | /* Cast */ CAST name LANGLE name RANGLE  
+					{ $$ = process.NewCast($2, $4) }
+		   | /* Shift */ name LEFT_ARROW SHIFT name SEQUENCE expression 
+		   			{ $$ = process.NewShift($1, $4, $6) }
+					
 					/* used for shared processes */
 					/* for debugging */
 /* remaining expressions:

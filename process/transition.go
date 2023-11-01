@@ -407,6 +407,11 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (f *WaitForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of wait: %s\n", f.String())
 
+	if f.to_c.IsSelf {
+		re.logProcess(LOGERROR, process, "Found a wait on self. Wait should only wait for other channels.")
+		panic("Found a wait on self. Wait should only wait for other channels.")
+	}
+
 	clsRule := func(message Message) {
 		// CLS rule (client)
 		// wait to_c; ...
@@ -634,6 +639,130 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 	// todo remove // Current process has been duplicated, so remove the duplication requirements to continue executing its body [i.e. become interactive]
 	// process.OtherProviders = []Name{}
 	process.transitionLoop(re)
+}
+
+func (f *CastForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of send: %s\n", f.String())
+
+	if f.to_c.IsSelf {
+		// CST rule (provider, +ve)
+		//
+		//  <...> <- shift self; ...
+		//	 /|\
+		//    |
+		//    |
+		// [cast to_c <...>]
+
+		message := Message{Rule: CST, Channel2: f.continuation_c}
+
+		cstRule := func() {
+			re.logProcess(LOGRULEDETAILS, process, "[cast, provider] finished casting on self")
+			// the rule SND is not guaranteed to be done, since it depends on the other side as well
+			process.finishedRule(SND, "[cast, provider]", "(p)", re)
+			process.terminate(re)
+		}
+
+		TransitionBySending(process, process.Providers[0].Channel, cstRule, message, re)
+	} else {
+		// SHF rule (client, -ve)
+		//
+		// [cast to_c <self>]
+		//    |
+		//    |
+		//   \|/
+		// <...> <- shift self; ...
+
+		if !f.continuation_c.IsSelf {
+			// todo error
+			re.logProcessf(LOGERROR, process, "[cast, client] in SHF rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
+			panic("Expected self but found something else")
+		}
+
+		message := Message{Rule: SHF, Channel2: process.Providers[0]}
+		// Send the provider channel (self) as the continuation channel
+
+		shfRule := func() {
+			// Message is the received message
+			re.logProcess(LOGRULE, process, "[cast, client] starting SHF rule")
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule SHF\n", f.to_c.String())
+
+			process.finishedRuleBeforeRenamed(SHF, "[cast, client]", "(c)", re)
+			// Although the process dies, its provider will be used as the client's provider
+			process.renamed(process.Providers, []Name{f.to_c}, re)
+		}
+
+		TransitionBySending(process, f.to_c.Channel, shfRule, message, re)
+	}
+}
+
+func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of shift: %s\n", f.String())
+
+	if f.from_c.IsSelf {
+		// RCV rule (provider, -ve)
+		//
+		// [casr to_c <self>]
+		//    |
+		//    |
+		//   \|/
+		// <...> <- shift self; ...
+
+		shfRule := func(message Message) {
+			re.logProcess(LOGRULEDETAILS, process, "[shift, provider] finished sending on self")
+
+			if message.Rule != SHF {
+				re.logProcessHighlightf(LOGERROR, process, "expected SHF, found %s\n", RuleString[message.Rule])
+				panic("expected SHF")
+			}
+
+			new_body := f.continuation_e
+			new_body.Substitute(f.continuation_c, Name{IsSelf: true})
+
+			process.finishedRule(SHF, "[shift, provider]", "(p)", re)
+			// Terminate the current provider to replace them with the one being received
+			process.terminateBeforeRename(process.Providers, []Name{message.Channel2}, re)
+
+			process.Body = new_body
+			process.Providers = []Name{message.Channel2}
+			// process.finishedRule(SHF, "[shift, provider]", "(p)", re)
+			process.processRenamed(re)
+
+			process.transitionLoop(re)
+		}
+
+		TransitionByReceiving(process, process.Providers[0].Channel, shfRule, re)
+	} else {
+		// SND rule (client, +ve)
+		// todo ask for controller permission
+		//
+		//  [<...> <- recv self; ...]
+		//	 /|\
+		//    |
+		//    |
+		// send to_c <...>
+
+		cstRule := func(message Message) {
+			re.logProcess(LOGRULE, process, "[receive, client] starting CST rule")
+			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
+
+			if message.Rule != CST {
+				re.logProcessHighlight(LOGERROR, process, "expected CST")
+				panic("expected CST")
+			}
+
+			new_body := f.continuation_e
+			new_body.Substitute(f.continuation_c, message.Channel2)
+
+			// re.logProcess(LOGRULE, process, "[receive, client] finished CST rule (c)")
+
+			process.Body = new_body
+
+			process.finishedRule(CST, "[receive, client]", "(c)", re)
+			process.transitionLoop(re)
+		}
+
+		TransitionByReceiving(process, f.from_c.Channel, cstRule, re)
+	}
 }
 
 // Debug

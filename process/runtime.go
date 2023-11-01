@@ -176,6 +176,8 @@ const (
 	SND Rule = iota // uses Channel1 and Channel2 of the Message struct
 	RCV             // uses ContinuationBody, Channel1 and Channel2 of the Message struct
 	CLS
+	CST
+	SHF
 
 	// These can happen when a process is 'interactive' by transitioning internally
 	CUT
@@ -205,6 +207,8 @@ var RuleString = map[Rule]string{
 	CUT:   "CUT",
 	CALL:  "CALL",
 	SPLIT: "SPLIT",
+	CST:   "CST",
+	SHF:   "SHT",
 
 	DUP: "DUP",
 

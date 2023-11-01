@@ -49,63 +49,48 @@ func expandProcesses(u unexpandedProcesses) []*process.Process {
 	return processes
 }
 
-func polarizeProcesses(processes []*process.Process) []*process.Process {
+// func polarizeProcesses(processes []*process.Process) []*process.Process {
 
-	// Set stop
-	tries := 0
-	limit := len(processes) * len(processes)
+// 	// Set stop
+// 	tries := 0
+// 	limit := len(processes) * len(processes)
 
-	// Queue all processes
-	queue := make([]*process.Process, len(processes))
-	copy(queue, processes)
+// 	// Queue all processes
+// 	queue := make([]*process.Process, len(processes))
+// 	copy(queue, processes)
 
-	// List of known channel polarities
-	// globalChannels := make(map[process.Name]process.Polarity)
+// 	// List of known channel polarities
+// 	// globalChannels := make(map[process.Name]process.Polarity)
 
-	for len(queue) > 0 && tries < limit {
-		tries += 1
+// 	for len(queue) > 0 && tries < limit {
+// 		tries += 1
 
-		// Pick next process and discard top element of queue
-		currentProcess := queue[0]
-		queue = queue[1:]
+// 		// Pick next process and discard top element of queue
+// 		currentProcess := queue[0]
+// 		queue = queue[1:]
 
-		// Is empty ?
-		if len(queue) == 0 {
-			fmt.Println("Queue is empty !")
-		}
+// 		// Is empty ?
+// 		if len(queue) == 0 {
+// 			fmt.Println("Queue is empty !")
+// 		}
 
-		fmt.Println(currentProcess.String())
+// 		fmt.Println(currentProcess.String())
 
-		// currentProcess.Body.Polarity()
+// 		// currentProcess.Body.Polarity()
 
-		// var processes []process.Process
-	}
+// 		// var processes []process.Process
+// 	}
 
-	if len(queue) > 0 {
-		fmt.Println("Error. Did not manage to find all polarities:")
+// 	if len(queue) > 0 {
+// 		fmt.Println("Error. Did not manage to find all polarities:")
 
-		for i, p := range queue {
-			fmt.Println(i, p.String())
-		}
-	}
+// 		for i, p := range queue {
+// 			fmt.Println(i, p.String())
+// 		}
+// 	}
 
-	// // todo maybe throw list of names in OtherProviders
-	// for _, p := range u.procs {
-	// 	// for _, n := range p.Providers {
-	// 	new_p := process.NewProcess(p.Body, p.Providers, process.LINEAR, &u.functions)
-	// 	processes = append(processes, *new_p)
-	// 	// }
-	// }
-
-	// The next step is to get rid of all the macros
-	// this is not easy since some macros may need type information
-	// todo
-	// for _, p := range processes {
-	// 	p.Body.
-	// }
-
-	return processes
-}
+// 	return processes
+// }
 
 // Convert from a list of pointer of processes to a plain list of processes (ready to be executed)
 func finalizeProcesses(processes []*process.Process) []process.Process {
@@ -132,8 +117,8 @@ func ParseFile(fileName string) ([]process.Process, error) {
 	}
 
 	expandedProcesses := expandProcesses(prc)
-	polarizedProcesses := polarizeProcesses(expandedProcesses)
-	finalizedProcesses := finalizeProcesses(polarizedProcesses)
+	// polarizedProcesses := polarizeProcesses(expandedProcesses)
+	finalizedProcesses := finalizeProcesses(expandedProcesses)
 
 	return finalizedProcesses, nil
 }
@@ -150,8 +135,8 @@ func ParseString(program string) ([]process.Process, error) {
 	}
 
 	expandedProcesses := expandProcesses(prc)
-	polarizedProcesses := polarizeProcesses(expandedProcesses)
-	finalizedProcesses := finalizeProcesses(polarizedProcesses)
+	// polarizedProcesses := polarizeProcesses(expandedProcesses)
+	finalizedProcesses := finalizeProcesses(expandedProcesses)
 
 	return finalizedProcesses, nil
 }

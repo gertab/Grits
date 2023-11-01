@@ -115,6 +115,16 @@ func TestBasicTokens(t *testing.T) {
 	output = append(output, input11.String())
 	expected = append(expected, "wait to_c; close self")
 
+	// Cast
+	input12 := NewCast(to_c, cont_c)
+	output = append(output, input12.String())
+	expected = append(expected, "cast to_c<cont_c>")
+
+	// Receive
+	input13 := NewShift(cont_c, from_c, end)
+	output = append(output, input13.String())
+	expected = append(expected, "cont_c <- shift from_c; close self")
+
 	compareOutput(t, output, expected)
 }
 
@@ -133,9 +143,8 @@ func TestSubstitutions(t *testing.T) {
 	end := NewClose(self)
 	new_end := NewClose(new_self)
 
-	input := NewSend(to_c, pay_c, cont_c)
-
 	// Send
+	input := NewSend(to_c, pay_c, cont_c)
 	input.Substitute(to_c, new_to_c)
 	input.Substitute(pay_c, new_pay_c)
 	input.Substitute(cont_c, new_cont_c)
@@ -231,6 +240,23 @@ func TestSubstitutions(t *testing.T) {
 	result11 := NewWait(new_to_c, end)
 	output = append(output, input10)
 	expected = append(expected, result11)
+
+	// Cast
+	input12 := NewCast(pay_c, cont_c)
+	input12.Substitute(pay_c, new_pay_c)
+	input12.Substitute(cont_c, new_cont_c)
+	output = append(output, input12)
+	result12 := NewCast(new_pay_c, new_cont_c)
+	expected = append(expected, result12)
+
+	// Shift
+	input13 := NewShift(cont_c, from_c, end)
+	input13.Substitute(cont_c, new_cont_c)
+	input13.Substitute(from_c, new_from_c)
+	input13.Substitute(self, new_self)
+	result13 := NewShift(cont_c, new_from_c, new_end)
+	output = append(output, input13)
+	expected = append(expected, result13)
 
 	compareOutputProgram(t, output, expected)
 }

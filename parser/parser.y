@@ -28,6 +28,7 @@ import (
 %type <functions> functions
 %type <name> name
 %type <names> names
+%type <names> optional_names
 %type <proc> process
 %type <branches> branches
 
@@ -78,14 +79,10 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 					{ $$ = process.NewNew($1, $6, $9, process.POSITIVE) } 
 		   | /* new (-ve) */ name LEFT_ARROW POL_NEGATIVE NEW LPAREN expression RPAREN SEQUENCE expression 
 					{ $$ = process.NewNew($1, $6, $9, process.NEGATIVE) } 
-		   | /* call (+ve) */ POL_POSITIVE LABEL LPAREN names RPAREN
+		   | /* call (+ve) */ POL_POSITIVE LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, process.POSITIVE) }
-		   | /* call (+ve) */ POL_POSITIVE LABEL LPAREN RPAREN
-		   			{ $$ = process.NewCall($2, []process.Name{}, process.POSITIVE) }
-		   | /* call (-ve) */ POL_NEGATIVE LABEL LPAREN names RPAREN
+		   | /* call (-ve) */ POL_NEGATIVE LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, process.NEGATIVE) }
-		   | /* call (-ve) */ POL_NEGATIVE LABEL LPAREN RPAREN
-		   			{ $$ = process.NewCall($2, []process.Name{}, process.NEGATIVE) }
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
 /* forward without explitit polarities */
@@ -128,14 +125,16 @@ branches :   /* empty */         										 { $$ = nil }
 names : name { $$ = []process.Name{$1} }
  	  | name COMMA names { $$ = append($3, $1) }
 
+optional_names : /* empty */ { $$ = nil }
+		| name { $$ = []process.Name{$1} }
+		| name COMMA names { $$ = append($3, $1) }
+
 name : SELF { $$ = process.Name{IsSelf: true} };
 name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 
 functions : /* empty */         										 
 				{ $$ = nil }
-		  | LABEL LPAREN RPAREN EQUALS expression 
-				{ $$ = []process.FunctionDefinition{{FunctionName: $1, Parameters: []process.Name{}, Body: $5}} }
-		  | LABEL LPAREN names RPAREN EQUALS expression functions
+		  | LABEL LPAREN optional_names RPAREN EQUALS expression functions
 		  		{ $$ = append($7, process.FunctionDefinition{FunctionName: $1, Parameters: $3, Body: $6}) };
 
 %%

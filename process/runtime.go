@@ -213,11 +213,13 @@ type Rule int
 
 const (
 	// These can happen when a process is 'interactive' by sending messages
-	SND Rule = iota // uses Channel1 and Channel2 of the Message struct
-	RCV             // uses ContinuationBody, Channel1 and Channel2 of the Message struct
-	CLS
-	CST
-	SHF
+	SND Rule = iota // uses Channel1 and Channel2 of the Message
+	RCV             // uses ContinuationBody, Channel1 and Channel2 of the Message
+	CLS             // does not use message payloads
+	CST             // uses Channel1 (continuation_c) of the Message
+	SHF             // uses Channel1 of the Message
+	SEL             // uses Channel1 and Label of the Message
+	CSE             // uses Channel1 and Label of the Message
 
 	// These can happen when a process is 'interactive' by transitioning internally
 	CUT
@@ -241,14 +243,17 @@ const (
 )
 
 var RuleString = map[Rule]string{
-	SND:   "SND",
-	RCV:   "RCV",
-	CLS:   "CLS",
+	SND: "SND",
+	RCV: "RCV",
+	CLS: "CLS",
+	CST: "CST",
+	SHF: "SHF",
+	SEL: "SEL",
+	CSE: "CSE",
+
 	CUT:   "CUT",
 	CALL:  "CALL",
 	SPLIT: "SPLIT",
-	CST:   "CST",
-	SHF:   "SHT",
 
 	DUP: "DUP",
 

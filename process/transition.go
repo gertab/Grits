@@ -165,11 +165,11 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 	if f.to_c.IsSelf {
 		// SND rule (provider, +ve)
 		//
-		//  <...> <- recv self; ...
+		//  <...> <- from_c self; ...
 		//	 /|\
 		//    |
 		//    |
-		// [send to_c <...>]
+		// [send self <...>]
 
 		message := Message{Rule: SND, Channel1: f.payload_c, Channel2: f.continuation_c}
 
@@ -323,11 +323,6 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 	TransitionInternally(process, newRule, re)
 }
 
-func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of select: ")
-	fmt.Println(f.String())
-}
-
 // CALL rule
 func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of call: %s\n", f.String())
@@ -375,13 +370,160 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 	}
 }
 
-func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of branch: ")
-	fmt.Println(f.String())
+func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of select: %s\n", f.String())
+
+	if f.to_c.IsSelf {
+		// SEL rule (provider, +ve)
+		//
+		//  case to (...)
+		//	 /|\
+		//    |
+		//    |
+		// [self.label<...>]
+
+		message := Message{Rule: SEL, Channel1: f.continuation_c, Label: f.label}
+
+		selRule := func() {
+			re.logProcess(LOGRULEDETAILS, process, "[select, provider] finished sending on self")
+			process.finishedRule(SEL, "[select, provider]", "(p)", re)
+			process.terminate(re)
+		}
+
+		TransitionBySending(process, process.Providers[0].Channel, selRule, message, re)
+	} else {
+		// CSE rule (client, -ve)
+		//
+		// [to_c.label<...>]
+		//    |
+		//    |
+		//   \|/
+		// case self (...)
+
+		if !f.continuation_c.IsSelf {
+			// todo error
+			re.logProcessf(LOGERROR, process, "[select, client] in CSE rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
+			panic("Expected self but found something else")
+		}
+
+		message := Message{Rule: CSE, Channel1: process.Providers[0], Label: f.label}
+		// Send the provider channel (self) as the continuation channel
+
+		cseRule := func() {
+			// Message is the received message
+			re.logProcess(LOGRULE, process, "[select, client] starting CSE rule")
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule CSE\n", f.to_c.String())
+
+			process.finishedRuleBeforeRenamed(CSE, "[select, client]", "(c)", re)
+			// Although the process dies, its provider will be used as the client's provider
+			process.renamed(process.Providers, []Name{f.to_c}, re)
+		}
+
+		TransitionBySending(process, f.to_c.Channel, cseRule, message, re)
+	}
 }
+
+func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
+	// Should only be referred from within a case
+	fmt.Print("cannot transition on branch")
+	panic("should never happen")
+}
+
 func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of case: ")
-	fmt.Println(f.String())
+	re.logProcessf(LOGRULEDETAILS, process, "transition of case: %s\n", f.String())
+
+	if f.from_c.IsSelf {
+		// RCV rule (provider, -ve)
+		//
+		// [to_c.label<self>]
+		//    |
+		//    |
+		//   \|/
+		// case self (...)
+
+		cseRule := func(message Message) {
+			re.logProcess(LOGRULEDETAILS, process, "[case, provider] finished receiving on self")
+
+			if message.Rule != CSE {
+				re.logProcessHighlightf(LOGERROR, process, "expected CSE, found %s\n", RuleString[message.Rule])
+				panic("expected CSE")
+			}
+
+			// Match received label with the available branches
+			var new_body Form
+			found := false
+			for _, j := range f.branches {
+				if j.label.Equal(message.Label) {
+					// Found a matching label
+					found = true
+					new_body = j.continuation_e
+					new_body.Substitute(j.payload_c, message.Channel1)
+					break
+				}
+			}
+
+			if !found {
+				re.logProcessHighlightf(LOGERROR, process, "no matching labels found for %s\n", message.Label)
+				panic("no matching labels found")
+			}
+
+			process.finishedRule(CSE, "[case, provider]", "(p)", re)
+			// Terminate the current provider to replace them with the one being received
+			process.terminateBeforeRename(process.Providers, []Name{message.Channel2}, re)
+
+			process.Body = new_body
+			process.Providers = []Name{message.Channel1}
+			// process.finishedRule(CSE, "[receive, provider]", "(p)", re)
+			process.processRenamed(re)
+
+			process.transitionLoop(re)
+		}
+
+		TransitionByReceiving(process, process.Providers[0].Channel, cseRule, re)
+	} else {
+		// SEL rule (client, +ve)
+		//
+		//  [case from_c (...)]
+		//	 /|\
+		//    |
+		//    |
+		// self.label<..>
+
+		selRule := func(message Message) {
+			re.logProcess(LOGRULE, process, "[case, client] starting SEL rule")
+			re.logProcessf(LOGRULEDETAILS, process, "[case, client] received select label %s on channel %s, containing rule: %s\n", message.Label, f.from_c.String(), RuleString[message.Rule])
+
+			if message.Rule != SEL {
+				re.logProcessHighlight(LOGERROR, process, "expected SEL ")
+				panic("expected SEL")
+			}
+
+			// Match received label with the available branches
+			var new_body Form
+			found := false
+			for _, j := range f.branches {
+				if j.label.Equal(message.Label) {
+					// Found a matching label
+					found = true
+					new_body = j.continuation_e
+					new_body.Substitute(j.payload_c, message.Channel1)
+					break
+				}
+			}
+
+			if !found {
+				re.logProcessHighlightf(LOGERROR, process, "no matching labels found for %s\n", message.Label)
+				panic("no matching labels found")
+			}
+
+			process.Body = new_body
+
+			process.finishedRule(SEL, "[case, client]", "(c)", re)
+			process.transitionLoop(re)
+		}
+
+		TransitionByReceiving(process, f.from_c.Channel, selRule, re)
+	}
 }
 
 func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
@@ -484,6 +626,10 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		case FWD:
 			new_body = NewForward(f.to_c, message.Providers[0], f.Polarity())
 			process.Providers = message.Providers
+		case SEL:
+			panic("todo")
+		case CST:
+			panic("todo")
 
 			// The following are not possible: e.g. a receive does not send anything
 		case RCV:
@@ -649,13 +795,13 @@ func (f *CastForm) Transition(process *Process, re *RuntimeEnvironment) {
 	if f.to_c.IsSelf {
 		// CST rule (provider, +ve)
 		//
-		//  <...> <- shift self; ...
+		//  <...> <- shift to_c; ...
 		//	 /|\
 		//    |
 		//    |
-		// [cast to_c <...>]
+		// [cast self <...>]
 
-		message := Message{Rule: CST, Channel2: f.continuation_c}
+		message := Message{Rule: CST, Channel1: f.continuation_c}
 
 		cstRule := func() {
 			re.logProcess(LOGRULEDETAILS, process, "[cast, provider] finished casting on self")
@@ -680,7 +826,7 @@ func (f *CastForm) Transition(process *Process, re *RuntimeEnvironment) {
 			panic("Expected self but found something else")
 		}
 
-		message := Message{Rule: SHF, Channel2: process.Providers[0]}
+		message := Message{Rule: SHF, Channel1: process.Providers[0]}
 		// Send the provider channel (self) as the continuation channel
 
 		shfRule := func() {
@@ -703,7 +849,7 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 	if f.from_c.IsSelf {
 		// RCV rule (provider, -ve)
 		//
-		// [casr to_c <self>]
+		// [cast to_c<self>]
 		//    |
 		//    |
 		//   \|/
@@ -722,10 +868,10 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			process.finishedRule(SHF, "[shift, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being received
-			process.terminateBeforeRename(process.Providers, []Name{message.Channel2}, re)
+			process.terminateBeforeRename(process.Providers, []Name{message.Channel1}, re)
 
 			process.Body = new_body
-			process.Providers = []Name{message.Channel2}
+			process.Providers = []Name{message.Channel1}
 			// process.finishedRule(SHF, "[shift, provider]", "(p)", re)
 			process.processRenamed(re)
 
@@ -734,14 +880,14 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		TransitionByReceiving(process, process.Providers[0].Channel, shfRule, re)
 	} else {
-		// SND rule (client, +ve)
+		// CST rule (client, +ve)
 		// todo ask for controller permission
 		//
-		//  [<...> <- recv self; ...]
+		//  [<..> <- shift from_c; ...]
 		//	 /|\
 		//    |
 		//    |
-		// send to_c <...>
+		// cast self<..>
 
 		cstRule := func(message Message) {
 			re.logProcess(LOGRULE, process, "[receive, client] starting CST rule")
@@ -753,7 +899,7 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 			}
 
 			new_body := f.continuation_e
-			new_body.Substitute(f.continuation_c, message.Channel2)
+			new_body.Substitute(f.continuation_c, message.Channel1)
 
 			// re.logProcess(LOGRULE, process, "[receive, client] finished CST rule (c)")
 

@@ -71,7 +71,7 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 			color:               true,
 			logLevels:           l,
 			delay:               1000 * time.Millisecond,
-			execution_version:   NORMAL_SYNC,
+			execution_version:   NORMAL_ASYNC,
 			// delay: 0,
 		}
 	}

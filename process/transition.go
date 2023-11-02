@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+// todo:
+// -> only send a rule finished when the receiving end finished (instead of sending both times)
+// -> DUP or copy
+// -> check whether using self is ok
+
 // send a <...>    <...> <- recv a; ...
 //  |              /|\
 //  |               |
@@ -53,20 +58,9 @@ func TransitionBySending(process *Process, toChan chan Message, continuationFunc
 		// Split process if needed
 		process.performDUPrule(re)
 	} else {
-		// select {
-		// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
-		// Leave option to send and receive non-deterministically, so that if unbuffered channels are used,
-		// it does not result in a deadlock
-		// case pm := <-process.Providers[0].Channel:
-		// 	handleNegativeForwardRequest(process, pm, re)
-
-		// A 'send' process will never receive FWD requests, so there is no need to check for message
-		// (Since when a send is negative, it sends messages to client, and when it is positive, the fwd process does not initiate requests.)
-		// case toChan <- sendingMessage:
+		// Send message and perform the remaining work defined by continuationFunc
 		toChan <- sendingMessage
-		// Sending a message to toChan
 		continuationFunc()
-		// }
 	}
 }
 
@@ -81,63 +75,41 @@ func TransitionByReceiving(process *Process, clientChan chan Message, processMes
 		process.performDUPrule(re)
 	} else {
 
-		// select {
-		// todo: Since we will be using buffered channels, switch by send and receive is not feasible (since the send will always succeed immediately)
-
-		// case pm := <-process.Providers[0].Channel:
-		// 	handleControlMessage(process, pm, re)
-		// case receivedMessage := <-clientChan:
+		// Blocks until a message arrives (may be a FWD request)
 		receivedMessage := <-clientChan
-		// may be control message
 
-		// Acting as a client by consuming a message from some channel
-
+		// Process acting as a client by consuming a message from some channel
 		if receivedMessage.Rule == FWD {
 			handleNegativeForwardRequest(process, receivedMessage, re)
 		} else {
 			processMessageFunc(receivedMessage)
 		}
-		// }
 	}
 }
 
-func TransitionInternally(process *Process, internalFunction func(), re *RuntimeEnvironment) {
+func TransitionInternally(process *Process, internalTransition func(), re *RuntimeEnvironment) {
 	if len(process.Providers) > 1 {
 		// Split process if needed
 		process.performDUPrule(re)
 	} else {
-		// select {
-		// Internal transitions do not check if there are any FWD messages,
-		// so SPLIT/NEW/... take precedence over FWD
-		// case pm := <-process.Providers[0].Channel:
-		// 	// todo this is problematic -- we may receive normal message or fwd messages
-		// 	handleControlMessage(process, pm, re)
-		// default:
-		internalFunction()
-		// }
+		// Immediately perform internal transition (does not affect/depend on external processes)
+		internalTransition()
 	}
 }
 
-func handleNegativeForwardRequest(process *Process, pm Message, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULEDETAILS, process, "[Control Msg] Received FWD request. Continuing as %s\n", NamesToString(pm.Providers))
+func handleNegativeForwardRequest(process *Process, message Message, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "Received FWD request. Continuing as %s\n", NamesToString(message.Providers))
 	// todo remove Close current channel and switch to new one
 
-	// todo ensure that action is correct
-	// todo remove - redundant check
-	if pm.Rule != FWD {
-		re.logProcessHighlight(LOGERROR, process, "expected FWD")
-		panic("expected FWD")
-	}
-
-	// Notify that the process will change providers (i.e. the process.Providers will die and be replaced by pm.Providers)
-	process.terminateBeforeRename(process.Providers, pm.Providers, re)
+	// Notify that the process will change providers (i.e. the process.Providers will die and be replaced by message.Providers)
+	process.terminateBeforeRename(process.Providers, message.Providers, re)
 
 	// the process.Providers can no longer be used, so close them
 	// todo check if they are being closed anywhere else
 	closeProviders(process.Providers)
 
 	// Change the providers to the one being forwarded to
-	process.Providers = pm.Providers
+	process.Providers = message.Providers
 
 	process.transitionLoop(re)
 }
@@ -147,9 +119,6 @@ func closeProviders(providers []Name) {
 		if p.Channel != nil {
 			close(p.Channel)
 		}
-		// if p.ControlChannel != nil {
-		// 	close(p.ControlChannel)
-		// }
 	}
 }
 
@@ -177,7 +146,6 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULEDETAILS, process, "[send, provider] finished sending on self")
 			// todo Although here we say the process finished executing (and died),
 			// the rule SND is not guaranteed to be done, since it depends on the other side as well
-			process.finishedRule(SND, "[send, provider]", "(p)", re)
 			process.terminate(re)
 		}
 
@@ -205,7 +173,6 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULE, process, "[send, client] starting RCV rule")
 			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule RCV\n", f.to_c.String())
 
-			process.finishedRuleBeforeRenamed(RCV, "[send, client]", "(c)", re)
 			// Although the process dies, its provider will be used as the client's provider
 			process.renamed(process.Providers, []Name{f.to_c}, re)
 		}
@@ -230,7 +197,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished sending on self")
 
 			if message.Rule != RCV {
-				re.logProcessHighlightf(LOGERROR, process, "expected RCV, found %s\n", RuleString[message.Rule])
+				re.logProcessf(LOGERROR, process, "expected RCV, found %s\n", RuleString[message.Rule])
 				panic("expected RCV")
 			}
 
@@ -273,8 +240,6 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			new_body := f.continuation_e
 			new_body.Substitute(f.payload_c, message.Channel1)
 			new_body.Substitute(f.continuation_c, message.Channel2)
-
-			// re.logProcess(LOGRULE, process, "[receive, client] finished SND rule (c)")
 
 			process.Body = new_body
 
@@ -361,12 +326,7 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// Split process if needed
 		process.performDUPrule(re)
 	} else {
-		// select {
-		// case pm := <-process.Providers[0].ControlChannel:
-		// handleControlMessage(process, pm, re)
-		// default:
 		callRule()
-		// }
 	}
 }
 
@@ -386,7 +346,6 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		selRule := func() {
 			re.logProcess(LOGRULEDETAILS, process, "[select, provider] finished sending on self")
-			process.finishedRule(SEL, "[select, provider]", "(p)", re)
 			process.terminate(re)
 		}
 
@@ -414,7 +373,6 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULE, process, "[select, client] starting CSE rule")
 			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule CSE\n", f.to_c.String())
 
-			process.finishedRuleBeforeRenamed(CSE, "[select, client]", "(c)", re)
 			// Although the process dies, its provider will be used as the client's provider
 			process.renamed(process.Providers, []Name{f.to_c}, re)
 		}
@@ -433,7 +391,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of case: %s\n", f.String())
 
 	if f.from_c.IsSelf {
-		// RCV rule (provider, -ve)
+		// CSE rule (provider, -ve)
 		//
 		// [to_c.label<self>]
 		//    |
@@ -538,7 +496,6 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 		clsRule := func() {
 			re.logProcess(LOGRULEDETAILS, process, "[close, provider] finished sending on self")
 			// the rule CLS is not guaranteed to be done, since it depends on the other side as well
-			process.finishedRule(CLS, "[close, provider]", "(p)", re)
 			process.terminate(re)
 		}
 
@@ -580,7 +537,7 @@ func (f *WaitForm) Transition(process *Process, re *RuntimeEnvironment) {
 // 	fmt.Println(f.String())
 // }
 
-// Special cases: Forward and Split [split is not a special case]
+// Special cases: Forward and Split
 func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of forward: %s\n", f.String())
 
@@ -598,6 +555,8 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		message := Message{Rule: FWD, Providers: process.Providers}
 		f.from_c.Channel <- message
 		re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to control channel %s\n", f.from_c.String())
+
+		// todo check if this is needed: process.finishedRule(FWD, "[forward, client]", "", re)
 		process.terminateForward(re)
 
 	} else {
@@ -609,10 +568,6 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		message := <-f.from_c.Channel
 		re.logProcessf(LOGRULE, process, "[forward, +ve] received message on %s. Will become a %s \n", f.from_c.String(), RuleString[message.Rule])
 
-		oldProviders := process.Providers[0]
-
-		var new_body Form
-
 		// todo: maybe instead of recreating each process, what I can do is check how many providers the
 		// forwarding process has. If it has exactly 1, then just forward the message directly.
 		// If it has >1, then recreate the process -- this allows for DUP to take place.
@@ -620,16 +575,19 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// Depending on the message type, recreate a corresponding process
 		switch message.Rule {
 		case SND:
-			new_body = NewSend(f.to_c, message.Channel1, message.Channel2)
+			process.Body = NewSend(f.to_c, message.Channel1, message.Channel2)
 		case CLS:
-			new_body = NewClose(f.to_c)
+			process.Body = NewClose(f.to_c)
 		case FWD:
-			new_body = NewForward(f.to_c, message.Providers[0], f.Polarity())
+			re.logProcessf(LOGINFO, process, "oldProviders: %s, newProviders: %s\n", NamesToString(process.Providers), NamesToString(message.Providers))
+			process.Body = NewForward(f.to_c, message.Providers[0], f.Polarity())
 			process.Providers = message.Providers
 		case SEL:
-			panic("todo")
+			process.Body = NewSelect(f.to_c, message.Label, message.Channel1)
+			panic("todo check if ok")
 		case CST:
-			panic("todo")
+			process.Body = NewCast(f.to_c, message.Channel1)
+			panic("todo check if ok")
 
 			// The following are not possible: e.g. a receive does not send anything
 		case RCV:
@@ -644,13 +602,10 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGERROR, process, "a positive forward should never receive DUP messages")
 		default:
 			re.logProcessHighlightf(LOGERROR, process, "forward should handle message %s", RuleString[message.Rule])
-			panic("forward should handle message")
+			panic("todo forward should handle message")
 		}
 
-		re.logProcessf(LOGINFO, process, "oldProviders: %s, newProviders: %s\n", oldProviders.String(), NamesToString(process.Providers))
 		process.finishedRule(FWD, "[fwd]", "(+ve)", re)
-
-		process.Body = new_body
 		process.transitionLoop(re)
 	}
 }
@@ -693,21 +648,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		process.transitionLoop(re)
 	}
 
-	// TransitionAsSpecialForm(process, f.from_c.ControlChannel, splitRule, controlMessage, re)
 	TransitionInternally(process, splitRule, re)
-
-	// if len(process.OtherProviders) > 0 {
-	// 	// todo first you need to check whether len(process.OtherProviders) > 0 -- if so, then the process is non-interacting and needs to be split
-	// 	re.logProcessf(LOGERROR, process, "process.OtherProviders = %d\n", len(process.OtherProviders))
-	// 	panic("needs to split first")
-	// }
-
-	// select {
-	// case pm := <-process.Provider.ControlChannel:
-	// 	handleControlMessage(process, pm, re)
-	// default:
-	// 	splitRule()
-	// }
 }
 
 func (process *Process) performDUPrule(re *RuntimeEnvironment) {
@@ -806,7 +747,6 @@ func (f *CastForm) Transition(process *Process, re *RuntimeEnvironment) {
 		cstRule := func() {
 			re.logProcess(LOGRULEDETAILS, process, "[cast, provider] finished casting on self")
 			// the rule SND is not guaranteed to be done, since it depends on the other side as well
-			process.finishedRule(SND, "[cast, provider]", "(p)", re)
 			process.terminate(re)
 		}
 
@@ -834,7 +774,6 @@ func (f *CastForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULE, process, "[cast, client] starting SHF rule")
 			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule SHF\n", f.to_c.String())
 
-			process.finishedRuleBeforeRenamed(SHF, "[cast, client]", "(c)", re)
 			// Although the process dies, its provider will be used as the client's provider
 			process.renamed(process.Providers, []Name{f.to_c}, re)
 		}
@@ -849,11 +788,11 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 	if f.from_c.IsSelf {
 		// RCV rule (provider, -ve)
 		//
-		// [cast to_c<self>]
+		// cast to_c<self>
 		//    |
 		//    |
 		//   \|/
-		// <...> <- shift self; ...
+		// [<...> <- shift self; ...]
 
 		shfRule := func(message Message) {
 			re.logProcess(LOGRULEDETAILS, process, "[shift, provider] finished sending on self")
@@ -872,7 +811,6 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			process.Body = new_body
 			process.Providers = []Name{message.Channel1}
-			// process.finishedRule(SHF, "[shift, provider]", "(p)", re)
 			process.processRenamed(re)
 
 			process.transitionLoop(re)
@@ -901,8 +839,6 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 			new_body := f.continuation_e
 			new_body.Substitute(f.continuation_c, message.Channel1)
 
-			// re.logProcess(LOGRULE, process, "[receive, client] finished CST rule (c)")
-
 			process.Body = new_body
 
 			process.finishedRule(CST, "[receive, client]", "(c)", re)
@@ -923,6 +859,7 @@ func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
 // being performed, there are the following functions:
 //
 //	->  finishedRule/3
+//	->  finishedHalfRule/3
 //	->  finishedRuleBeforeRenamed/4
 //	->  processRenamed/1
 //	->  terminate/1
@@ -991,10 +928,4 @@ func (process *Process) renamed(oldProviders, newProviders []Name, re *RuntimeEn
 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
 
 	// Although the old providers should be closed (i.e. die), the process itself does not die. It lives on using the new provider names.
-
-	// if re.debug {
-	// 	// Update monitor
-	// 	// todo change
-	// 	re.monitor.MonitorProcessForwarded(process)
-	// }
 }

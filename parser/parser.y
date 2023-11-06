@@ -12,21 +12,21 @@ import (
 %}
 
 %union {
-	strval string
-	common_type   unexpandedProcessOrFunction
-	items []unexpandedProcessOrFunction
-	name process.Name
-	names []process.Name
-	form process.Form
-	branches []*process.BranchForm
+	strval 		string
+	common_type	unexpandedProcessOrFunction
+	items 		[]unexpandedProcessOrFunction
+	name 		process.Name
+	names 		[]process.Name
+	form 		process.Form
+	branches 	[]*process.BranchForm
 }
 
 %token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT POL_POSITIVE POL_NEGATIVE
 %type <strval> LABEL
 %type <items> items 
-%type <common_type> process
-%type <common_type> function
-%type <common_type> type
+%type <common_type> process_def
+%type <common_type> function_def
+%type <common_type> type_def
 %type <form> expression 
 %type <name> name
 %type <names> names
@@ -52,18 +52,22 @@ program :
 		};
 /*	 | LET functions IN processes END { }; */
 
-items :   process { $$ = []unexpandedProcessOrFunction{$1} }
-		| process items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
-		| LET function { $$ = []unexpandedProcessOrFunction{$2} }
-		| LET function items { $$ = append([]unexpandedProcessOrFunction{$2}, $3...) };
-		| TYPE type { $$ = []unexpandedProcessOrFunction{$2} }
-		| TYPE type items { $$ = append([]unexpandedProcessOrFunction{$2}, $3...) };
+/* A program may consist a combination of processes, function definitions and types */
+items :   process_def { $$ = []unexpandedProcessOrFunction{$1} }
+		| process_def items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
+		| function_def { $$ = []unexpandedProcessOrFunction{$1} }
+		| function_def items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		| type_def { $$ = []unexpandedProcessOrFunction{$1} }
+		| type_def items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
 
-process : PRC LSBRACK names RSBRACK COLON expression  
-				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} }
-		| SPRC LSBRACK names RSBRACK COLON expression 
+/* A process is defined using the prc keyword */
+process_def : 
+		  PRC LSBRACK names RSBRACK COLON expression  
 				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} };
+		/*| SPRC LSBRACK names RSBRACK COLON expression 
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} };*/
 
+/* Expressions form the core part of a program  */
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }
 /* Send Macro */
@@ -119,7 +123,6 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   | /* print - for debugging */ PRINT name
 		   			{ $$ = process.NewPrint($2) };
  
-
 branches :   /* empty */         										 { $$ = nil }
          |               LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = []*process.BranchForm{process.NewBranch(process.Label{L: $1}, $3, $6)} }
          | branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = append($1, process.NewBranch(process.Label{L: $3}, $5, $8)) }
@@ -135,10 +138,10 @@ optional_names : /* empty */ { $$ = nil }
 name : SELF { $$ = process.Name{IsSelf: true} };
 name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 
-function : LABEL LPAREN optional_names RPAREN EQUALS expression
-			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $1, Parameters: $3, Body: $6}} };
+function_def : LET LABEL LPAREN optional_names RPAREN EQUALS expression
+			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7}} };
 
-type : LABEL EQUALS 
+type_def : TYPE LABEL EQUALS 
 			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionType{}} };
 
 %%

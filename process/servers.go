@@ -132,7 +132,7 @@ func (m *Monitor) monitorLoop() {
 	case error := <-m.errorChan:
 		fmt.Println(error)
 
-	case <-time.After(m.inactiveTimer + m.re.delay + 1000*time.Second):
+	case <-time.After(m.inactiveTimer + m.re.delay):
 		m.re.logMonitorf("Monitor inactive, terminating\n")
 		m.monitorFinished <- true
 		return

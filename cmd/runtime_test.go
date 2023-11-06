@@ -326,7 +326,6 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 func initProcesses(processes []process.Process) ([]process.Process, []process.MonitorRulesLog, uint64) {
 
 	l := []process.LogLevel{
-		process.LOGERROR,
 		// process.LOGINFO,
 		// process.LOGPROCESSING,
 		// process.LOGRULE,
@@ -335,7 +334,12 @@ func initProcesses(processes []process.Process) ([]process.Process, []process.Mo
 
 	debug := true
 
-	re := process.NewRuntimeEnvironment(l, debug, true)
+	re := &process.RuntimeEnvironment{
+		ProcessCount:     0,
+		Debug:            true,
+		Color:            true,
+		LogLevels:        l,
+		ExecutionVersion: process.NORMAL_ASYNC}
 
 	// fmt.Printf("Initializing %d processes\n", len(processes))
 

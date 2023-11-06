@@ -3,6 +3,7 @@ package process
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,19 +20,21 @@ type RuntimeEnvironment struct {
 	ProcessCount uint64
 
 	// Logging levels
-	logLevels []LogLevel
+	LogLevels []LogLevel
 	// Debugging info
-	debug bool
+	Debug bool
 	// Colored output
-	color bool
+	Color bool
 	// Keeps counter of the number of channels created
 	debugChannelCounter uint64
 	// Monitor info
 	monitor *Monitor
 	// Slow execution speed
-	delay time.Duration
+	Delay time.Duration
+	// Errors are sent to this channel
+	errorChan chan error
 	// Chooses how the transitions are performed ([non-]polarized [a]synchronous)
-	executionVersion Execution_Version
+	ExecutionVersion Execution_Version
 }
 
 type Execution_Version int
@@ -49,17 +52,17 @@ const (
 func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvironment {
 	return &RuntimeEnvironment{
 		ProcessCount:        0,
+		Debug:               true,
+		Color:               true,
+		LogLevels:           l,
+		ExecutionVersion:    NORMAL_ASYNC,
 		debugChannelCounter: 0,
-		debug:               true,
-		color:               true,
-		logLevels:           l,
-		executionVersion:    NORMAL_ASYNC}
+	}
 }
 
 // Entry point for execution
 func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *RuntimeEnvironment) *RuntimeEnvironment {
 	l := []LogLevel{
-		LOGERROR,
 		LOGINFO,
 		LOGPROCESSING,
 		LOGRULE,
@@ -69,16 +72,18 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 
 	if re == nil {
 		re = &RuntimeEnvironment{
-			ProcessCount:        0,
-			debugChannelCounter: 0,
-			debug:               true,
-			color:               true,
-			logLevels:           l,
-			delay:               1000 * time.Millisecond,
-			executionVersion:    NORMAL_ASYNC,
-			// delay: 0,
+			ProcessCount:     0,
+			Debug:            true,
+			Color:            true,
+			LogLevels:        l,
+			Delay:            1000 * time.Millisecond,
+			ExecutionVersion: NORMAL_ASYNC,
+			// Delay: 0,
 		}
 	}
+
+	re.debugChannelCounter = 0
+	re.errorChan = make(chan error)
 
 	re.logf(LOGINFO, "Initializing %d processes\n", len(processes))
 
@@ -86,7 +91,7 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 
 	re.SubstituteNameInitialization(processes, channels)
 
-	if re.debug {
+	if re.Debug {
 		startedWg := new(sync.WaitGroup)
 		startedWg.Add(1)
 
@@ -98,19 +103,24 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 
 	re.StartTransitions(processes)
 
-	re.WaitForMonitorToFinish()
+	select {
+	case <-re.monitor.monitorFinished:
+		// Monitor terminated successfully
+	case err := <-re.errorChan:
+		log.Fatal(err)
+	}
 
-	if re.debug {
+	if re.Debug {
 		re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
 	}
 
 	return re
 }
 
-func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
-	<-re.monitor.monitorFinished
-	return re.monitor.deadProcesses, re.monitor.rulesLog
-}
+// func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
+// 	<-re.monitor.monitorFinished
+// 	return re.monitor.deadProcesses, re.monitor.rulesLog
+// }
 
 // Create the initial channels required. E.g. for a process prc[c1], a channel with Ident: c1 is created
 func (re *RuntimeEnvironment) CreateChannelForEachProcess(processes []Process) []NameInitialization {
@@ -139,7 +149,7 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 
 	// Create new channel and assign a name to it
 	var mChan chan Message
-	switch re.executionVersion {
+	switch re.ExecutionVersion {
 
 	case NORMAL_ASYNC:
 		mChan = make(chan Message, 1)
@@ -152,7 +162,7 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	// Control channel is only used in the non-polarized version
 	var cmChan chan ControlMessage
 
-	if re.executionVersion == NON_POLARIZED_SYNC {
+	if re.ExecutionVersion == NON_POLARIZED_SYNC {
 		cmChan = make(chan ControlMessage)
 		// Not needed in the case of NORMAL_ASYNC or NORMAL_SYNC
 	}
@@ -182,7 +192,7 @@ func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 	for _, p := range processes {
 		p_uniq := p
 
-		switch re.executionVersion {
+		switch re.ExecutionVersion {
 		case NORMAL_ASYNC:
 			p_uniq.SpawnThenTransition(re)
 		case NORMAL_SYNC:
@@ -191,6 +201,11 @@ func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 			p_uniq.SpawnThenTransitionNP(re)
 		}
 	}
+}
+
+func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
+	<-re.monitor.monitorFinished
+	return re.monitor.deadProcesses, re.monitor.rulesLog
 }
 
 type Message struct {
@@ -276,20 +291,20 @@ const (
 	LOGINFO                        // information
 	LOGRULEDETAILS                 // rule while processing
 	LOGPROCESSING                  // process info
-	LOGERROR
+	// LOGERROR
 	LOGMONITOR
 )
 
 // Similar to Println
 func (re *RuntimeEnvironment) log(level LogLevel, message string) {
-	if slices.Contains(re.logLevels, level) {
+	if slices.Contains(re.LogLevels, level) {
 		fmt.Println(message)
 	}
 }
 
 // Similar to Printf
 func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...interface{}) {
-	if slices.Contains(re.logLevels, level) {
+	if slices.Contains(re.LogLevels, level) {
 		fmt.Printf(message, args...)
 	}
 }
@@ -298,89 +313,166 @@ func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...inter
 var colors = []string{"\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m"}
 var colorsHl = []string{"\033[102m", "\033[103m", "\033[104m", "\033[105m", "\033[106m", "\033[107m"}
 
+const colorRed = "\033[31m"
+const colorHlRed = "\033[101m"
 const colorsLen = 5 // avoiding gray coz it looks like white and red as it resembles error messages
-
-var resetColor = "\033[0m"
+const resetColor = "\033[0m"
 
 // Similar to Println
 func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, message string) {
-	if slices.Contains(re.logLevels, level) {
-		if re.color {
+	if slices.Contains(re.LogLevels, level) {
+		var buffer bytes.Buffer
+
+		if re.Color {
 			colorIndex := 0
 			if len(process.Providers) > 0 {
 				colorIndex = int(process.Providers[0].ChannelID) % colorsLen
 			}
-			fmt.Printf("%s%s: "+message+"\n%s", colors[colorIndex], process.OutlineString(), resetColor)
-		} else {
-			fmt.Printf("%s: "+message+"\n", process.OutlineString())
+
+			buffer.WriteString(colors[colorIndex])
 		}
+
+		buffer.WriteString(process.OutlineString())
+		buffer.WriteString(": ")
+		buffer.WriteString(message)
+
+		if re.Color {
+			buffer.WriteString(resetColor)
+		}
+
+		buffer.WriteString("\n")
+
+		fmt.Print(buffer.String())
+
 	}
 }
 
 // Similar to Printf
 func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, message string, args ...interface{}) {
-	if slices.Contains(re.logLevels, level) {
-		data := append([]interface{}{process.OutlineString()}, args...)
+	if slices.Contains(re.LogLevels, level) {
+		var buffer bytes.Buffer
 
-		if re.color {
+		if re.Color {
 			colorIndex := 0
 			if len(process.Providers) > 0 {
 				colorIndex = int(process.Providers[0].ChannelID) % colorsLen
 			}
-			var buf bytes.Buffer
-			buf.WriteString(colors[colorIndex])
-			buf.WriteString(fmt.Sprintf("%s: "+message, data...))
-			buf.WriteString(resetColor)
-
-			fmt.Print(buf.String())
-		} else {
-			fmt.Printf("%s: "+message, data...)
+			buffer.WriteString(colors[colorIndex])
 		}
+		buffer.WriteString(process.OutlineString())
+		buffer.WriteString(": ")
+		buffer.WriteString(fmt.Sprintf(message, args...))
+		if re.Color {
+			buffer.WriteString(resetColor)
+		}
+
+		fmt.Print(buffer.String())
 	}
 }
 
-// Similar to logProcessf but adds highlighted text
-func (re *RuntimeEnvironment) logProcessHighlight(level LogLevel, process *Process, message string) {
-	if slices.Contains(re.logLevels, level) {
+// // Similar to logProcessf but adds highlighted text
+// func (re *RuntimeEnvironment) logProcessHighlight(level LogLevel, process *Process, message string) {
+// 	if slices.Contains(re.LogLevels, level) {
+// 		colorIndex := 0
+// 		if len(process.Providers) > 0 {
+// 			colorIndex = int(process.Providers[0].ChannelID) % colorsLen
+// 		}
 
-		colorIndex := 0
-		if len(process.Providers) > 0 {
-			colorIndex = int(process.Providers[0].ChannelID) % colorsLen
-		}
+// 		var buf bytes.Buffer
+// 		buf.WriteString(colorsHl[colorIndex])
+// 		buf.WriteString(process.OutlineString())
+// 		buf.WriteString(": ")
+// 		buf.WriteString(message)
+// 		buf.WriteString(resetColor)
+
+// 		fmt.Print(buf.String())
+// 	}
+// }
+
+// func (re *RuntimeEnvironment) logProcessHighlightf(level LogLevel, process *Process, message string, args ...interface{}) {
+// 	if slices.Contains(re.LogLevels, level) {
+
+// 		data := append([]interface{}{process.OutlineString()}, args...)
+
+// 		if re.Color {
+// 			// todo fix: remove /n (if needed) from message and add it at the end
+
+// 			colorIndex := 0
+// 			if len(process.Providers) > 0 {
+// 				colorIndex = int(process.Providers[0].ChannelID) % colorsLen
+// 			}
+// 			var buf bytes.Buffer
+// 			// buf.WriteString(colors[colorIndex])
+// 			buf.WriteString(colorsHl[colorIndex])
+// 			buf.WriteString(fmt.Sprintf("%s: "+message, data...))
+// 			buf.WriteString(resetColor)
+
+// 			fmt.Print(buf.String())
+// 		} else {
+// 			fmt.Printf("%s: "+message, data...)
+// 		}
+// 		// fmt.Printf("%s", resetColor)
+// 	}
+// }
+
+func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {
+	if slices.Contains(re.LogLevels, LOGMONITOR) {
 
 		var buf bytes.Buffer
-		buf.WriteString(colorsHl[colorIndex])
-		buf.WriteString(process.OutlineString())
-		buf.WriteString(": ")
-		buf.WriteString(message)
-		buf.WriteString(resetColor)
+		if re.monitor.re.Color {
+			buf.WriteString(colorsHl[0])
+		}
+		buf.WriteString("[monitor]:")
+		if re.monitor.re.Color {
+			buf.WriteString(resetColor)
+		}
+		buf.WriteString(" ")
+		buf.WriteString(fmt.Sprintf(message, args...))
 
 		fmt.Print(buf.String())
 	}
 }
 
-func (re *RuntimeEnvironment) logProcessHighlightf(level LogLevel, process *Process, message string, args ...interface{}) {
-	if slices.Contains(re.logLevels, level) {
+func (re *RuntimeEnvironment) error(process *Process, message string) {
+	var buffer bytes.Buffer
 
-		data := append([]interface{}{process.OutlineString()}, args...)
-
-		if re.color {
-			// todo fix: remove /n (if needed) from message and add it at the end
-
-			colorIndex := 0
-			if len(process.Providers) > 0 {
-				colorIndex = int(process.Providers[0].ChannelID) % colorsLen
-			}
-			var buf bytes.Buffer
-			// buf.WriteString(colors[colorIndex])
-			buf.WriteString(colorsHl[colorIndex])
-			buf.WriteString(fmt.Sprintf("%s: "+message, data...))
-			buf.WriteString(resetColor)
-
-			fmt.Print(buf.String())
-		} else {
-			fmt.Printf("%s: "+message, data...)
-		}
-		// fmt.Printf("%s", resetColor)
+	if re.Color {
+		buffer.WriteString(colorHlRed)
+		buffer.WriteString("Error in ")
+		buffer.WriteString(process.OutlineString())
+		buffer.WriteString(resetColor)
+		buffer.WriteString("\n")
+		buffer.WriteString(colorRed)
+		buffer.WriteString(message)
+		buffer.WriteString(resetColor)
+		buffer.WriteString("\n")
+	} else {
+		fmt.Fprintf(&buffer, "Error %s: "+message+"\n", process.OutlineString())
 	}
+
+	// fmt.Println(buffer.String())
+	panic(buffer.String())
+}
+
+// Similar to Printf
+func (re *RuntimeEnvironment) errorf(process *Process, message string, args ...interface{}) {
+	data := append([]interface{}{process.OutlineString()}, args...)
+
+	var buffer bytes.Buffer
+
+	if re.Color {
+		buffer.WriteString(colorHlRed)
+		buffer.WriteString("Error in ")
+		buffer.WriteString(process.OutlineString())
+		buffer.WriteString("\n")
+		buffer.WriteString(resetColor)
+		buffer.WriteString(colorRed)
+		buffer.WriteString(fmt.Sprintf(message, args...))
+		buffer.WriteString(resetColor)
+	} else {
+		fmt.Fprintf(&buffer, "%s: "+message, data...)
+	}
+
+	// fmt.Println(buffer.String())
+	panic(buffer.String())
 }

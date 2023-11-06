@@ -1,13 +1,10 @@
 package process
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
 	"sync"
 	"time"
-
-	"golang.org/x/exp/slices"
 )
 
 type Monitor struct {
@@ -132,7 +129,7 @@ func (m *Monitor) monitorLoop() {
 	case error := <-m.errorChan:
 		fmt.Println(error)
 
-	case <-time.After(m.inactiveTimer + m.re.delay):
+	case <-time.After(m.inactiveTimer + m.re.Delay):
 		m.re.logMonitorf("Monitor inactive, terminating\n")
 		m.monitorFinished <- true
 		return
@@ -319,28 +316,4 @@ func NewSubscriberInfo() *SubscriberInfo {
 	processSubscriberChan := make(chan ProcessesStructure, 100)
 	ruleSubscriberChan := make(chan []RuleInfo, 100)
 	return &SubscriberInfo{ProcessesSubscriberChan: processSubscriberChan, RulesSubscriberChan: ruleSubscriberChan}
-}
-
-// func (m *Monitor) ForwardProcessFinished(process *Process) {
-// 	body := CopyForm(process.Body)
-// 	provider := process.Providers
-// 	shape := process.Shape
-
-// 	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: FWD, isRuleDone: true}
-// }
-
-func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {
-	if slices.Contains(re.logLevels, LOGMONITOR) {
-
-		data := append([]interface{}{"[monitor]"}, args...)
-
-		colorIndex := 0
-
-		var buf bytes.Buffer
-		buf.WriteString(colorsHl[colorIndex])
-		buf.WriteString(fmt.Sprintf("%s:\033[0m "+message, data...))
-		buf.WriteString(resetColor)
-
-		fmt.Print(buf.String())
-	}
 }

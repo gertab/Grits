@@ -24,7 +24,7 @@ import (
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
-	if re.debug {
+	if re.Debug {
 		// ProcessCount is atomic
 		atomic.AddUint64(&re.ProcessCount, 1)
 	}
@@ -45,7 +45,7 @@ func (process *Process) transitionLoop(re *RuntimeEnvironment) {
 	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", PolarityMap[process.Body.Polarity()], process.Body.String())
 
 	// To slow down the execution speed
-	time.Sleep(re.delay)
+	time.Sleep(re.Delay)
 
 	process.Body.(Transitionable).Transition(process, re)
 }
@@ -72,8 +72,7 @@ func TransitionBySending(process *Process, toChan chan Message, continuationFunc
 
 func TransitionByReceiving(process *Process, clientChan chan Message, processMessageFunc func(Message), re *RuntimeEnvironment) {
 	if clientChan == nil {
-		re.logProcess(LOGERROR, process, "Channel not initialized (attempting to receive on a dead channel)")
-		panic("Channel not initialized (attempting to receive on a dead channel)")
+		re.error(process, "Channel not initialized (attempting to receive on a dead channel)")
 	}
 
 	if len(process.Providers) > 1 {
@@ -167,8 +166,7 @@ func (f *SendForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		if !f.continuation_c.IsSelf {
 			// todo error
-			re.logProcessf(LOGERROR, process, "[send, client] in RCV rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
-			panic("Expected self but found something else")
+			re.errorf(process, "[send, client] in RCV rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
 		}
 
 		message := Message{Rule: RCV, Channel1: f.payload_c, Channel2: process.Providers[0]}
@@ -203,8 +201,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished sending on self")
 
 			if message.Rule != RCV {
-				re.logProcessf(LOGERROR, process, "expected RCV, found %s\n", RuleString[message.Rule])
-				panic("expected RCV")
+				re.errorf(process, "expected RCV, found %s\n", RuleString[message.Rule])
 			}
 
 			new_body := f.continuation_e
@@ -238,8 +235,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
 
 			if message.Rule != SND {
-				re.logProcessHighlight(LOGERROR, process, "expected SND")
-				panic("expected SND")
+				re.error(process, "expected SND")
 			}
 
 			new_body := f.continuation_e
@@ -303,9 +299,7 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 		functionCall := GetFunctionByNameArity(*process.FunctionDefinitions, f.functionName, arity)
 
 		if functionCall == nil {
-			// No function found in the FunctionDefinitions list
-			re.logProcessf(LOGERROR, process, "Function %s does not exist.\n", f.String())
-			panic("Wrong function call")
+			re.errorf(process, "Function %s does not exist.\n", f.String())
 		}
 
 		// Function found
@@ -365,9 +359,7 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// case self (...)
 
 		if !f.continuation_c.IsSelf {
-			// todo error
-			re.logProcessf(LOGERROR, process, "[select, client] in CSE rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
-			panic("Expected self but found something else")
+			re.errorf(process, "[select, client] in CSE rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
 		}
 
 		message := Message{Rule: CSE, Channel1: process.Providers[0], Label: f.label}
@@ -388,8 +380,7 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 func (f *BranchForm) Transition(process *Process, re *RuntimeEnvironment) {
 	// Should only be referred from within a case
-	fmt.Print("cannot transition on branch")
-	panic("should never happen")
+	re.error(process, "Should never transition on branch")
 }
 
 func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
@@ -408,8 +399,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULEDETAILS, process, "[case, provider] finished receiving on self")
 
 			if message.Rule != CSE {
-				re.logProcessHighlightf(LOGERROR, process, "expected CSE, found %s\n", RuleString[message.Rule])
-				panic("expected CSE")
+				re.errorf(process, "expected CSE, found %s\n", RuleString[message.Rule])
 			}
 
 			// Match received label with the available branches
@@ -426,8 +416,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 			}
 
 			if !found {
-				re.logProcessHighlightf(LOGERROR, process, "no matching labels found for %s\n", message.Label)
-				panic("no matching labels found")
+				re.errorf(process, "no matching labels found for %s\n", message.Label)
 			}
 
 			process.finishedRule(CSE, "[case, provider]", "(p)", re)
@@ -457,8 +446,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcessf(LOGRULEDETAILS, process, "[case, client] received select label %s on channel %s, containing rule: %s\n", message.Label, f.from_c.String(), RuleString[message.Rule])
 
 			if message.Rule != SEL {
-				re.logProcessHighlight(LOGERROR, process, "expected SEL ")
-				panic("expected SEL")
+				re.error(process, "expected SEL")
 			}
 
 			// Match received label with the available branches
@@ -475,8 +463,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 			}
 
 			if !found {
-				re.logProcessHighlightf(LOGERROR, process, "no matching labels found for %s\n", message.Label)
-				panic("no matching labels found")
+				re.errorf(process, "no matching labels found for %s\n", message.Label)
 			}
 
 			process.Body = new_body
@@ -512,8 +499,7 @@ func (f *WaitForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of wait: %s\n", f.String())
 
 	if f.to_c.IsSelf {
-		re.logProcess(LOGERROR, process, "Found a wait on self. Wait should only wait for other channels.")
-		panic("Found a wait on self. Wait should only wait for other channels.")
+		re.error(process, "Found a wait on self. Wait should only wait for other channels.")
 	}
 
 	clsRule := func(message Message) {
@@ -524,8 +510,7 @@ func (f *WaitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		re.logProcessf(LOGRULEDETAILS, process, "[wait, client] Received message on channel %s, containing rule: %s\n", f.to_c.String(), RuleString[message.Rule])
 
 		if message.Rule != CLS {
-			re.logProcessHighlight(LOGERROR, process, "expected CLS")
-			panic("expected CLS")
+			re.error(process, "expected CLS")
 		}
 
 		process.Body = f.continuation_e
@@ -547,9 +532,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of forward: %s\n", f.String())
 
 	if !f.to_c.IsSelf {
-		re.logProcessHighlight(LOGERROR, process, "should forward on self")
-		// todo panic
-		panic("should forward on self")
+		re.error(process, "should forward on self")
 	}
 
 	if f.Polarity() == NEGATIVE {
@@ -596,18 +579,17 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			// The following are not possible: e.g. a receive does not send anything
 		case RCV:
-			re.logProcess(LOGERROR, process, "a positive forward should never receive RCV messages")
+			re.error(process, "a positive forward should never receive RCV messages")
 		case CUT:
-			re.logProcess(LOGERROR, process, "a positive forward should never receive CUT messages")
+			re.error(process, "a positive forward should never receive CUT messages")
 		case CALL:
-			re.logProcess(LOGERROR, process, "a positive forward should never receive CALL messages")
+			re.error(process, "a positive forward should never receive CALL messages")
 		case SPLIT:
-			re.logProcess(LOGERROR, process, "a positive forward should never receive SPLIT messages")
+			re.error(process, "a positive forward should never receive SPLIT messages")
 		case DUP:
-			re.logProcess(LOGERROR, process, "a positive forward should never receive DUP messages")
+			re.error(process, "a positive forward should never receive DUP messages")
 		default:
-			re.logProcessHighlightf(LOGERROR, process, "forward should handle message %s", RuleString[message.Rule])
-			panic("todo forward should handle message")
+			re.errorf(process, "forward should handle message %s", RuleString[message.Rule])
 		}
 
 		process.finishedRule(FWD, "[fwd]", "(+ve)", re)
@@ -620,9 +602,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	if f.from_c.IsSelf {
 		// from_cannot be self -- only split other processes
-		re.logProcessHighlight(LOGERROR, process, "should not split on self")
-		// todo panic
-		panic("should not split on self")
+		re.error(process, "should not split on self")
 	}
 
 	// Perform SPLIT
@@ -658,8 +638,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 	if len(process.Providers) == 1 {
-		re.logProcessHighlight(LOGERROR, process, "Cannot duplicate this process")
-		panic("Cannot duplicate this process")
+		re.error(process, "Cannot duplicate this process")
 	}
 	// The process needs to be DUPlicated
 
@@ -766,9 +745,7 @@ func (f *CastForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// <...> <- shift self; ...
 
 		if !f.continuation_c.IsSelf {
-			// todo error
-			re.logProcessf(LOGERROR, process, "[cast, client] in SHF rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
-			panic("Expected self but found something else")
+			re.errorf(process, "[cast, client] in SHF rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
 		}
 
 		message := Message{Rule: SHF, Channel1: process.Providers[0]}
@@ -803,8 +780,7 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcess(LOGRULEDETAILS, process, "[shift, provider] finished sending on self")
 
 			if message.Rule != SHF {
-				re.logProcessHighlightf(LOGERROR, process, "expected SHF, found %s\n", RuleString[message.Rule])
-				panic("expected SHF")
+				re.errorf(process, "expected SHF, found %s\n", RuleString[message.Rule])
 			}
 
 			new_body := f.continuation_e
@@ -836,8 +812,7 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
 
 			if message.Rule != CST {
-				re.logProcessHighlight(LOGERROR, process, "expected CST")
-				panic("expected CST")
+				re.error(process, "expected CST")
 			}
 
 			new_body := f.continuation_e
@@ -864,7 +839,6 @@ func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
 //
 //	->  finishedRule/3
 //	->  finishedHalfRule/3
-//	->  finishedRuleBeforeRenamed/4
 //	->  processRenamed/1
 //	->  terminate/1
 //	->  terminateForward/1
@@ -873,26 +847,15 @@ func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
 
-	if re.debug {
+	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, rule)
 	}
 }
 
-// Used when a process will be terminated, however its provider will be used (to rename) another process
-// E.g. in the case of RCV, when the 'send' client dies, its provider channels are used for the continuation of the other process
-func (process *Process) finishedRuleBeforeRenamed(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
-
-	if re.debug {
-		// Update monitor
-		re.monitor.MonitorRuleFinishedBeforeRenamed(process, rule)
-	}
-}
-
 // Process did not finish executing but will be taken over
 func (process *Process) processRenamed(re *RuntimeEnvironment) {
-	if re.debug {
+	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorProcessRenamed(process)
 	}
@@ -902,7 +865,7 @@ func (process *Process) processRenamed(re *RuntimeEnvironment) {
 func (process *Process) terminate(re *RuntimeEnvironment) {
 	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
 
-	if re.debug {
+	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorProcessTerminated(process)
 	}
@@ -912,7 +875,7 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 func (process *Process) terminateForward(re *RuntimeEnvironment) {
 	re.logProcess(LOGRULEDETAILS, process, "process will change by forwarding its provider")
 
-	if re.debug {
+	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, FWD)
 	}
@@ -921,7 +884,7 @@ func (process *Process) terminateForward(re *RuntimeEnvironment) {
 func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
 
-	if re.debug {
+	if re.Debug {
 		// Update monitor
 		// todo change
 		re.monitor.MonitorProcessForwarded(process)

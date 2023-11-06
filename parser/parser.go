@@ -7,9 +7,14 @@ import (
 	"strings"
 )
 
-type unexpandedProcesses struct {
-	procs     []incompleteProcess
-	functions []process.FunctionDefinition
+type allEnvironment struct {
+	procsAndFuns []unexpandedProcessOrFunction
+}
+
+type unexpandedProcessOrFunction struct {
+	isProcess bool
+	proc      incompleteProcess
+	function  process.FunctionDefinition
 }
 
 // Process that is currently being parsed and yet to become a process.Process
@@ -19,9 +24,18 @@ type incompleteProcess struct {
 	// FunctionDefinitions *[]process.FunctionDefinition
 }
 
-func expandProcesses(u unexpandedProcesses) []*process.Process {
+func expandProcesses(u allEnvironment) []*process.Process {
 
 	var processes []*process.Process
+	var functions []process.FunctionDefinition
+
+	// Pull all functions
+	for _, p := range u.procsAndFuns {
+		if !p.isProcess {
+			// is function
+			functions = append(functions, p.function)
+		}
+	}
 
 	// First step is to duplicate process having multiple names:
 	// 		e.g. prc[a, b, c, d]: send self<...>
@@ -32,10 +46,13 @@ func expandProcesses(u unexpandedProcesses) []*process.Process {
 	//   <a, b, c, d> <- split ...
 
 	// todo maybe throw list of names in OtherProviders
-	for _, p := range u.procs {
+	// Pull all processes
+	for _, p := range u.procsAndFuns {
 		// for _, n := range p.Providers {
-		new_p := process.NewProcess(p.Body, p.Providers, process.LINEAR, &u.functions)
-		processes = append(processes, new_p)
+		if p.isProcess {
+			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, process.LINEAR, &functions)
+			processes = append(processes, new_p)
+		}
 		// }
 	}
 

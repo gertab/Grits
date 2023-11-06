@@ -97,7 +97,9 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 
 	re.WaitForMonitorToFinish()
 
-	re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
+	if re.debug {
+		re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
+	}
 
 	return re
 }

@@ -72,10 +72,10 @@ type Name struct {
 	IsSelf bool
 	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
 	Channel chan Message
-	// Polarity
+	// Polarity used in NORMAL_[A]SYNC
 	// todo: currently not being set/used, but might be useful to use it
 	Polarity Polarity
-	// Used for control commands (i.e. fwd, split, ...)
+	// Used for control commands (i.e. fwd, split, ...) in NON_POLARIZED_SYNC
 	ControlChannel chan ControlMessage
 	// Channel ID is a unique id for each channel
 	// Used only for debugging, since setting the ChannelID is a slow (& synchronous) operation

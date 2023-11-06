@@ -12,9 +12,9 @@ import (
 
 %union {
 	strval string
-	proc   incompleteProcess
-	procs []incompleteProcess
-	functions []process.FunctionDefinition
+	proc   unexpandedProcessOrFunction
+	items []unexpandedProcessOrFunction
+	function unexpandedProcessOrFunction
 	name process.Name
 	names []process.Name
 	form process.Form
@@ -23,13 +23,13 @@ import (
 
 %token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW LET IN END SPRC PRC FORWARD SELF PRINT POL_POSITIVE POL_NEGATIVE
 %type <strval> LABEL
-%type <procs> processes 
+%type <proc> process
+%type <items> items 
+%type <function> function
 %type <form> expression 
-%type <functions> functions
 %type <name> name
 %type <names> names
 %type <names> optional_names
-%type <proc> process
 %type <branches> branches
 
 %left SEND
@@ -40,26 +40,26 @@ import (
 root : program { };
 
 program : 
-		/* collect results in processesRes and functionDefinitionsRes */
-	expression 
+		/* simulate a process */
+	   expression 
 		{
-			philex.(*lexer).processesRes = append(philex.(*lexer).processesRes, incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root", IsSelf: false}}})
+			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{isProcess: true, proc: incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root", IsSelf: false}}}})
 		}
-	 | processes 
+	 | items 
 		{ 
-			philex.(*lexer).processesRes = $1
-		}
-	 | LET functions IN processes END 
-		{ 
-			philex.(*lexer).processesRes = $4
-			philex.(*lexer).functionDefinitionsRes = $2
+			philex.(*lexer).processesOrFunctionsRes = $1
 		};
+/*	 | LET functions IN processes END { }; */
 
-processes : process processes { $$ = append([]incompleteProcess{$1}, $2...) }
-		  | process           { $$ = []incompleteProcess{$1} }; 
+items :   process { $$ = []unexpandedProcessOrFunction{$1} }
+		| process items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		| LET function { $$ = []unexpandedProcessOrFunction{$2} }
+		| LET function items { $$ = append([]unexpandedProcessOrFunction{$2}, $3...) };
 
-process : PRC LSBRACK names RSBRACK COLON expression  { $$ = incompleteProcess{Body:$6, Providers: $3} }
-		| SPRC LSBRACK names RSBRACK COLON expression { $$ = incompleteProcess{Body:$6, Providers: $3} };
+process : PRC LSBRACK names RSBRACK COLON expression  
+				{ $$ = unexpandedProcessOrFunction{isProcess: true, proc: incompleteProcess{Body:$6, Providers: $3}} }
+		| SPRC LSBRACK names RSBRACK COLON expression 
+				{ $$ = unexpandedProcessOrFunction{isProcess: true, proc: incompleteProcess{Body:$6, Providers: $3}} };
 
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }
@@ -132,22 +132,22 @@ optional_names : /* empty */ { $$ = nil }
 name : SELF { $$ = process.Name{IsSelf: true} };
 name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 
-functions : /* empty */         										 
-				{ $$ = nil }
-		  | LABEL LPAREN optional_names RPAREN EQUALS expression functions
-		  		{ $$ = append($7, process.FunctionDefinition{FunctionName: $1, Parameters: $3, Body: $6}) };
+function : LABEL LPAREN optional_names RPAREN EQUALS expression
+			{ $$ = unexpandedProcessOrFunction{isProcess: false, function: process.FunctionDefinition{FunctionName: $1, Parameters: $3, Body: $6}} };
 
 %%
 
 // Parse is the entry point to the parser.
-func Parse(r io.Reader) (unexpandedProcesses, error) {
+func Parse(r io.Reader) (allEnvironment, error) {
 	l := newLexer(r)
 	phiParse(l)
+	allEnvironment := allEnvironment{}
 	select {
 	case err := <-l.Errors:
-		return unexpandedProcesses{}, err
+		return  allEnvironment, err
 	default:
-		unexpandedProcesses := unexpandedProcesses{procs: l.processesRes, functions: l.functionDefinitionsRes}
-		return unexpandedProcesses, nil	
+		// allEnvironment := l
+		allEnvironment.procsAndFuns = l.processesOrFunctionsRes
+		return allEnvironment, nil
 	}
 }

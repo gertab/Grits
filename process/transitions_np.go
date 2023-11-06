@@ -16,8 +16,10 @@ import (
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
-	// ProcessCount is atomic
-	atomic.AddUint64(&re.ProcessCount, 1)
+	if re.debug {
+		// ProcessCount is atomic
+		atomic.AddUint64(&re.ProcessCount, 1)
+	}
 
 	// notify monitor about new process
 	re.monitor.MonitorNewProcess(process)

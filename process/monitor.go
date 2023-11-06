@@ -344,25 +344,3 @@ func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {
 		fmt.Print(buf.String())
 	}
 }
-
-// Controller
-type Controller struct {
-	i int
-	// Controller receives new action permission requests on this channel
-	controllerNewActionChan chan int
-	// Runtime environment contains log info
-	re *RuntimeEnvironment
-}
-
-func NewController(re *RuntimeEnvironment) *Controller {
-
-	controllerChan := make(chan int)
-
-	return &Controller{i: 0, controllerNewActionChan: controllerChan, re: re}
-}
-
-func (m *Controller) startController(startedWg *sync.WaitGroup) {
-	m.re.log(LOGINFO, "Controller alive, waiting to receive...")
-
-	startedWg.Done()
-}

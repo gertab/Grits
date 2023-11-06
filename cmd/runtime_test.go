@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const numberOfIterations = 1000
+const numberOfIterations = 2000
 
 // Invalidate all cache
 // go clean -testcache
@@ -98,6 +98,7 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 
 		// {steps{{"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}, 2},
 		{steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 4},
+		// {steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 3},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -344,10 +345,9 @@ func initProcesses(processes []process.Process) ([]process.Process, []process.Mo
 
 	if debug {
 		startedWg := new(sync.WaitGroup)
-		startedWg.Add(2)
+		startedWg.Add(1)
 
 		re.InitializeMonitor(startedWg, nil)
-		re.InitializeController(startedWg)
 
 		// Ensure that both servers are running
 		startedWg.Wait()

@@ -6,25 +6,6 @@ import (
 	"strconv"
 )
 
-// Stores the states of each running process.
-// May also reference a controller & a monitor to observe the running state.
-type ProcessConfiguration struct {
-	Processes []Process
-	// ref to controller/monitor
-}
-
-type Shape int
-
-const (
-	LINEAR Shape = iota
-	SHARED
-)
-
-var shapeMap = map[Shape]string{
-	LINEAR: "prc",
-	SHARED: "sprc",
-}
-
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
 	Body                Form
@@ -190,4 +171,16 @@ func GetFunctionByNameArity(functions []FunctionDefinition, name string, arity i
 	}
 
 	return nil
+}
+
+type Shape int
+
+const (
+	LINEAR Shape = iota
+	SHARED
+)
+
+var shapeMap = map[Shape]string{
+	LINEAR: "prc",
+	SHARED: "sprc",
 }

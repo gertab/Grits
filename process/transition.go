@@ -222,7 +222,6 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 		TransitionByReceiving(process, process.Providers[0].Channel, rcvRule, re)
 	} else {
 		// SND rule (client, +ve)
-		// todo ask for controller permission
 		//
 		//  [<...> <- recv self; ...]
 		//	 /|\
@@ -821,7 +820,6 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 		TransitionByReceiving(process, process.Providers[0].Channel, shfRule, re)
 	} else {
 		// CST rule (client, +ve)
-		// todo ask for controller permission
 		//
 		//  [<..> <- shift from_c; ...]
 		//	 /|\

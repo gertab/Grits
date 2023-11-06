@@ -236,7 +236,6 @@ func (f *ReceiveForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		TransitionByReceivingNP(process, process.Providers[0].Channel, rcvRule, re)
 	} else {
 		// SND rule (client)
-		// todo ask for controller permission
 
 		sndRule := func(message Message) {
 			re.logProcess(LOGRULE, process, "[receive, client] starting SND rule")

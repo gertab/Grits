@@ -28,8 +28,6 @@ type RuntimeEnvironment struct {
 	debugChannelCounter uint64
 	// Monitor info
 	monitor *Monitor
-	// Controller info
-	controller *Controller
 	// Slow execution speed
 	delay time.Duration
 	// Chooses how the transitions are performed ([non-]polarized [a]synchronous)
@@ -84,10 +82,9 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 
 	if re.debug {
 		startedWg := new(sync.WaitGroup)
-		startedWg.Add(2)
+		startedWg.Add(1)
 
 		re.InitializeMonitor(startedWg, subscriber)
-		re.InitializeController(startedWg)
 
 		// Ensure that both servers are running
 		startedWg.Wait()
@@ -166,14 +163,6 @@ func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subsc
 
 	// Start monitor on new thread
 	go re.monitor.startMonitor(startedWg)
-}
-
-func (re *RuntimeEnvironment) InitializeController(startedWg *sync.WaitGroup) {
-	// Declare new controller
-	re.controller = NewController(re)
-
-	// Start controller on new thread
-	go re.controller.startController(startedWg)
 }
 
 // Used after initialization to substitute known names to the actual channel

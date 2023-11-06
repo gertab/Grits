@@ -56,8 +56,8 @@ func TransitionBySendingNP(process *Process, toChan chan Message, continuationFu
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].ControlChannel:
-			handleControlMessageNP(process, pm, re)
+		case cm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, cm, re)
 		case toChan <- sendingMessage:
 			// Sending a message to toChan
 			continuationFunc()
@@ -76,8 +76,8 @@ func TransitionByReceivingNP(process *Process, clientChan chan Message, processM
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].ControlChannel:
-			handleControlMessageNP(process, pm, re)
+		case cm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, cm, re)
 		case receivedMessage := <-clientChan:
 			// Acting as a client by consuming a message from some channel
 			processMessageFunc(receivedMessage)
@@ -85,61 +85,48 @@ func TransitionByReceivingNP(process *Process, clientChan chan Message, processM
 	}
 }
 
-// func TransitionAsSpecialForm(process *Process, controlChannel chan ControlMessage, specialFormFunc func(), sendingControlMessage ControlMessage, re *RuntimeEnvironment) {
-// 	// Certain forms (e.g. forward and split forms) send their command on the control channel, never utilizing their main provider channel
-// 	select {
-// 	case pm := <-process.Provider.ControlChannel:
-// 		handleControlMessageNP(process, pm, re)
-// 	case controlChannel <- sendingControlMessage:
-// 		specialFormFunc()
-// 	}
-// }
-
 func TransitionInternallyNP(process *Process, internalFunction func(), re *RuntimeEnvironment) {
 	if len(process.Providers) > 1 {
 		// Split process if needed
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].ControlChannel:
-			handleControlMessageNP(process, pm, re)
+		case cm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, cm, re)
 		default:
 			internalFunction()
 		}
 	}
 }
 
-func handleControlMessageNP(process *Process, pm ControlMessage, re *RuntimeEnvironment) {
-	switch pm.Action {
+func handleControlMessageNP(process *Process, cm ControlMessage, re *RuntimeEnvironment) {
+	switch cm.Action {
 	case FWD_REQUEST:
-		fwdhandleControlMessageNP(process, pm, re)
-	// case SPLIT_DUP_FWD:
-	// 	// todo probably remove
-	// 	splithandleControlMessageNP(process, pm, re)
+		fwdhandleControlMessageNP(process, cm, re)
 	default:
 		handleInvalidControlMessageNP(process, re)
 	}
 }
 
-func fwdhandleControlMessageNP(process *Process, pm ControlMessage, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULEDETAILS, process, "[Control Msg] Received FWD request. Continuing as %s\n", NamesToString(pm.Providers))
+func fwdhandleControlMessageNP(process *Process, cm ControlMessage, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "[Control Msg] Received FWD request. Continuing as %s\n", NamesToString(cm.Providers))
 	// todo remove Close current channel and switch to new one
 
 	// todo ensure that action is correct
-	if pm.Action != FWD_REQUEST {
+	if cm.Action != FWD_REQUEST {
 		re.logProcessHighlight(LOGERROR, process, "expected FWD_REQUEST")
 		panic("expected FWD_REQUEST")
 	}
 
-	// Notify that the process will change providers (i.e. the process.Providers will die and be replaced by pm.Providers)
-	process.terminateBeforeRename(process.Providers, pm.Providers, re)
+	// Notify that the process will change providers (i.e. the process.Providers will die and be replaced by cm.Providers)
+	process.terminateBeforeRename(process.Providers, cm.Providers, re)
 
 	// the process.Providers can no longer be used, so close them
 	// todo check if they are being closed anywhere else
 	closeProvidersNP(process.Providers)
 
 	// Change the providers to the one being forwarded to
-	process.Providers = pm.Providers
+	process.Providers = cm.Providers
 
 	process.transitionLoopNP(re)
 }
@@ -472,8 +459,8 @@ func (f *CallForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		process.performDUPruleNP(re)
 	} else {
 		select {
-		case pm := <-process.Providers[0].ControlChannel:
-			handleControlMessageNP(process, pm, re)
+		case cm := <-process.Providers[0].ControlChannel:
+			handleControlMessageNP(process, cm, re)
 		default:
 			callRule()
 		}
@@ -547,9 +534,9 @@ func (f *ForwardForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 	// TransitionAsSpecialForm(process, f.from_c.ControlChannel, forwardRule, controlMessage, re)
 	select {
-	case pm := <-process.Providers[0].ControlChannel:
+	case cm := <-process.Providers[0].ControlChannel:
 		// todo check if this should only happen if len(process.OtherProviders) == 0
-		handleControlMessageNP(process, pm, re)
+		handleControlMessageNP(process, cm, re)
 	case f.from_c.ControlChannel <- controlMessage:
 		forwardRule()
 	}

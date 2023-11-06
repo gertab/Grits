@@ -31,14 +31,14 @@ type RuntimeEnvironment struct {
 	// Slow execution speed
 	delay time.Duration
 	// Chooses how the transitions are performed ([non-]polarized [a]synchronous)
-	execution_version RE_Version
+	executionVersion Execution_Version
 }
 
-type RE_Version int
+type Execution_Version int
 
 const (
 	/* polarized + async */
-	NORMAL_ASYNC RE_Version = iota
+	NORMAL_ASYNC Execution_Version = iota
 	/* polarized + sync */
 	NORMAL_SYNC
 	/* non-polarized forwards + sync */
@@ -47,7 +47,13 @@ const (
 )
 
 func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvironment {
-	return &RuntimeEnvironment{ProcessCount: 0, debugChannelCounter: 0, debug: true, color: true, logLevels: l, execution_version: NORMAL_ASYNC}
+	return &RuntimeEnvironment{
+		ProcessCount:        0,
+		debugChannelCounter: 0,
+		debug:               true,
+		color:               true,
+		logLevels:           l,
+		executionVersion:    NORMAL_ASYNC}
 }
 
 // Entry point for execution
@@ -69,7 +75,7 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 			color:               true,
 			logLevels:           l,
 			delay:               1000 * time.Millisecond,
-			execution_version:   NORMAL_ASYNC,
+			executionVersion:    NORMAL_ASYNC,
 			// delay: 0,
 		}
 	}
@@ -133,7 +139,7 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 
 	// Create new channel and assign a name to it
 	var mChan chan Message
-	switch re.execution_version {
+	switch re.executionVersion {
 
 	case NORMAL_ASYNC:
 		mChan = make(chan Message, 1)
@@ -144,17 +150,14 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 	}
 
 	// Control channel is only used in the non-polarized version
-	var pmChan chan ControlMessage
+	var cmChan chan ControlMessage
 
-	if re.execution_version == NON_POLARIZED_SYNC {
-		pmChan = make(chan ControlMessage)
+	if re.executionVersion == NON_POLARIZED_SYNC {
+		cmChan = make(chan ControlMessage)
 		// Not needed in the case of NORMAL_ASYNC or NORMAL_SYNC
 	}
 
-	// // todo see hwo to eventually change to buffered
-	// mChan := make(chan Message, 1000)
-	// pmChan := make(chan ControlMessage, 1000)
-	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, ControlChannel: pmChan, IsSelf: false}
+	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, ControlChannel: cmChan, IsSelf: false}
 }
 
 func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subscriber *SubscriberInfo) {
@@ -179,7 +182,7 @@ func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
 	for _, p := range processes {
 		p_uniq := p
 
-		switch re.execution_version {
+		switch re.executionVersion {
 		case NORMAL_ASYNC:
 			p_uniq.SpawnThenTransition(re)
 		case NORMAL_SYNC:

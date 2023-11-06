@@ -281,14 +281,14 @@ func (c *Client) handleRequest(message string) {
 		go c.handleMonitorProcessUpdates()
 		go c.handleMonitorRuleUpdates()
 
-		processes, err := parser.ParseString(request.ProgramToCompile)
+		processes, globalEnv, err := parser.ParseString(request.ProgramToCompile)
 
 		if err != nil {
 			c.sendError(err.Error())
 			return
 		}
 
-		process.InitializeProcesses(processes, c.subscriberInfo, nil)
+		process.InitializeProcesses(processes, globalEnv, c.subscriberInfo, nil)
 	} else {
 		c.sendError("Invalid request type")
 	}

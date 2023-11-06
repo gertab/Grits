@@ -25,7 +25,7 @@ func assertEqual(t *testing.T, i1, i2 process.Form) {
 }
 
 func parseGetBody(input string) process.Form {
-	body, err := ParseString(input)
+	body, _, err := ParseString(input)
 
 	if err != nil {
 		return nil

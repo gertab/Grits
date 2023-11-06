@@ -227,7 +227,7 @@ func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOpt
 }
 
 func checkInput(t *testing.T, input string, expectedOptions []traceOption, done chan bool) {
-	processes, err := parser.ParseString(input)
+	processes, globalEnv, err := parser.ParseString(input)
 
 	if err != nil {
 		t.Errorf("Error during parsing")
@@ -235,7 +235,7 @@ func checkInput(t *testing.T, input string, expectedOptions []traceOption, done 
 
 		return
 	}
-	deadProcesses, rulesLog, _ := initProcesses(processes)
+	deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv)
 	stepsGot := convertRulesLog(rulesLog)
 
 	if len(stepsGot) == 0 {
@@ -323,7 +323,7 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 	return log
 }
 
-func initProcesses(processes []process.Process) ([]process.Process, []process.MonitorRulesLog, uint64) {
+func initProcesses(processes []process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, []process.MonitorRulesLog, uint64) {
 
 	l := []process.LogLevel{
 		// process.LOGINFO,
@@ -335,11 +335,11 @@ func initProcesses(processes []process.Process) ([]process.Process, []process.Mo
 	debug := true
 
 	re := &process.RuntimeEnvironment{
-		ProcessCount:     0,
-		Debug:            true,
-		Color:            true,
-		LogLevels:        l,
-		ExecutionVersion: process.NORMAL_ASYNC}
+		GlobalEnvironment: globalEnv,
+		Debug:             true,
+		Color:             true,
+		LogLevels:         l,
+		ExecutionVersion:  process.NORMAL_ASYNC}
 
 	// fmt.Printf("Initializing %d processes\n", len(processes))
 
@@ -361,5 +361,5 @@ func initProcesses(processes []process.Process) ([]process.Process, []process.Mo
 
 	deadProcesses, rulesLog := re.WaitForMonitorToFinish()
 
-	return deadProcesses, rulesLog, re.ProcessCount
+	return deadProcesses, rulesLog, re.ProcessCount()
 }

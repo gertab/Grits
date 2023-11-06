@@ -18,7 +18,7 @@ import (
 func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
 	if re.Debug {
 		// ProcessCount is atomic
-		atomic.AddUint64(&re.ProcessCount, 1)
+		atomic.AddUint64(&re.processCount, 1)
 	}
 
 	// notify monitor about new process
@@ -262,7 +262,7 @@ func (f *NewForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		// Create structure of new process
 		newProcessBody := f.body
 		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
-		newProcess := NewProcess(newProcessBody, []Name{newChannel}, LINEAR, process.FunctionDefinitions, process.Types)
+		newProcess := NewProcess(newProcessBody, []Name{newChannel}, LINEAR)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 
@@ -408,7 +408,7 @@ func (f *CallForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	callRule := func() {
 		// Look up function by name and arity
 		arity := len(f.parameters)
-		functionCall := GetFunctionByNameArity(*process.FunctionDefinitions, f.functionName, arity)
+		functionCall := GetFunctionByNameArity(*re.GlobalEnvironment.FunctionDefinitions, f.functionName, arity)
 
 		if functionCall == nil {
 			// No function found in the FunctionDefinitions list
@@ -546,7 +546,7 @@ func (f *SplitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 		// Create structure of new forward process
 		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, process.Body.Polarity())
-		newProcess := NewProcess(newProcessBody, newSplitNames, LINEAR, process.FunctionDefinitions, process.Types)
+		newProcess := NewProcess(newProcessBody, newSplitNames, LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 		// Spawn and initiate new forward process
 		newProcess.SpawnThenTransitionNP(re)
@@ -603,7 +603,7 @@ func (process *Process) performDUPruleNP(re *RuntimeEnvironment) {
 
 		// Create and spawn the new processes
 		// Set its provider to the channel received in the DUP request
-		newDuplicatedProcess := NewProcess(newDuplicatedProcessBody, []Name{newProcessNames[i]}, process.Shape, process.FunctionDefinitions, process.Types)
+		newDuplicatedProcess := NewProcess(newDuplicatedProcessBody, []Name{newProcessNames[i]}, process.Shape)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] creating new process (%d): %s\n", i, newDuplicatedProcess.String())
 
@@ -619,7 +619,7 @@ func (process *Process) performDUPruleNP(re *RuntimeEnvironment) {
 	for i := range processFreeNames {
 		// Create structure of new forward process
 		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i], process.Body.Polarity())
-		newProcess := NewProcess(newProcessBody, freshChannels[i], LINEAR, process.FunctionDefinitions, process.Types)
+		newProcess := NewProcess(newProcessBody, freshChannels[i], LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process
 		newProcess.SpawnThenTransitionNP(re)

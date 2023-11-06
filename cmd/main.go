@@ -150,7 +150,7 @@ func main() {
 	// processes, err := parser.ParseFile("cmd/examples/ex1.txt")
 
 	// Execute directly from string
-	processes, err := parser.ParseString(program)
+	processes, globalEnv, err := parser.ParseString(program)
 	if err != nil {
 		log.Fatal(err)
 		// fmt.Println(err.Error())
@@ -158,9 +158,9 @@ func main() {
 	}
 
 	re := &process.RuntimeEnvironment{
-		ProcessCount: 0,
-		Debug:        true,
-		Color:        true,
+		GlobalEnvironment: globalEnv,
+		Debug:             true,
+		Color:             true,
 		LogLevels: []process.LogLevel{
 			process.LOGINFO,
 			process.LOGPROCESSING,
@@ -171,7 +171,9 @@ func main() {
 		ExecutionVersion: process.NORMAL_ASYNC,
 	}
 
-	process.InitializeProcesses(processes, nil, re)
+	// process.TypecheckProcesses(processes)
+
+	process.InitializeProcesses(processes, nil, nil, re)
 
 	// Run via API
 	// setupAPI()

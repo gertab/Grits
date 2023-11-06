@@ -34,7 +34,7 @@ type incompleteProcess struct {
 	// FunctionDefinitions *[]process.FunctionDefinition
 }
 
-func expandProcesses(u allEnvironment) []*process.Process {
+func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvironment) {
 
 	var processes []*process.Process
 	var functions []process.FunctionDefinition
@@ -62,7 +62,7 @@ func expandProcesses(u allEnvironment) []*process.Process {
 	for _, p := range u.procsAndFuns {
 		// for _, n := range p.Providers {
 		if p.kind == PROCESS {
-			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, process.LINEAR, &functions, &types)
+			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, process.LINEAR)
 			processes = append(processes, new_p)
 		}
 		// }
@@ -75,7 +75,7 @@ func expandProcesses(u allEnvironment) []*process.Process {
 	// 	p.Body.
 	// }
 
-	return processes
+	return processes, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}
 }
 
 // func polarizeProcesses(processes []*process.Process) []*process.Process {
@@ -122,16 +122,16 @@ func expandProcesses(u allEnvironment) []*process.Process {
 // }
 
 // Convert from a list of pointer of processes to a plain list of processes (ready to be executed)
-func finalizeProcesses(processes []*process.Process) []process.Process {
+func finalizeProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, *process.GlobalEnvironment) {
 	result := make([]process.Process, 0)
 	for _, j := range processes {
 		result = append(result, *j)
 	}
 
-	return result
+	return result, globalEnv
 }
 
-func ParseFile(fileName string) ([]process.Process, error) {
+func ParseFile(fileName string) ([]process.Process, *process.GlobalEnvironment, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		panic(err)
@@ -142,17 +142,17 @@ func ParseFile(fileName string) ([]process.Process, error) {
 	if err != nil {
 		fmt.Println(err)
 		// panic("Parsing error!")
-		return nil, err
+		return nil, nil, err
 	}
 
-	expandedProcesses := expandProcesses(allEnvironment)
+	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
 	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	finalizedProcesses := finalizeProcesses(expandedProcesses)
+	finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
 
-	return finalizedProcesses, nil
+	return finalizedProcesses, globalEnv, nil
 }
 
-func ParseString(program string) ([]process.Process, error) {
+func ParseString(program string) ([]process.Process, *process.GlobalEnvironment, error) {
 	r := strings.NewReader(program)
 
 	allEnvironment, err := Parse(r)
@@ -160,26 +160,26 @@ func ParseString(program string) ([]process.Process, error) {
 	if err != nil {
 		fmt.Println(err)
 		// panic("Parsing error!")
-		return nil, err
+		return nil, nil, err
 	}
 
-	expandedProcesses := expandProcesses(allEnvironment)
+	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
 	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	finalizedProcesses := finalizeProcesses(expandedProcesses)
+	finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
 
-	return finalizedProcesses, nil
+	return finalizedProcesses, globalEnv, nil
 }
 
-func Check() {
-	processes, _ := ParseFile("parser/input.test")
+// func Check() {
+// 	processes, _ := ParseFile("parser/input.test")
 
-	for _, p := range processes {
-		fmt.Println(p.Body.String())
-		if p.FunctionDefinitions != nil {
-			fmt.Println(len(*p.FunctionDefinitions))
-		}
-	}
-}
+// 	for _, p := range processes {
+// 		fmt.Println(p.Body.String())
+// 		if p.FunctionDefinitions != nil {
+// 			fmt.Println(len(*p.FunctionDefinitions))
+// 		}
+// 	}
+// }
 
 // // Forms used as shorthand notations
 // // When expanded, these are converted to the other ones

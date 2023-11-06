@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"phi/types"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,11 +15,22 @@ import (
 // A RuntimeEnvironmentOption sets an option on a RuntimeEnvironment.
 type RuntimeEnvironmentOption func(*RuntimeEnvironment)
 
+type GlobalEnvironment struct {
+	// Contains all the functions definitions
+	FunctionDefinitions *[]FunctionDefinition
+
+	// Contains all the type definitions
+	Types *[]types.SessionType
+}
+
 // RuntimeEnvironment provides the instance instance for processes to be initialized and executed
 type RuntimeEnvironment struct {
-	// Keeps count of how many processes were spawned (only for debug info)
-	ProcessCount uint64
 
+	// Keeps a (read only) global environment containing the function definitions and session types
+	GlobalEnvironment *GlobalEnvironment
+
+	// Keeps count of how many processes were spawned (only for debug info)
+	processCount uint64
 	// Logging levels
 	LogLevels []LogLevel
 	// Debugging info
@@ -51,17 +63,18 @@ const (
 
 func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvironment {
 	return &RuntimeEnvironment{
-		ProcessCount:        0,
 		Debug:               true,
 		Color:               true,
 		LogLevels:           l,
 		ExecutionVersion:    NORMAL_ASYNC,
 		debugChannelCounter: 0,
+		processCount:        0,
+		errorChan:           make(chan error),
 	}
 }
 
 // Entry point for execution
-func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *RuntimeEnvironment) *RuntimeEnvironment {
+func InitializeProcesses(processes []Process, globalEnv *GlobalEnvironment, subscriber *SubscriberInfo, re *RuntimeEnvironment) *RuntimeEnvironment {
 	l := []LogLevel{
 		LOGINFO,
 		LOGPROCESSING,
@@ -72,7 +85,6 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 
 	if re == nil {
 		re = &RuntimeEnvironment{
-			ProcessCount:     0,
 			Debug:            true,
 			Color:            true,
 			LogLevels:        l,
@@ -82,6 +94,11 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 		}
 	}
 
+	if globalEnv != nil {
+		re.GlobalEnvironment = globalEnv
+	}
+
+	re.processCount = 0
 	re.debugChannelCounter = 0
 	re.errorChan = make(chan error)
 
@@ -111,7 +128,7 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 	}
 
 	if re.Debug {
-		re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount)
+		re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount())
 	}
 
 	return re
@@ -121,6 +138,10 @@ func InitializeProcesses(processes []Process, subscriber *SubscriberInfo, re *Ru
 // 	<-re.monitor.monitorFinished
 // 	return re.monitor.deadProcesses, re.monitor.rulesLog
 // }
+
+func (re *RuntimeEnvironment) ProcessCount() uint64 {
+	return re.processCount
+}
 
 // Create the initial channels required. E.g. for a process prc[c1], a channel with Ident: c1 is created
 func (re *RuntimeEnvironment) CreateChannelForEachProcess(processes []Process) []NameInitialization {

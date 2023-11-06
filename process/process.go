@@ -2,26 +2,25 @@ package process
 
 import (
 	"bytes"
-	"phi/types"
 	"strconv"
 )
 
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
-	Body                Form
-	Providers           []Name
-	Shape               Shape
-	FunctionDefinitions *[]FunctionDefinition
-	Types               *[]types.SessionType
+	Body      Form
+	Providers []Name
+	Shape     Shape
+	// FunctionDefinitions *[]FunctionDefinition
+	// Types               *[]types.SessionType
 }
 
-func NewProcess(body Form, providers []Name, shape Shape, functionDefinitions *[]FunctionDefinition, types *[]types.SessionType) *Process {
+func NewProcess(body Form, providers []Name, shape Shape) *Process {
 	return &Process{
-		Body:                body,
-		Providers:           providers,
-		Shape:               shape,
-		FunctionDefinitions: functionDefinitions,
-		Types:               types,
+		Body:      body,
+		Providers: providers,
+		Shape:     shape,
+		// FunctionDefinitions: functionDefinitions,
+		// Types:               types,
 	}
 }
 

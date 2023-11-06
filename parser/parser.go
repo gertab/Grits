@@ -137,7 +137,7 @@ func ParseFile(fileName string) ([]process.Process, error) {
 		panic(err)
 	}
 	// LexAndPrintTokens(file)
-	prc, err := Parse(file)
+	allEnvironment, err := Parse(file)
 
 	if err != nil {
 		fmt.Println(err)
@@ -145,7 +145,7 @@ func ParseFile(fileName string) ([]process.Process, error) {
 		return nil, err
 	}
 
-	expandedProcesses := expandProcesses(prc)
+	expandedProcesses := expandProcesses(allEnvironment)
 	// polarizedProcesses := polarizeProcesses(expandedProcesses)
 	finalizedProcesses := finalizeProcesses(expandedProcesses)
 
@@ -155,7 +155,7 @@ func ParseFile(fileName string) ([]process.Process, error) {
 func ParseString(program string) ([]process.Process, error) {
 	r := strings.NewReader(program)
 
-	prc, err := Parse(r)
+	allEnvironment, err := Parse(r)
 
 	if err != nil {
 		fmt.Println(err)
@@ -163,7 +163,7 @@ func ParseString(program string) ([]process.Process, error) {
 		return nil, err
 	}
 
-	expandedProcesses := expandProcesses(prc)
+	expandedProcesses := expandProcesses(allEnvironment)
 	// polarizedProcesses := polarizeProcesses(expandedProcesses)
 	finalizedProcesses := finalizeProcesses(expandedProcesses)
 

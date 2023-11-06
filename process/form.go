@@ -10,11 +10,9 @@ import (
 // Form refers to AST types
 type Form interface {
 	String() string
+	Polarity() Polarity
 	FreeNames() []Name
 	Substitute(Name, Name)
-	Transition(*Process, *RuntimeEnvironment)
-	TransitionNP(*Process, *RuntimeEnvironment) /* transition without polarities */
-	Polarity() Polarity
 }
 
 type Polarity int
@@ -25,7 +23,7 @@ const (
 	UNKNOWN
 )
 
-var polarityMap = map[Polarity]string{
+var PolarityMap = map[Polarity]string{
 	POSITIVE: "+ve",
 	NEGATIVE: "-ve",
 	UNKNOWN:  "Unknown",

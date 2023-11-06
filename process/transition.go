@@ -35,15 +35,19 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 	go process.transitionLoop(re)
 }
 
+type Transitionable interface {
+	Transition(*Process, *RuntimeEnvironment)
+}
+
 // Entry point for each process transition
 // todo maybe rename to process.Transition
 func (process *Process) transitionLoop(re *RuntimeEnvironment) {
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", polarityMap[process.Body.Polarity()], process.Body.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", PolarityMap[process.Body.Polarity()], process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.delay)
 
-	process.Body.Transition(process, re)
+	process.Body.(Transitionable).Transition(process, re)
 }
 
 // When a process starts transitioning, a process chooses to transition as one of these forms:

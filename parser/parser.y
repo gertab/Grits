@@ -6,26 +6,27 @@ package parser
 import (
 	"io"
 	"phi/process"
+	"phi/types"
 )
 
 %}
 
 %union {
 	strval string
-	proc   unexpandedProcessOrFunction
+	common_type   unexpandedProcessOrFunction
 	items []unexpandedProcessOrFunction
-	function unexpandedProcessOrFunction
 	name process.Name
 	names []process.Name
 	form process.Form
 	branches []*process.BranchForm
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW LET IN END SPRC PRC FORWARD SELF PRINT POL_POSITIVE POL_NEGATIVE
+%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT POL_POSITIVE POL_NEGATIVE
 %type <strval> LABEL
-%type <proc> process
 %type <items> items 
-%type <function> function
+%type <common_type> process
+%type <common_type> function
+%type <common_type> type
 %type <form> expression 
 %type <name> name
 %type <names> names
@@ -43,7 +44,7 @@ program :
 		/* simulate a process */
 	   expression 
 		{
-			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{isProcess: true, proc: incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root", IsSelf: false}}}})
+			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root", IsSelf: false}}}})
 		}
 	 | items 
 		{ 
@@ -52,14 +53,16 @@ program :
 /*	 | LET functions IN processes END { }; */
 
 items :   process { $$ = []unexpandedProcessOrFunction{$1} }
-		| process items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		| process items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
 		| LET function { $$ = []unexpandedProcessOrFunction{$2} }
 		| LET function items { $$ = append([]unexpandedProcessOrFunction{$2}, $3...) };
+		| TYPE type { $$ = []unexpandedProcessOrFunction{$2} }
+		| TYPE type items { $$ = append([]unexpandedProcessOrFunction{$2}, $3...) };
 
 process : PRC LSBRACK names RSBRACK COLON expression  
-				{ $$ = unexpandedProcessOrFunction{isProcess: true, proc: incompleteProcess{Body:$6, Providers: $3}} }
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} }
 		| SPRC LSBRACK names RSBRACK COLON expression 
-				{ $$ = unexpandedProcessOrFunction{isProcess: true, proc: incompleteProcess{Body:$6, Providers: $3}} };
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} };
 
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }
@@ -133,7 +136,10 @@ name : SELF { $$ = process.Name{IsSelf: true} };
 name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 
 function : LABEL LPAREN optional_names RPAREN EQUALS expression
-			{ $$ = unexpandedProcessOrFunction{isProcess: false, function: process.FunctionDefinition{FunctionName: $1, Parameters: $3, Body: $6}} };
+			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $1, Parameters: $3, Body: $6}} };
+
+type : LABEL EQUALS 
+			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionType{}} };
 
 %%
 

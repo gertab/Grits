@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"phi/types"
 	"strconv"
 )
 
@@ -30,14 +31,16 @@ type Process struct {
 	Providers           []Name
 	Shape               Shape
 	FunctionDefinitions *[]FunctionDefinition
+	Types               *[]types.SessionType
 }
 
-func NewProcess(body Form, providers []Name, shape Shape, functionDefinitions *[]FunctionDefinition) *Process {
+func NewProcess(body Form, providers []Name, shape Shape, functionDefinitions *[]FunctionDefinition, types *[]types.SessionType) *Process {
 	return &Process{
 		Body:                body,
 		Providers:           providers,
 		Shape:               shape,
 		FunctionDefinitions: functionDefinitions,
+		Types:               types,
 	}
 }
 

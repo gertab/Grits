@@ -242,7 +242,7 @@ func (m *Monitor) MonitorRuleFinished(process *Process, rule Rule) {
 	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: rule, isRuleDone: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil, nil), rule: rule, isRuleDone: true}
 }
 
 func (m *Monitor) MonitorRuleFinishedBeforeRenamed(process *Process, rule Rule) {
@@ -252,7 +252,7 @@ func (m *Monitor) MonitorRuleFinishedBeforeRenamed(process *Process, rule Rule) 
 	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), rule: rule, isRuleDoneBeforeRename: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil, nil), rule: rule, isRuleDoneBeforeRename: true}
 }
 
 func (m *Monitor) MonitorNewProcess(process *Process) {
@@ -260,7 +260,7 @@ func (m *Monitor) MonitorNewProcess(process *Process) {
 	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), newProcess: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil, nil), newProcess: true}
 }
 
 func (m *Monitor) MonitorProcessRenamed(process *Process) {
@@ -268,14 +268,14 @@ func (m *Monitor) MonitorProcessRenamed(process *Process) {
 	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil), updatedProcess: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(body, provider, shape, nil, nil), updatedProcess: true}
 }
 func (m *Monitor) MonitorProcessTerminated(process *Process) {
 	// body := CopyForm(process.Body)
 	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil, nil), isDead: true}
 }
 
 func (m *Monitor) MonitorProcessForwarded(process *Process) {
@@ -283,7 +283,7 @@ func (m *Monitor) MonitorProcessForwarded(process *Process) {
 	provider := process.Providers
 	shape := process.Shape
 
-	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil), isDead: true}
+	m.monitorChan <- MonitorUpdate{process: *NewProcess(nil, provider, shape, nil, nil), isDead: true}
 }
 
 // Information to interact with the webserver

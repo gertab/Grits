@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"phi/process"
+	"phi/types"
 	"strings"
 )
 
@@ -12,10 +13,19 @@ type allEnvironment struct {
 }
 
 type unexpandedProcessOrFunction struct {
-	isProcess bool
-	proc      incompleteProcess
-	function  process.FunctionDefinition
+	kind         Kind
+	proc         incompleteProcess
+	function     process.FunctionDefinition
+	session_type types.SessionType
 }
+
+type Kind int
+
+const (
+	PROCESS Kind = iota
+	FUNCTION_DEF
+	TYPE_DEF
+)
 
 // Process that is currently being parsed and yet to become a process.Process
 type incompleteProcess struct {
@@ -28,12 +38,14 @@ func expandProcesses(u allEnvironment) []*process.Process {
 
 	var processes []*process.Process
 	var functions []process.FunctionDefinition
+	var types []types.SessionType
 
-	// Pull all functions
+	// Collect all functions and types
 	for _, p := range u.procsAndFuns {
-		if !p.isProcess {
-			// is function
+		if p.kind == FUNCTION_DEF {
 			functions = append(functions, p.function)
+		} else if p.kind == TYPE_DEF {
+			types = append(types, p.session_type)
 		}
 	}
 
@@ -49,8 +61,8 @@ func expandProcesses(u allEnvironment) []*process.Process {
 	// Pull all processes
 	for _, p := range u.procsAndFuns {
 		// for _, n := range p.Providers {
-		if p.isProcess {
-			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, process.LINEAR, &functions)
+		if p.kind == PROCESS {
+			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, process.LINEAR, &functions, &types)
 			processes = append(processes, new_p)
 		}
 		// }

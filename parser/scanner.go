@@ -214,6 +214,8 @@ func (s *scanner) scanLabel() (token tok, value string, startPos, endPos TokenPo
 		return FORWARD, buf.String(), startPos, endPos
 	case "fwd":
 		return FORWARD, buf.String(), startPos, endPos
+	case "type":
+		return TYPE, buf.String(), startPos, endPos
 	case "let":
 		return LET, buf.String(), startPos, endPos
 	case "in":

@@ -116,6 +116,10 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 		return LSBRACK, string(ch), startPos, endPos
 	case ']':
 		return RSBRACK, string(ch), startPos, endPos
+	case '{':
+		return LCBRACK, string(ch), startPos, endPos
+	case '}':
+		return RCBRACK, string(ch), startPos, endPos
 	case '.':
 		return DOT, string(ch), startPos, endPos
 	case ';':
@@ -127,9 +131,11 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 	case ',':
 		return COMMA, string(ch), startPos, endPos
 	case '+':
-		return POL_POSITIVE, string(ch), startPos, endPos
-	case '-':
-		return POL_NEGATIVE, string(ch), startPos, endPos
+		return PLUS, string(ch), startPos, endPos
+	case '*':
+		return TIMES, string(ch), startPos, endPos
+	case '&':
+		return AMPERSAND, string(ch), startPos, endPos
 	}
 
 	if s.consumeIfComment(ch) {
@@ -285,7 +291,7 @@ func (s *scanner) skipToEOL() {
 
 // Some commands are multi-character. So, they have to be check explicitly
 func isSpecialSymbol(ch rune) bool {
-	return ch == '=' || ch == '<'
+	return ch == '=' || ch == '<' || ch == '-' || ch == '1'
 }
 
 func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos TokenPos) {
@@ -314,6 +320,27 @@ func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos
 			// is just <
 			s.unread()
 			return LANGLE, "<", startPos, endPos
+		}
+	case '-':
+		// Can be - or -o
+		if ch2 == 'o' {
+			// is -o
+			return LOLLI, "-o", startPos, endPos
+		} else {
+			// is just -
+			s.unread()
+			return MINUS, "-", startPos, endPos
+		}
+	case '1':
+		// Can be 1 or label starting with 1
+		if isAlphaNum(ch2) || isUnderscore(ch2) {
+			// is a label
+			s.unread()
+			return s.scanLabel()
+		} else {
+			// is just 1
+			s.unread()
+			return UNIT, "1", startPos, endPos
 		}
 	}
 	// Not one of the special commands

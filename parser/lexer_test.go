@@ -61,6 +61,7 @@ func TestSimpleToken(t *testing.T) {
 		{"release rel drop split push new", []int{RELEASE, RELEASE, DROP, SPLIT, PUSH, NEW}},
 		{"snew forward fwd let in end sprc prc self", []int{SNEW, FORWARD, FORWARD, LET, IN, END, SPRC, PRC, SELF}},
 		{"print", []int{PRINT}},
+		{"+-1{},", []int{PLUS, MINUS, UNIT, LCBRACK, RCBRACK, COMMA}},
 	}
 
 	for _, c := range cases {

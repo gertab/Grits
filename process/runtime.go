@@ -20,7 +20,7 @@ type GlobalEnvironment struct {
 	FunctionDefinitions *[]FunctionDefinition
 
 	// Contains all the type definitions
-	Types *[]types.SessionType
+	Types *[]types.SessionTypeDefinition
 }
 
 // RuntimeEnvironment provides the instance instance for processes to be initialized and executed
@@ -74,7 +74,7 @@ func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvi
 }
 
 // Entry point for execution
-func InitializeProcesses(processes []Process, globalEnv *GlobalEnvironment, subscriber *SubscriberInfo, re *RuntimeEnvironment) *RuntimeEnvironment {
+func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, subscriber *SubscriberInfo, re *RuntimeEnvironment) *RuntimeEnvironment {
 	l := []LogLevel{
 		LOGINFO,
 		LOGPROCESSING,
@@ -144,7 +144,7 @@ func (re *RuntimeEnvironment) ProcessCount() uint64 {
 }
 
 // Create the initial channels required. E.g. for a process prc[c1], a channel with Ident: c1 is created
-func (re *RuntimeEnvironment) CreateChannelForEachProcess(processes []Process) []NameInitialization {
+func (re *RuntimeEnvironment) CreateChannelForEachProcess(processes []*Process) []NameInitialization {
 
 	var channels []NameInitialization
 
@@ -200,7 +200,7 @@ func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subsc
 }
 
 // Used after initialization to substitute known names to the actual channel
-func (re *RuntimeEnvironment) SubstituteNameInitialization(processes []Process, channels []NameInitialization) {
+func (re *RuntimeEnvironment) SubstituteNameInitialization(processes []*Process, channels []NameInitialization) {
 	for i := 0; i < len(processes); i++ {
 		for _, c := range channels {
 			// Substitute all free names in a body
@@ -209,7 +209,7 @@ func (re *RuntimeEnvironment) SubstituteNameInitialization(processes []Process, 
 	}
 }
 
-func (re *RuntimeEnvironment) StartTransitions(processes []Process) {
+func (re *RuntimeEnvironment) StartTransitions(processes []*Process) {
 	for _, p := range processes {
 		p_uniq := p
 

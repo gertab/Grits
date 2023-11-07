@@ -16,7 +16,7 @@ type unexpandedProcessOrFunction struct {
 	kind         Kind
 	proc         incompleteProcess
 	function     process.FunctionDefinition
-	session_type types.SessionType
+	session_type types.SessionTypeDefinition
 }
 
 type Kind int
@@ -38,7 +38,7 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 
 	var processes []*process.Process
 	var functions []process.FunctionDefinition
-	var types []types.SessionType
+	var types []types.SessionTypeDefinition
 
 	// Collect all functions and types
 	for _, p := range u.procsAndFuns {
@@ -121,17 +121,17 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 // 	return processes
 // }
 
-// Convert from a list of pointer of processes to a plain list of processes (ready to be executed)
-func finalizeProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, *process.GlobalEnvironment) {
-	result := make([]process.Process, 0)
-	for _, j := range processes {
-		result = append(result, *j)
-	}
+// // Convert from a list of pointer of processes to a plain list of processes (ready to be executed)
+// func finalizeProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, *process.GlobalEnvironment) {
+// 	result := make([]process.Process, 0)
+// 	for _, j := range processes {
+// 		result = append(result, *j)
+// 	}
 
-	return result, globalEnv
-}
+// 	return result, globalEnv
+// }
 
-func ParseFile(fileName string) ([]process.Process, *process.GlobalEnvironment, error) {
+func ParseFile(fileName string) ([]*process.Process, *process.GlobalEnvironment, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		panic(err)
@@ -147,12 +147,12 @@ func ParseFile(fileName string) ([]process.Process, *process.GlobalEnvironment, 
 
 	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
 	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
+	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
 
-	return finalizedProcesses, globalEnv, nil
+	return expandedProcesses, globalEnv, nil
 }
 
-func ParseString(program string) ([]process.Process, *process.GlobalEnvironment, error) {
+func ParseString(program string) ([]*process.Process, *process.GlobalEnvironment, error) {
 	r := strings.NewReader(program)
 
 	allEnvironment, err := Parse(r)
@@ -165,9 +165,9 @@ func ParseString(program string) ([]process.Process, *process.GlobalEnvironment,
 
 	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
 	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
+	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
 
-	return finalizedProcesses, globalEnv, nil
+	return expandedProcesses, globalEnv, nil
 }
 
 // func Check() {

@@ -15,7 +15,21 @@ import (
 // prc[a]: self.label1<self>
 //
 //	`
+
 const program = `
+type Receive = 1bc
+type Label = label
+type Unit = 1
+type Select = +{a : b}
+type Select2 = +{a : b, c : d}
+type Branch = &{a : b}
+type Branch2 = &{a : b, c : d}
+type Send = 1 * b
+type Receive = 1a -o b
+type Brack = (a)
+type Complex = +{a : (x -o &{a : f * g}), c : d}
+`
+const program22 = `
 let func3(next_pid) = send self< next_pid, self>
 let func1(next_pid) = send self< next_pid, self>
 let func2(next_pid) = send self< next_pid, self>
@@ -171,7 +185,7 @@ func main() {
 		ExecutionVersion: process.NORMAL_ASYNC,
 	}
 
-	// process.TypecheckProcesses(processes)
+	process.Typecheck(processes, globalEnv)
 
 	process.InitializeProcesses(processes, nil, nil, re)
 

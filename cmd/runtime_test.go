@@ -323,7 +323,7 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 	return log
 }
 
-func initProcesses(processes []process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, []process.MonitorRulesLog, uint64) {
+func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, []process.MonitorRulesLog, uint64) {
 
 	l := []process.LogLevel{
 		// process.LOGINFO,

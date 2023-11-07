@@ -12,16 +12,18 @@ import (
 %}
 
 %union {
-	strval 		string
-	common_type	unexpandedProcessOrFunction
-	items 		[]unexpandedProcessOrFunction
-	name 		process.Name
-	names 		[]process.Name
-	form 		process.Form
-	branches 	[]*process.BranchForm
+	strval 			string
+	common_type		unexpandedProcessOrFunction
+	items 			[]unexpandedProcessOrFunction
+	name 			process.Name
+	names 			[]process.Name
+	form 			process.Form
+	branches 		[]*process.BranchForm
+	sessionType 	types.SessionType
+	sessionTypeAlt 	[]types.BranchOption
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT POL_POSITIVE POL_NEGATIVE
+%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI
 %type <strval> LABEL
 %type <items> items 
 %type <common_type> process_def
@@ -32,9 +34,13 @@ import (
 %type <names> names
 %type <names> optional_names
 %type <branches> branches
+%type <sessionType> session_type
+%type <sessionTypeAlt> session_type_alts
 
 %left SEND
 %left SEQUENCE
+%left TIMES
+%left LOLLI
 
 %%
 
@@ -82,29 +88,29 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 /* new without explicit polarities */	
 /* | name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression 
 		{ $$ = process.NewNew($1, $5, $8) } */
-		   | /* new (+ve) */ name LEFT_ARROW POL_POSITIVE NEW LPAREN expression RPAREN SEQUENCE expression 
+		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW LPAREN expression RPAREN SEQUENCE expression 
 					{ $$ = process.NewNew($1, $6, $9, process.POSITIVE) } 
-		   | /* new (-ve) */ name LEFT_ARROW POL_NEGATIVE NEW LPAREN expression RPAREN SEQUENCE expression 
+		   | /* new (-ve) */ name LEFT_ARROW MINUS NEW LPAREN expression RPAREN SEQUENCE expression 
 					{ $$ = process.NewNew($1, $6, $9, process.NEGATIVE) } 
-		   | /* call (+ve) */ POL_POSITIVE LABEL LPAREN optional_names RPAREN
+		   | /* call (+ve) */ PLUS LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, process.POSITIVE) }
-		   | /* call (-ve) */ POL_NEGATIVE LABEL LPAREN optional_names RPAREN
+		   | /* call (-ve) */ MINUS LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, process.NEGATIVE) }
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
 /* forward without explitit polarities */
 /* | FORWARD name name
 		{ $$ = process.NewForward($2, $3) } */
-		   | /* forward (+ve) */ POL_POSITIVE FORWARD name name
+		   | /* forward (+ve) */ PLUS FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, process.POSITIVE) }
-		   | /* forward (-ve) */ POL_NEGATIVE FORWARD name name
+		   | /* forward (-ve) */ MINUS FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, process.NEGATIVE) }
 /* split without explicit polarities */
 /* | LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
 	{ $$ = process.NewSplit($2, $4, $8, $10) } */
-		   | /* split (+ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW POL_POSITIVE SPLIT name SEQUENCE expression
+		   | /* split (+ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW PLUS SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $9, $11, process.POSITIVE) }
-		   | /* split (-ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW POL_NEGATIVE SPLIT name SEQUENCE expression
+		   | /* split (-ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW MINUS SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $9, $11, process.NEGATIVE) }
 		   | /* wait */ WAIT name SEQUENCE expression
 		   			{ $$ = process.NewWait($2, $4) }
@@ -141,8 +147,49 @@ name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 function_def : LET LABEL LPAREN optional_names RPAREN EQUALS expression
 			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7}} };
 
-type_def : TYPE LABEL EQUALS 
-			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionType{}} };
+/*
+<tp> ::= <id>
+       | '1'
+       | '+' '{' <alts> '}'
+       | '&' '{' <alts> '}'
+       | <tp> '*' <tp>
+       | <tp> '-o' <tp>
+       | '(' <tp> ')'
+type bin = +{'b0 : bin, 'b1 : bin, 'e : 1}*/
+
+type_def : TYPE LABEL EQUALS session_type
+			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: $2, SessionType: $4}} };
+
+/*
+<tp> ::= <id>
+       | '1'
+       | '+' '{' <alts> '}'   select
+       | '&' '{' <alts> '}'   branch
+       | <tp> '*' <tp>			send
+       | <tp> '-o' <tp>			receive
+       | '(' <tp> ')'
+type bin = +{'b0 : bin, 'b1 : bin, 'e : 1}*/
+
+session_type :  
+			/* label */ LABEL
+				{ $$ = types.NewLabelType($1) }
+		   | /* unit */ UNIT
+		   		{ $$ = types.NewUnitType()}
+		   | /* select +{ } */ PLUS LCBRACK session_type_alts RCBRACK  
+		   		{ $$ = types.NewSelectType($3)}
+		   | /* branch &{ } */ AMPERSAND LCBRACK session_type_alts RCBRACK  
+		   		{ $$ = types.NewBranchCaseType($3)}
+		   | /* send A * B */ session_type TIMES session_type
+		   		{ $$ = types.NewSendType($1, $3)}
+		   | /* receive A -o B */ session_type LOLLI session_type
+		   		{ $$ = types.NewReceiveType($1, $3)}
+		   | /* brackets (A) */ LPAREN session_type RPAREN
+		   		{ $$ = $2};
+
+session_type_alts : 
+			LABEL COLON session_type { $$ = []types.BranchOption{*types.NewBranchOption($1, $3)}} 
+	 	  | LABEL COLON session_type COMMA session_type_alts { $$ = append($5, *types.NewBranchOption($1, $3)) };
+
 
 %%
 

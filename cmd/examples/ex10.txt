@@ -1,0 +1,42 @@
+
+(* Lecture 5 examples *)
+(* 15-836 Fall '23 *)
+
+type bin = +{'b0 : bin, 'b1 : bin, 'e : 1}
+
+proc zero (x : bin) = send x 'e ; send x ()
+proc succ (x : bin) (y : bin) =
+  recv y ( 'b0 => send x 'b1 ; fwd x y
+         | 'b1 => send x 'b0 ; call succ x y
+         | 'e => recv y (() => send x 'b1 ; send x 'e ; send x ()) ) 
+
+proc test (x : bin) =
+  x0 <- call zero x0 ;    % x0 : bin |- x : bin
+  x1 <- call succ x1 x0 ; % x1 : bin |- x : bin
+  x2 <- call succ x2 x1 ; % x2 : bin |- x : bin
+  x3 <- call succ x3 x2 ; % x3 : bin |- x : bin
+  fwd x x3
+
+exec test
+
+
+let
+
+  false() = send self.false<self>
+  true() = send self.true<self>
+
+  neg(a) = case a (
+                true<b> => send self.true<self>
+              | false<b> => send self.false<self> ) 
+
+
+    zero() = x <- new close x; self.e<x>
+    succ(y) = 
+
+
+        recv y ( 
+           'b0 => send x 'b1 ; fwd x y
+         | 'b1 => send x 'b0 ; call succ x y
+         |  'e => recv y (() => send x 'b1 ; send x 'e ; send x ()) ) 
+in 
+end

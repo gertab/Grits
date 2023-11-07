@@ -14,7 +14,7 @@ import (
 %union {
 	strval 			string
 	common_type		unexpandedProcessOrFunction
-	items 			[]unexpandedProcessOrFunction
+	statements 			[]unexpandedProcessOrFunction
 	name 			process.Name
 	names 			[]process.Name
 	form 			process.Form
@@ -25,14 +25,16 @@ import (
 
 %token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI
 %type <strval> LABEL
-%type <items> items 
+%type <statements> statements 
 %type <common_type> process_def
 %type <common_type> function_def
 %type <common_type> type_def
 %type <form> expression 
 %type <name> name
+%type <name> name_with_type_ann
 %type <names> names
 %type <names> optional_names
+%type <names> optional_names_with_type_ann
 %type <branches> branches
 %type <sessionType> session_type
 %type <sessionTypeAlt> session_type_alts
@@ -48,28 +50,32 @@ root : program { };
 
 program : 
 		/* simulate a process */
+		/* todo remove */
 	   expression 
 		{
 			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root", IsSelf: false}}}})
 		}
-	 | items 
+	 | statements 
 		{ 
 			philex.(*lexer).processesOrFunctionsRes = $1
 		};
 /*	 | LET functions IN processes END { }; */
 
 /* A program may consist a combination of processes, function definitions and types */
-items :   process_def { $$ = []unexpandedProcessOrFunction{$1} }
-		| process_def items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
-		| function_def { $$ = []unexpandedProcessOrFunction{$1} }
-		| function_def items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
-		| type_def { $$ = []unexpandedProcessOrFunction{$1} }
-		| type_def items { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+statements : process_def { $$ = []unexpandedProcessOrFunction{$1} }
+		   | process_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
+		   | function_def { $$ = []unexpandedProcessOrFunction{$1} }
+		   | function_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		   | type_def { $$ = []unexpandedProcessOrFunction{$1} }
+		   | type_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
 
 /* A process is defined using the prc keyword */
 process_def : 
-		  PRC LSBRACK names RSBRACK COLON expression  
-				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} };
+			/* without type - todo remove option to force types */
+		    PRC LSBRACK names RSBRACK EQUALS expression  
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} }
+		  | PRC LSBRACK names RSBRACK COLON session_type EQUALS expression  
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$8, Type: $6, Providers: $3}} };
 		/*| SPRC LSBRACK names RSBRACK COLON expression 
 				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} };*/
 
@@ -141,11 +147,27 @@ optional_names : /* empty */ { $$ = nil }
 		| name { $$ = []process.Name{$1} }
 		| name COMMA names { $$ = append($3, $1) }
 
-name : SELF { $$ = process.Name{IsSelf: true} };
-name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
+optional_names_with_type_ann : 
+			/* empty */ { $$ = nil }
+		| name_with_type_ann { $$ = []process.Name{$1} }
+		| name_with_type_ann COMMA names { $$ = append([]process.Name{$1}, $3...) }
 
-function_def : LET LABEL LPAREN optional_names RPAREN EQUALS expression
-			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7}} };
+name_with_type_ann : 
+			/* without type - todo remove option to force types */
+			LABEL
+					{ $$ = process.Name{Ident: $1, IsSelf: false} } | 
+			LABEL COLON session_type 
+			 		{ $$ = process.Name{Ident: $1, Type: $3, IsSelf: false} };
+
+name : SELF { $$ = process.Name{IsSelf: true} }
+	 | LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
+
+function_def : 
+			/* without type - todo remove option to force types */
+			 LET LABEL LPAREN optional_names_with_type_ann RPAREN EQUALS expression
+			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7}} } | 
+			/* with type annotation */ LET LABEL LPAREN optional_names_with_type_ann RPAREN COLON session_type EQUALS expression
+			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $9, Type: $7}} };
 
 type_def : TYPE LABEL EQUALS session_type
 			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: $2, SessionType: $4}} };

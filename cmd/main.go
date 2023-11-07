@@ -16,7 +16,7 @@ import (
 //
 //	`
 
-const program = `
+const program22 = `
 type Receive = 1bc
 type Label = label
 type Unit = 1
@@ -24,21 +24,26 @@ type Select = +{a : b}
 type Select2 = +{a : b, c : d}
 type Branch = &{a : b}
 type Branch2 = &{a : b, c : d}
-type Send = 1 * b
-type Receive = 1a -o b
+type Send = a * b
+type Receive = c -o b
 type Brack = (a)
 type Complex = +{a : (x -o &{a : f * g}), c : d}
-`
-const program22 = `
-let func3(next_pid) = send self< next_pid, self>
-let func1(next_pid) = send self< next_pid, self>
-let func2(next_pid) = send self< next_pid, self>
 
-prc[pid1]: <a, b> <- recv pid2; wait a; close self
-prc[pid2]: +fwd self pid3
-prc[pid3]: +fwd self pid4
-prc[pid4]: +func1(pid5)
-prc[pid5]: close self
+`
+const program = `
+type Unit = 1
+type Select = +{a : b}
+
+let func3(next_pid : B) : A = send self< next_pid, self>
+let func1(next_pid : a * b) : a * b = send self< next_pid, self>
+
+let func2(next_pid : s) = send self< next_pid, self>
+
+prc[pid1] = <a, b> <- recv pid2; wait a; close self
+prc[pid2] = +fwd self pid3
+prc[pid3] = +fwd self pid4
+prc[pid4] = +func1(pid5)
+prc[pid5] = close self
 `
 
 const program1 = `

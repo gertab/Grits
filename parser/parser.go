@@ -31,7 +31,7 @@ const (
 type incompleteProcess struct {
 	Body      process.Form
 	Providers []process.Name
-	// FunctionDefinitions *[]process.FunctionDefinition
+	Type      types.SessionType
 }
 
 func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvironment) {
@@ -62,7 +62,7 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 	for _, p := range u.procsAndFuns {
 		// for _, n := range p.Providers {
 		if p.kind == PROCESS {
-			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, process.LINEAR)
+			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, p.proc.Type, process.LINEAR)
 			processes = append(processes, new_p)
 		}
 		// }

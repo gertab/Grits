@@ -17,7 +17,7 @@ func Typecheck(processes []*Process, globalEnv *GlobalEnvironment) error {
 	case err := <-errorChan:
 		log.Fatal(err)
 	case <-doneChan:
-		fmt.Println("Typecheck succesful")
+		fmt.Println("Typecheck successful")
 	}
 
 	return nil
@@ -30,3 +30,7 @@ func typecheckProcesses(processes []*Process, globalEnv *GlobalEnvironment, erro
 
 	fmt.Println("ok")
 }
+
+// some preliminary checks about the types:
+// 		1) contractive
+// 		2) labelled type refers to existing type

@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"phi/types"
 	"strconv"
 )
 
@@ -10,17 +11,15 @@ type Process struct {
 	Body      Form
 	Providers []Name
 	Shape     Shape
-	// FunctionDefinitions *[]FunctionDefinition
-	// Types               *[]types.SessionType
+	Type      types.SessionType
 }
 
-func NewProcess(body Form, providers []Name, shape Shape) *Process {
+func NewProcess(body Form, providers []Name, session_type types.SessionType, shape Shape) *Process {
 	return &Process{
 		Body:      body,
 		Providers: providers,
 		Shape:     shape,
-		// FunctionDefinitions: functionDefinitions,
-		// Types:               types,
+		Type:      session_type,
 	}
 }
 
@@ -51,6 +50,8 @@ func (p *Process) String() string {
 type Name struct {
 	// Ident refers to the original name of the channel (used for pretty printing)
 	Ident string
+	// Session type which the channel must follow
+	Type types.SessionType
 	// If IsSelf, then this channel should reference the the channel from the provider
 	IsSelf bool
 	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
@@ -156,6 +157,7 @@ type FunctionDefinition struct {
 	Body         Form
 	FunctionName string
 	Parameters   []Name
+	Type         types.SessionType // Session type for 'self'
 }
 
 func (function *FunctionDefinition) Arity() int {

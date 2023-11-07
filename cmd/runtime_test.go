@@ -19,9 +19,9 @@ func TestSimpleFWDRCV(t *testing.T) {
 	// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
 	// Case 1: FWD + RCV
 	input := ` 	/* FWD + RCV rule */
-		prc[pid1]: send pid2<pid5, self>
-		prc[pid2]: -fwd self pid3
-		prc[pid3]: <a, b> <- recv self; close a
+		prc[pid1] = send pid2<pid5, self>
+		prc[pid2] = -fwd self pid3
+		prc[pid3] = <a, b> <- recv self; close a
 		`
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}}, 2},
@@ -36,9 +36,9 @@ func TestSimpleFWDSND(t *testing.T) {
 	// go test -timeout 30s -run ^TestSimpleFWDSND$ phi/cmd
 	// Case 1: FWD + SND
 	input := ` 	/* FWD + RCV rule */
-		prc[pid1]: <a, b> <- recv pid2; close a
-		prc[pid2]: +fwd self pid3
-		prc[pid3]: send self<pid5, self>
+		prc[pid1] = <a, b> <- recv pid2; close a
+		prc[pid2] = +fwd self pid3
+		prc[pid3] = send self<pid5, self>
 		`
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid1", process.SND}}, 2},
@@ -52,8 +52,8 @@ func TestSimpleFWDSND(t *testing.T) {
 func TestSimpleSND(t *testing.T) {
 	// Case 2: SND
 	input := ` 	/* SND rule */
-	prc[pid1]: send self<pid3, self>
-	prc[pid2]: <a, b> <- recv pid1; close self
+	prc[pid1] = send self<pid3, self>
+	prc[pid2] = <a, b> <- recv pid1; close self
 	`
 	expected := []traceOption{
 		{steps{{"pid2", process.SND}}, 2},
@@ -65,8 +65,8 @@ func TestSimpleSND(t *testing.T) {
 func TestSimpleCUTSND(t *testing.T) {
 	// Case 3: CUT + SND
 	input := ` 	/* CUT + SND rule */
-		prc[pid1]: x <- +new (<a, b> <- recv pid2; close b); close self
-		prc[pid2]: send self<pid5, self>
+		prc[pid1] = x <- +new (<a, b> <- recv pid2; close b); close self
+		prc[pid2] = send self<pid5, self>
 		`
 	expected := []traceOption{
 		{steps{{"pid1", process.CUT}, {"x", process.SND}}, 3},
@@ -83,9 +83,9 @@ func TestSimpleCUTSND(t *testing.T) {
 func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 	// Case 3: CUT + SND
 	input := `   /* CUT + inner blocking SND + FWD + RCV rule */
-			prc[pid1]: send pid2<pid5, self>
-			prc[pid2]: -fwd self pid3
-			prc[pid3]: ff <- -new (send ff<pid5, ff>); <a, b> <- recv self; close self
+			prc[pid1] = send pid2<pid5, self>
+			prc[pid2] = -fwd self pid3
+			prc[pid3] = ff <- -new (send ff<pid5, ff>); <a, b> <- recv self; close self
 			`
 	expected := []traceOption{
 		// {steps{{"ff", process.SND}, {"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 3},
@@ -107,10 +107,10 @@ func TestSimpleMultipleFWD(t *testing.T) {
 	// Case 4: FWD + FWD + RCV
 
 	input := ` 	/* FWD + RCV rule */
-		prc[pid1]: send pid2<pid5, self>
-		prc[pid2]: -fwd self pid3
-		prc[pid3]: -fwd self pid4
-		prc[pid4]: <a, b> <- recv self; close a
+		prc[pid1] = send pid2<pid5, self>
+		prc[pid2] = -fwd self pid3
+		prc[pid3] = -fwd self pid4
+		prc[pid4] = <a, b> <- recv self; close a
 		`
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}, 3},
@@ -141,9 +141,9 @@ func TestSimpleSPLITCUT(t *testing.T) {
 	// Case 6: SPLIT + CUT + SND
 
 	input := ` 	/* SPLIT + CUT + SND rule */
-			prc[pid0]: <x1, x2> <- +split pid1; close self
-			prc[pid1]: x <- +new (<a, b> <- recv pid2; close b); close self
-			prc[pid2]: send self<pid5, self>
+			prc[pid0] = <x1, x2> <- +split pid1; close self
+			prc[pid1] = x <- +new (<a, b> <- recv pid2; close b); close self
+			prc[pid2] = send self<pid5, self>
 	`
 	expected := []traceOption{
 		// // Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
@@ -162,11 +162,13 @@ func TestSimpleSPLITSNDSND(t *testing.T) {
 	// Case 7: SPLIT + SND rule (x 2)
 
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
-		prc[pid1]: <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-		prc[pid2]: send self<pid3, self>
+		prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+		prc[pid2] = send self<pid3, self>
 		`
 	expected := []traceOption{
 		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SND}}, 4},
+		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SPLIT}}, 4},
+		// this shouldn't be here ^
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -177,9 +179,9 @@ func TestSimpleSPLITCALL(t *testing.T) {
 	input := ` /* SPLIT + CALL rule */
 				let D1(c) =  <a, b> <- recv c; close a
 
-				prc[pid0]: <x1, x2> <- +split pid1; close self
-				prc[pid1]: +D1(pid2)
-				prc[pid2]: send self<pid3, self>
+				prc[pid0] = <x1, x2> <- +split pid1; close self
+				prc[pid1] = +D1(pid2)
+				prc[pid2] = send self<pid3, self>
 			`
 	expected := []traceOption{
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}, 4},

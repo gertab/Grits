@@ -30,6 +30,15 @@ func NewLabelType(i string) *LabelType {
 	}
 }
 
+type WIPType struct{}
+
+func (q *WIPType) String() string {
+	return "wip"
+}
+func NewWIPType() *WIPType {
+	return &WIPType{}
+}
+
 // Unit: 1
 type UnitType struct{}
 
@@ -244,4 +253,9 @@ func equalTypeBranch(option1, option2 BranchOption) bool {
 	}
 
 	return EqualType(option1.session_type, option2.session_type)
+}
+
+func TODOCopySessionType(s SessionType) SessionType {
+	// todo Not sure if a deep copy of the structs is needed
+	return s
 }

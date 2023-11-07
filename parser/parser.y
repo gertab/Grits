@@ -39,8 +39,8 @@ import (
 
 %left SEND
 %left SEQUENCE
-%left TIMES
-%left LOLLI
+%right TIMES
+%right LOLLI
 
 %%
 
@@ -147,28 +147,8 @@ name : LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 function_def : LET LABEL LPAREN optional_names RPAREN EQUALS expression
 			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7}} };
 
-/*
-<tp> ::= <id>
-       | '1'
-       | '+' '{' <alts> '}'
-       | '&' '{' <alts> '}'
-       | <tp> '*' <tp>
-       | <tp> '-o' <tp>
-       | '(' <tp> ')'
-type bin = +{'b0 : bin, 'b1 : bin, 'e : 1}*/
-
 type_def : TYPE LABEL EQUALS session_type
 			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: $2, SessionType: $4}} };
-
-/*
-<tp> ::= <id>
-       | '1'
-       | '+' '{' <alts> '}'   select
-       | '&' '{' <alts> '}'   branch
-       | <tp> '*' <tp>			send
-       | <tp> '-o' <tp>			receive
-       | '(' <tp> ')'
-type bin = +{'b0 : bin, 'b1 : bin, 'e : 1}*/
 
 session_type :  
 			/* label */ LABEL
@@ -188,8 +168,7 @@ session_type :
 
 session_type_alts : 
 			LABEL COLON session_type { $$ = []types.BranchOption{*types.NewBranchOption($1, $3)}} 
-	 	  | LABEL COLON session_type COMMA session_type_alts { $$ = append($5, *types.NewBranchOption($1, $3)) };
-
+	 	  | LABEL COLON session_type COMMA session_type_alts { $$ = append([]types.BranchOption{*types.NewBranchOption($1, $3)}, $5...) };
 
 %%
 

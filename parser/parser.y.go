@@ -139,7 +139,7 @@ const phiEofCode = 1
 const phiErrCode = 2
 const phiInitialStackSize = 16
 
-//line parser/parser.y:194
+//line parser/parser.y:173
 
 // Parse is the entry point to the parser.
 func Parse(r io.Reader) (allEnvironment, error) {
@@ -201,7 +201,7 @@ var phiPact = [...]int16{
 	-33, -36, 25, 15, 143, 48, 141, 141, 141, -1000,
 	162, 15, -1000, 15, -1000, -1000, 141, -1000, 142, 25,
 	25, 152, 152, -10, 36, -2, -1000, 80, 78, -1000,
-	31, 32, -1000, -1000, 141, -46, -1000, -38, 112, -41,
+	31, 32, -1000, -1000, 141, -40, -46, -38, 112, -41,
 	-1000, -1000, 15, 4, -6, 132, 120, 15, 155, -1000,
 	-1000, 25, -1000, 119, 15, 15, 141, 141, 14, 141,
 	-7, 141, 118, 115, -1000, -1000, 153, -1000, 152, -1000,
@@ -849,63 +849,63 @@ phidefault:
 		}
 	case 39:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:161
+//line parser/parser.y:151
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: phiDollar[2].strval, SessionType: phiDollar[4].sessionType}}
 		}
 	case 40:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:175
+//line parser/parser.y:155
 		{
 			phiVAL.sessionType = types.NewLabelType(phiDollar[1].strval)
 		}
 	case 41:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:177
+//line parser/parser.y:157
 		{
 			phiVAL.sessionType = types.NewUnitType()
 		}
 	case 42:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:179
+//line parser/parser.y:159
 		{
 			phiVAL.sessionType = types.NewSelectType(phiDollar[3].sessionTypeAlt)
 		}
 	case 43:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:181
+//line parser/parser.y:161
 		{
 			phiVAL.sessionType = types.NewBranchCaseType(phiDollar[3].sessionTypeAlt)
 		}
 	case 44:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:183
+//line parser/parser.y:163
 		{
 			phiVAL.sessionType = types.NewSendType(phiDollar[1].sessionType, phiDollar[3].sessionType)
 		}
 	case 45:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:185
+//line parser/parser.y:165
 		{
 			phiVAL.sessionType = types.NewReceiveType(phiDollar[1].sessionType, phiDollar[3].sessionType)
 		}
 	case 46:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:187
+//line parser/parser.y:167
 		{
 			phiVAL.sessionType = phiDollar[2].sessionType
 		}
 	case 47:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:190
+//line parser/parser.y:170
 		{
 			phiVAL.sessionTypeAlt = []types.BranchOption{*types.NewBranchOption(phiDollar[1].strval, phiDollar[3].sessionType)}
 		}
 	case 48:
 		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:191
+//line parser/parser.y:171
 		{
-			phiVAL.sessionTypeAlt = append(phiDollar[5].sessionTypeAlt, *types.NewBranchOption(phiDollar[1].strval, phiDollar[3].sessionType))
+			phiVAL.sessionTypeAlt = append([]types.BranchOption{*types.NewBranchOption(phiDollar[1].strval, phiDollar[3].sessionType)}, phiDollar[5].sessionTypeAlt...)
 		}
 	}
 	goto phistack /* stack new state and value */

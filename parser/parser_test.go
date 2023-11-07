@@ -2,6 +2,7 @@ package parser
 
 import (
 	"phi/process"
+	"phi/types"
 	"testing"
 )
 
@@ -18,6 +19,27 @@ func compareOutputProgram(t *testing.T, got []process.Form, expected []process.F
 	}
 }
 
+func compareOutputTypes(t *testing.T, got []types.SessionType, expected []types.SessionType) {
+	if len(got) != len(expected) {
+		t.Errorf("len of got %d, does not match len of expected %d\n", len(got), len(expected))
+		return
+	}
+
+	for index := range got {
+		if !types.EqualType(got[index], expected[index]) {
+			t.Errorf("[%d] got %s, expected %s\n", index, got[index].String(), expected[index].String())
+		}
+	}
+}
+
+func compareOutputType(t *testing.T, got types.SessionType, expected types.SessionType) bool {
+	if !types.EqualType(got, expected) {
+		t.Errorf("got %s, expected %s\n", got.String(), expected.String())
+		return false
+	}
+	return true
+}
+
 func assertEqual(t *testing.T, i1, i2 process.Form) {
 	if !process.EqualForm(i1, i2) {
 		t.Errorf("got %s, expected %s\n", i1.String(), i2.String())
@@ -32,6 +54,16 @@ func parseGetBody(input string) process.Form {
 	}
 
 	return body[0].Body
+}
+
+func parseGetEnvironment(input string) *process.GlobalEnvironment {
+	_, globalEnv, err := ParseString(input)
+
+	if err != nil {
+		return nil
+	}
+
+	return globalEnv
 }
 
 func TestBasicForms(t *testing.T) {
@@ -83,58 +115,85 @@ func TestBasicForms(t *testing.T) {
 
 	compareOutputProgram(t, output, expected)
 }
+func TestSimpleTypes(t *testing.T) {
+	unitType := types.NewUnitType()
+	labelType1 := types.NewLabelType("abc")
+	labelType2 := types.NewLabelType("def")
 
-// func TestSimpleToken(t *testing.T) {
-// 	cases := []struct {
-// 		input    string
-// 		expected []int
-// 	}{
-// 		{"().;:,[]<>", []int{LPAREN, RPAREN, DOT, SEQUENCE, COLON, COMMA, LSBRACK, RSBRACK, LANGLE, RANGLE}},
-// 		{"==><<-<", []int{EQUALS, RIGHT_ARROW, LANGLE, LEFT_ARROW, LANGLE}},
-// 		{"send recv receive case close wait", []int{SEND, RECEIVE, RECEIVE, CASE, CLOSE, WAIT}},
-// 		{"cast shift accept acc acquire acq detach det", []int{CAST, SHIFT, ACCEPT, ACCEPT, ACQUIRE, ACQUIRE, DETACH, DETACH}},
-// 		{"release rel drop split push new", []int{RELEASE, RELEASE, DROP, SPLIT, PUSH, NEW}},
-// 		{"snew forward fwd let in end sprc prc", []int{SNEW, FORWARD, FORWARD, LET, IN, END, SPRC, PRC}},
-// 	}
+	cases := []struct {
+		input    string
+		expected types.SessionType
+	}{
+		{"type A = 1", unitType},
+		{"type A = abc", labelType1},
+		{"type B = abc * def", types.NewSendType(labelType1, labelType2)},
+		{"type C = abc -o def", types.NewReceiveType(labelType1, labelType2)},
+		{"type C = +{a : abc}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1)})},
+		{"type D = &{a : abc}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1)})},
+	}
 
-// 	for _, c := range cases {
-// 		reader := strings.NewReader(c.input)
-// 		l := newLexer(reader)
-// 		tokens := getTokens(l)
-// 		compareOutput(t, tokens, c.expected)
-// 	}
-// }
+	for i, c := range cases {
+		output := *parseGetEnvironment(c.input).Types
+		outputST := output[0].SessionType
+		if !compareOutputType(t, outputST, c.expected) {
+			t.Errorf("error in case #%d\n", i)
+		}
+	}
+}
 
-// func TestIdentToken(t *testing.T) {
-// 	cases := []struct {
-// 		input    string
-// 		expected []int
-// 	}{
-// 		{"testIdent", []int{LABEL}},
-// 		{"ill\\egal", []int{LABEL}}, // kILLEGAL
-// 	}
+func TestTypes(t *testing.T) {
+	unitType := types.NewUnitType()
+	labelType1 := types.NewLabelType("abc")
+	labelType2 := types.NewLabelType("def")
 
-// 	for _, c := range cases {
-// 		reader := strings.NewReader(c.input)
-// 		l := newLexer(reader)
-// 		tokens := getTokens(l)
-// 		compareOutput(t, tokens, c.expected)
-// 	}
-// }
+	cases := []struct {
+		input    string
+		expected types.SessionType
+	}{
+		{"type A = (1)", unitType},
+		{"type A = (abc)", labelType1},
+		{"type B = (abc * def)", types.NewSendType(labelType1, labelType2)},
+		{"type C = (abc -o def)", types.NewReceiveType(labelType1, labelType2)},
+		{"type C = +{a : abc, bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})},
+		{"type D = &{a : abc, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})},
+		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})), *types.NewBranchOption("bb", labelType2)})},
+		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})), *types.NewBranchOption("bb", labelType2)})},
+		{"type E = (abc -o (abc -o def))", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
+		{"type E = abc -o (abc -o def)", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
+		{"type E = abc -o abc -o def", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
+		{"type E = +{a : (abc -o (abc -o def)), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))), *types.NewBranchOption("bb", labelType2)})},
+		{"type E = +{a : (abc -o (abc -o &{a : abc, bb : def})), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})))), *types.NewBranchOption("bb", labelType2)})},
+	}
 
-// func TestCommentToken(t *testing.T) {
-// 	cases := []struct {
-// 		input    string
-// 		expected []int
-// 	}{
-// 		{"test/*abc*/Ident", []int{LABEL, LABEL}},
-// 		{"il//egal", []int{LABEL}}, // kILLEGAL
-// 	}
+	for i, c := range cases {
+		output := *parseGetEnvironment(c.input).Types
+		outputST := output[0].SessionType
+		if !compareOutputType(t, outputST, c.expected) {
+			t.Errorf("error in case #%d\n", i)
+		}
+	}
+}
 
-// 	for _, c := range cases {
-// 		reader := strings.NewReader(c.input)
-// 		l := newLexer(reader)
-// 		tokens := getTokens(l)
-// 		compareOutput(t, tokens, c.expected)
-// 	}
-// }
+func TestSimpleTypesStrings(t *testing.T) {
+
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"type A = 1", "1"},
+		{"type A = abc", "abc"},
+		{"type B = abc * def", "abc * def"},
+		{"type C = abc -o def", "abc -o def"},
+		{"type C = +{a : abc}", "+{a : abc}"},
+		{"type D = &{a : abc}", "&{a : abc}"},
+		{"type E = +{a : (abc -o (abc -o &{a : abc, bb : def})), bb : def}", "+{a : abc -o abc -o &{a : abc, bb : def}, bb : def}"},
+	}
+
+	for i, c := range cases {
+		output := *parseGetEnvironment(c.input).Types
+		outputST := output[0].SessionType
+		if c.expected != outputST.String() {
+			t.Errorf("error in case #%d: Got %s, expected %s\n", i, outputST.String(), c.expected)
+		}
+	}
+}

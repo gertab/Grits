@@ -119,6 +119,55 @@ When processes transition, the list of the transitions is sent as a message.
 
 - D3.js: [http://d3js.org/](http://d3js.org/)
 
+## Grammar
+
+```text
+<prog> ::= <statement>*
+
+<statement> ::= type <label> = <type>
+              | let <label> ( [<parameters>] ) : <type> = <term>
+              | prc '[' <name> ']' : <type> = <term>
+
+<parameters> ::= <name> : <type> [ , <parameters> ]
+
+<type> ::= <label>
+         | 1
+         | + { <branch_type> }
+         | & { <branch_type> }
+         | <type> * <type>
+         | <type> -o <type>
+         | ( <type> )
+
+<branch_type> ::= <label> : <type> [ , <branch_type> ]
+
+<term> ::= send <name> '<' <name> , <name> '>' 
+        | '<' <name> , <name> '>' <- recv <name> ; <term>
+        | <name> . <label> '<' <name> '>' 
+        | case <name> ( <branches> )
+        | <name> <- <polarity> new ( <term> ) ; <term>
+        | <polarity> <label> ( [<names>] )
+        | <polarity> fwd <names> <names>
+        | '<' <name> , <name> '>' <- <polarity> split <name> ; <term>
+        | close <name>
+        | wait <name> ; term
+        | cast <name> '<' <name> '>'
+        | <name> <- shift <name> ; <term>
+
+<polarity> ::= +
+             | -
+
+<branches> ::= <label> '<' <name> => term [ '|' <branches> ]
+
+<names> ::= <name> [ ',' <names> ]
+
+Others:
+    <name> and <label> are any alpha-numeric label, where name represents a channel and label represents a labelled choice
+    // Single line comments
+    /* Multi line comments */
+    whitespace is ignored
+
+```
+
 ## Goals
 
 Similar projects:

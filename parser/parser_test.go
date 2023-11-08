@@ -197,3 +197,100 @@ func TestSimpleTypesStrings(t *testing.T) {
 		}
 	}
 }
+
+func TestSimpleFunctionDefinitions(t *testing.T) {
+
+	cases := []struct {
+		input          string
+		expectedNumber int
+	}{
+		{"type A = 1", 0},
+		{"prc[a] = close self", 0},
+		{"let f() = close self", 1},
+		{"let f(a, b, c) = close self", 1},
+		{"let f(a : 1, b : 1, c : 1) = close self", 1},
+		{"let f(a : 1, b : 1, c : 1) : 1 = close self", 1},
+		{`type A = 1
+		let f(a : 1, b : 1, c : 1) : A = close self`, 1},
+	}
+
+	for i, c := range cases {
+		processes, globalEnv, err := ParseString(c.input)
+
+		if err != nil {
+			t.Errorf("compilation error in case #%d: %s\n", i, err.Error())
+		}
+
+		err = process.Typecheck(processes, globalEnv)
+
+		if err != nil {
+			t.Errorf("type error in case #%d: %s\n", i, err.Error())
+		}
+
+		if len(*globalEnv.FunctionDefinitions) != c.expectedNumber {
+			t.Errorf("error in case #%d: Got %d, expected %d\n", i, len(*globalEnv.FunctionDefinitions), c.expectedNumber)
+		}
+	}
+}
+
+// Checks related to the typechecker
+
+// Parses the cases and expects each to pass the typechecking phase successfully (or not)
+func runThroughTypechecker(t *testing.T, cases []string, pass bool) {
+	for i, c := range cases {
+		processes, globalEnv, err := ParseString(c)
+
+		if err != nil {
+			t.Errorf("compilation error in case #%d: %s\n", i, err.Error())
+		}
+
+		err = process.Typecheck(processes, globalEnv)
+
+		if pass {
+			if err != nil {
+				t.Errorf("expected no type errors in case #%d, but found %s\n", i, err.Error())
+			}
+		} else {
+			if err == nil {
+				t.Errorf("expected type error in case #%d, but didn't find any\n", i)
+			}
+		}
+	}
+}
+
+// Typechecker -> these programs should fail
+func TestTypecheckIncorrectPrograms(t *testing.T) {
+
+	cases := []string{
+		"type A = B",
+		"prc[a] : A = close self",
+		"let f() : 1 -o A = close self",
+		// // MulL (extra non used names)
+		// "let f(c : 1, a : 1, b : 1) : 1 * 1 = send self<a, b>",
+		// // MulR (wrong types)
+		// "let f(a : 1 -o 1, b : 1) : 1 * 1 = send self<a, b>",
+		// "let f(a : 1, b : 1 -o 1) : 1 * 1 = send self<a, b>",
+		// "let f(a : 1, b : 1) : 1 * (1 * 1) = send self<a, b>",
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+// Typechecker -> these programs should pass the typechecker
+func TestTypecheckCorrectPrograms(t *testing.T) {
+
+	cases := []string{
+		"type A = 1",
+		"let f() : 1 = close self",
+		// send
+		// MulL
+		"let f(a : 1, b : 1) : 1 * 1 = send self<a, b>",
+		// MulR
+		"let f(a : 1, b : 1) : 1 * 1 = send self<a, b>",
+		`type A = +{l1 : 1}
+		  type B = 1 -o 1
+		  let f(a : A, b : B) : A * B = send self<a, b>`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}

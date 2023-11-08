@@ -7,9 +7,19 @@ import (
 )
 
 const program = `
-prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-prc[pid2] = send self<pid3, self>
+type A = 1
+
+let f1(a0 : 1, b : 1) : 1 * 1 = p_new <- +new (send p_new<a0, b>); <a1, b2> <- recv p_new; wait a1; wait b2; close self
+
+prc[x] = +f1(a_orig, b_orig)
+prc[a_orig] = close self
+prc[b_orig] = close self
 `
+
+// let f2(x : 1, y : 1) : 1 * 1 = send x<y, self>
+
+// prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+// prc[pid2] = send self<pid3, self>
 
 // type C = 1 * 1
 // type D = 1 -o 1
@@ -56,7 +66,6 @@ type Send = a * b
 type Receive = c -o b
 type Brack = (a)
 type Complex = +{a : (x -o &{a : f * g}), c : d}
-
 `
 const program33 = `
 type Unit = 1
@@ -200,11 +209,14 @@ func main() {
 	processes, globalEnv, err := parser.ParseString(program)
 	if err != nil {
 		log.Fatal(err)
-		// fmt.Println(err.Error())
 		return
 	}
 
-	process.Typecheck(processes, globalEnv)
+	err = process.Typecheck(processes, globalEnv)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 
 	re := &process.RuntimeEnvironment{
 		GlobalEnvironment: globalEnv,

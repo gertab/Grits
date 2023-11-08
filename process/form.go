@@ -3,6 +3,7 @@ package process
 import (
 	"bytes"
 	"fmt"
+	"phi/types"
 	"reflect"
 )
 
@@ -17,7 +18,7 @@ type Form interface {
 	// Transition functions are used during evaluation
 	Transition(*Process, *RuntimeEnvironment)
 	TransitionNP(*Process, *RuntimeEnvironment)
-	typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv)
+	typecheckForm(gammaNameTypes NamesTypesCtx, providerType types.SessionType, a LabelledTypesEnv, sigma FunctionTypesEnv)
 }
 
 type Polarity int

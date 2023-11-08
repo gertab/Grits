@@ -35,6 +35,7 @@ import (
 %type <names> names
 %type <names> optional_names
 %type <names> optional_names_with_type_ann
+%type <names> names_with_type_ann
 %type <branches> branches
 %type <sessionType> session_type
 %type <sessionTypeAlt> session_type_alts
@@ -141,16 +142,20 @@ branches :   /* empty */         										 { $$ = nil }
          ;
 
 names : name { $$ = []process.Name{$1} }
- 	  | name COMMA names { $$ = append($3, $1) }
+ 	  | name COMMA names { $$ = append([]process.Name{$1}, $3...) }
 
 optional_names : /* empty */ { $$ = nil }
 		| name { $$ = []process.Name{$1} }
-		| name COMMA names { $$ = append($3, $1) }
+		| name COMMA names { $$ = append([]process.Name{$1}, $3...) }
 
 optional_names_with_type_ann : 
 			/* empty */ { $$ = nil }
 		| name_with_type_ann { $$ = []process.Name{$1} }
-		| name_with_type_ann COMMA names { $$ = append([]process.Name{$1}, $3...) }
+		| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) }
+
+names_with_type_ann : 
+	name_with_type_ann { $$ = []process.Name{$1} }
+	| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) }
 
 name_with_type_ann : 
 			/* without type - todo remove option to force types */

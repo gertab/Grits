@@ -7,14 +7,17 @@ import (
 )
 
 const program = `
-type C = 1 * 1
-type D = 1 -o 1
-
-let func3(next_pid : D) : C = send self< next_pid, self>
-let func2(next_pid : &{a : 1, c : 1}) : &{a : 1, c : 1} = send self< next_pid, self>
-
-prc[pid1] : &{a : 1, c : 1} = <a, b> <- recv pid2; wait a; close self
+prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+prc[pid2] = send self<pid3, self>
 `
+
+// type C = 1 * 1
+// type D = 1 -o 1
+
+// let func3(next_pid : D) : C = send self< next_pid, self>
+// let func2(next_pid : &{a : 1, c : 1}) : &{a : 1, c : 1} = send self< next_pid, self>
+
+// prc[pid1] : &{a : 1, c : 1} = <a, b> <- recv pid2; wait a; close self
 
 // undefined label reference
 // type B = &{a : unknownlabel, c : 1}
@@ -203,21 +206,21 @@ func main() {
 
 	process.Typecheck(processes, globalEnv)
 
-	// re := &process.RuntimeEnvironment{
-	// 	GlobalEnvironment: globalEnv,
-	// 	Debug:             true,
-	// 	Color:             true,
-	// 	LogLevels: []process.LogLevel{
-	// 		process.LOGINFO,
-	// 		process.LOGPROCESSING,
-	// 		process.LOGRULE,
-	// 		process.LOGRULEDETAILS,
-	// 		process.LOGMONITOR,
-	// 	},
-	// 	ExecutionVersion: process.NORMAL_ASYNC,
-	// }
+	re := &process.RuntimeEnvironment{
+		GlobalEnvironment: globalEnv,
+		Debug:             true,
+		Color:             true,
+		LogLevels: []process.LogLevel{
+			process.LOGINFO,
+			process.LOGPROCESSING,
+			process.LOGRULE,
+			process.LOGRULEDETAILS,
+			process.LOGMONITOR,
+		},
+		ExecutionVersion: process.NORMAL_ASYNC,
+	}
 
-	// process.InitializeProcesses(processes, nil, nil, re)
+	process.InitializeProcesses(processes, nil, nil, re)
 
 	// Run via API
 	// setupAPI()

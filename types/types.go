@@ -187,9 +187,9 @@ func EqualType(type1, type2 SessionType) bool {
 
 	switch interface{}(type1).(type) {
 	case *LabelType:
-		_, ok1 := type1.(*LabelType)
-		_, ok2 := type2.(*LabelType)
-		return ok1 && ok2
+		f1, ok1 := type1.(*LabelType)
+		f2, ok2 := type2.(*LabelType)
+		return ok1 && ok2 && f1.Label == f2.Label
 
 	case *UnitType:
 		_, ok1 := type1.(*UnitType)
@@ -218,7 +218,7 @@ func EqualType(type1, type2 SessionType) bool {
 		f1, ok1 := type1.(*SelectLabelType)
 		f2, ok2 := type2.(*SelectLabelType)
 
-		if ok1 && ok2 {
+		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
 			for index := range f1.Branches {
 				if !equalTypeBranch(f1.Branches[index], f2.Branches[index]) {
 					return false
@@ -232,7 +232,7 @@ func EqualType(type1, type2 SessionType) bool {
 		f1, ok1 := type1.(*BranchCaseType)
 		f2, ok2 := type2.(*BranchCaseType)
 
-		if ok1 && ok2 {
+		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
 			// todo check if order matters
 			for index := range f1.Branches {
 				if !equalTypeBranch(f1.Branches[index], f2.Branches[index]) {
@@ -242,6 +242,8 @@ func EqualType(type1, type2 SessionType) bool {
 
 			return true
 		}
+	case *WIPType:
+		return true
 	}
 
 	fmt.Printf("todo implement EqualType for type %s\n", a)
@@ -259,7 +261,9 @@ func equalTypeBranch(option1, option2 BranchOption) bool {
 
 // Takes a type and returns a (separate) clone
 func CopyType(orig SessionType) SessionType {
-	// origWithType := reflect.TypeOf(orig)
+	if orig == nil {
+		return nil
+	}
 
 	switch interface{}(orig).(type) {
 	case *LabelType:
@@ -305,10 +309,13 @@ func CopyType(orig SessionType) SessionType {
 				branches[i].Session_type = CopyType(p.Branches[i].Session_type)
 			}
 
-			return NewSelectType(branches)
+			return NewBranchCaseType(branches)
 		}
+
+	case *WIPType:
+		return NewWIPType()
 	}
 
-	panic("Should not happen")
+	panic("Should not happen (type)")
 	// return nil
 }

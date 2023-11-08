@@ -13,20 +13,23 @@ type SessionTypeDefinition struct {
 
 type SessionType interface {
 	String() string
+
+	// used for inner checks
+	checkLabelledTypes(typeDefNames map[string]bool) error
 }
 
 // Label
 type LabelType struct {
-	label string
+	Label string
 }
 
 func (q *LabelType) String() string {
-	return q.label
+	return q.Label
 }
 
 func NewLabelType(i string) *LabelType {
 	return &LabelType{
-		label: i,
+		Label: i,
 	}
 }
 
@@ -52,100 +55,100 @@ func NewUnitType() *UnitType {
 
 // Send: A * B
 type SendType struct {
-	left  SessionType
-	right SessionType
+	Left  SessionType
+	Right SessionType
 }
 
 func (q *SendType) String() string {
 	var buffer bytes.Buffer
 	// buffer.WriteString("(")
-	buffer.WriteString(q.left.String())
+	buffer.WriteString(q.Left.String())
 	buffer.WriteString(" * ")
-	buffer.WriteString(q.right.String())
+	buffer.WriteString(q.Right.String())
 	// buffer.WriteString(")")
 	return buffer.String()
 }
 
 func NewSendType(left, right SessionType) *SendType {
 	return &SendType{
-		left:  left,
-		right: right,
+		Left:  left,
+		Right: right,
 	}
 }
 
 // Receive: A -o B
 type ReceiveType struct {
-	left  SessionType
-	right SessionType
+	Left  SessionType
+	Right SessionType
 }
 
 func (q *ReceiveType) String() string {
 	var buffer bytes.Buffer
 	// buffer.WriteString("(")
-	buffer.WriteString(q.left.String())
+	buffer.WriteString(q.Left.String())
 	buffer.WriteString(" -o ")
-	buffer.WriteString(q.right.String())
+	buffer.WriteString(q.Right.String())
 	// buffer.WriteString(")")
 	return buffer.String()
 }
 
 func NewReceiveType(left, right SessionType) *ReceiveType {
 	return &ReceiveType{
-		left:  left,
-		right: right,
+		Left:  left,
+		Right: right,
 	}
 }
 
 // SelectLabel: +{ }
 type SelectLabelType struct {
-	branches []BranchOption
+	Branches []BranchOption
 }
 
 func (q *SelectLabelType) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("+{")
-	buffer.WriteString(stringifyBranches(q.branches))
+	buffer.WriteString(stringifyBranches(q.Branches))
 	buffer.WriteString("}")
 	return buffer.String()
 }
 
 func NewSelectType(branches []BranchOption) *SelectLabelType {
 	return &SelectLabelType{
-		branches: branches,
+		Branches: branches,
 	}
 }
 
 // BranchCase: & { }
 type BranchCaseType struct {
-	branches []BranchOption
+	Branches []BranchOption
 }
 
 func (q *BranchCaseType) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("&{")
-	buffer.WriteString(stringifyBranches(q.branches))
+	buffer.WriteString(stringifyBranches(q.Branches))
 	buffer.WriteString("}")
 	return buffer.String()
 }
 
 func NewBranchCaseType(branches []BranchOption) *BranchCaseType {
 	return &BranchCaseType{
-		branches: branches,
+		Branches: branches,
 	}
 }
 
 // branches
 type BranchOption struct {
-	label        string
-	session_type SessionType
+	Label        string
+	Session_type SessionType
 }
 
 func (branch *BranchOption) String() string {
 	var buffer bytes.Buffer
 
-	buffer.WriteString(branch.label)
+	buffer.WriteString(branch.Label)
 	buffer.WriteString(" : ")
-	buffer.WriteString(branch.session_type.String())
+	buffer.WriteString(branch.Session_type.String())
 
 	return buffer.String()
 }
@@ -154,9 +157,9 @@ func stringifyBranches(branches []BranchOption) string {
 	var buf bytes.Buffer
 
 	for i, j := range branches {
-		buf.WriteString(j.label)
+		buf.WriteString(j.Label)
 		buf.WriteString(" : ")
-		buf.WriteString(j.session_type.String())
+		buf.WriteString(j.Session_type.String())
 
 		if i < len(branches)-1 {
 			buf.WriteString(", ")
@@ -167,8 +170,8 @@ func stringifyBranches(branches []BranchOption) string {
 
 func NewBranchOption(label string, session_type SessionType) *BranchOption {
 	return &BranchOption{
-		label:        label,
-		session_type: session_type,
+		Label:        label,
+		Session_type: session_type,
 	}
 }
 
@@ -183,7 +186,6 @@ func EqualType(type1, type2 SessionType) bool {
 	}
 
 	switch interface{}(type1).(type) {
-
 	case *LabelType:
 		_, ok1 := type1.(*LabelType)
 		_, ok2 := type2.(*LabelType)
@@ -200,7 +202,7 @@ func EqualType(type1, type2 SessionType) bool {
 
 		if ok1 && ok2 {
 			// todo check if send type is commutative
-			return EqualType(f1.left, f2.left) && EqualType(f1.right, f2.right)
+			return EqualType(f1.Left, f2.Left) && EqualType(f1.Right, f2.Right)
 		}
 
 	case *ReceiveType:
@@ -209,7 +211,7 @@ func EqualType(type1, type2 SessionType) bool {
 
 		if ok1 && ok2 {
 			// todo check if receive type is commutative
-			return EqualType(f1.left, f2.left) && EqualType(f1.right, f2.right)
+			return EqualType(f1.Left, f2.Left) && EqualType(f1.Right, f2.Right)
 		}
 
 	case *SelectLabelType:
@@ -217,8 +219,8 @@ func EqualType(type1, type2 SessionType) bool {
 		f2, ok2 := type2.(*SelectLabelType)
 
 		if ok1 && ok2 {
-			for index := range f1.branches {
-				if !equalTypeBranch(f1.branches[index], f2.branches[index]) {
+			for index := range f1.Branches {
+				if !equalTypeBranch(f1.Branches[index], f2.Branches[index]) {
 					return false
 				}
 			}
@@ -232,8 +234,8 @@ func EqualType(type1, type2 SessionType) bool {
 
 		if ok1 && ok2 {
 			// todo check if order matters
-			for index := range f1.branches {
-				if !equalTypeBranch(f1.branches[index], f2.branches[index]) {
+			for index := range f1.Branches {
+				if !equalTypeBranch(f1.Branches[index], f2.Branches[index]) {
 					return false
 				}
 			}
@@ -248,14 +250,65 @@ func EqualType(type1, type2 SessionType) bool {
 
 func equalTypeBranch(option1, option2 BranchOption) bool {
 
-	if option1.label != option2.label {
+	if option1.Label != option2.Label {
 		return false
 	}
 
-	return EqualType(option1.session_type, option2.session_type)
+	return EqualType(option1.Session_type, option2.Session_type)
 }
 
-func TODOCopySessionType(s SessionType) SessionType {
-	// todo Not sure if a deep copy of the structs is needed
-	return s
+// Takes a type and returns a (separate) clone
+func CopyType(orig SessionType) SessionType {
+	// origWithType := reflect.TypeOf(orig)
+
+	switch interface{}(orig).(type) {
+	case *LabelType:
+		p, ok := orig.(*LabelType)
+		if ok {
+			return NewLabelType(p.Label)
+		}
+	case *UnitType:
+		_, ok := orig.(*UnitType)
+		if ok {
+			return NewUnitType()
+		}
+	case *SendType:
+		p, ok := orig.(*SendType)
+		if ok {
+			return NewSendType(CopyType(p.Left), CopyType(p.Right))
+		}
+	case *ReceiveType:
+		p, ok := orig.(*ReceiveType)
+		if ok {
+			return NewReceiveType(CopyType(p.Left), CopyType(p.Right))
+		}
+	case *SelectLabelType:
+		p, ok := orig.(*SelectLabelType)
+		if ok {
+			branches := make([]BranchOption, len(p.Branches))
+
+			for i := 0; i < len(p.Branches); i++ {
+				branches[i].Label = p.Branches[i].Label
+				branches[i].Session_type = CopyType(p.Branches[i].Session_type)
+			}
+
+			return NewSelectType(branches)
+		}
+
+	case *BranchCaseType:
+		p, ok := orig.(*BranchCaseType)
+		if ok {
+			branches := make([]BranchOption, len(p.Branches))
+
+			for i := 0; i < len(p.Branches); i++ {
+				branches[i].Label = p.Branches[i].Label
+				branches[i].Session_type = CopyType(p.Branches[i].Session_type)
+			}
+
+			return NewSelectType(branches)
+		}
+	}
+
+	panic("Should not happen")
+	// return nil
 }

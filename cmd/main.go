@@ -6,6 +6,31 @@ import (
 	"phi/process"
 )
 
+const program = `
+type C = 1 * 1
+type D = 1 -o 1
+
+let func3(next_pid : D) : C = send self< next_pid, self>
+let func2(next_pid : &{a : 1, c : 1}) : &{a : 1, c : 1} = send self< next_pid, self>
+
+prc[pid1] : &{a : 1, c : 1} = <a, b> <- recv pid2; wait a; close self
+`
+
+// undefined label reference
+// type B = &{a : unknownlabel, c : 1}
+// type E = 1 * X
+// type A = +{a : (1 -o &{a : FF * 1}), c : 1}
+// let func2(next_pid : B) : &{a : ssss, c : 1} = send self< next_pid, self>
+// prc[pid1] : &{a : ssss, c : 1} = <a, b> <- recv pid2; wait a; close self
+
+// contractive
+// type A = B
+
+// multiple types with the same name
+// type A = 1
+// type B = 1
+// type A = 1
+
 // const program = `
 // prc[pid1]: case a
 //
@@ -30,7 +55,7 @@ type Brack = (a)
 type Complex = +{a : (x -o &{a : f * g}), c : d}
 
 `
-const program = `
+const program33 = `
 type Unit = 1
 type Select = +{a : b}
 
@@ -176,23 +201,23 @@ func main() {
 		return
 	}
 
-	re := &process.RuntimeEnvironment{
-		GlobalEnvironment: globalEnv,
-		Debug:             true,
-		Color:             true,
-		LogLevels: []process.LogLevel{
-			process.LOGINFO,
-			process.LOGPROCESSING,
-			process.LOGRULE,
-			process.LOGRULEDETAILS,
-			process.LOGMONITOR,
-		},
-		ExecutionVersion: process.NORMAL_ASYNC,
-	}
-
 	process.Typecheck(processes, globalEnv)
 
-	process.InitializeProcesses(processes, nil, nil, re)
+	// re := &process.RuntimeEnvironment{
+	// 	GlobalEnvironment: globalEnv,
+	// 	Debug:             true,
+	// 	Color:             true,
+	// 	LogLevels: []process.LogLevel{
+	// 		process.LOGINFO,
+	// 		process.LOGPROCESSING,
+	// 		process.LOGRULE,
+	// 		process.LOGRULEDETAILS,
+	// 		process.LOGMONITOR,
+	// 	},
+	// 	ExecutionVersion: process.NORMAL_ASYNC,
+	// }
+
+	// process.InitializeProcesses(processes, nil, nil, re)
 
 	// Run via API
 	// setupAPI()

@@ -12,7 +12,7 @@ func Typecheck(processes []*Process, globalEnv *GlobalEnvironment) error {
 
 	// Running in a separate process allows us to break the typechecking part as soon as the first
 	// error is found
-	go typecheckProcesses(processes, globalEnv, errorChan, doneChan)
+	go typecheckFunctionsAndProcesses(processes, globalEnv, errorChan, doneChan)
 
 	select {
 	case err := <-errorChan:
@@ -21,23 +21,10 @@ func Typecheck(processes []*Process, globalEnv *GlobalEnvironment) error {
 		fmt.Println("Typecheck successful")
 	}
 
-	i := types.NewLabelType("hello")
-
-	k := types.NewReceiveType(i, types.NewUnitType())
-
-	j := types.CopyType(k)
-
-	i.Label = "iiii"
-
-	fmt.Println(j)
-	fmt.Println(k)
-
-	// k.
-
 	return nil
 }
 
-func typecheckProcesses(processes []*Process, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
+func typecheckFunctionsAndProcesses(processes []*Process, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
 	defer func() {
 		doneChan <- true
 	}()
@@ -49,6 +36,10 @@ func typecheckProcesses(processes []*Process, globalEnv *GlobalEnvironment, erro
 	}
 
 	// We can initiate the more heavyweight typechecking
+	// 1) Typecheck function definitions
+	typecheckFunctionDefinitions(globalEnv)
+
+	// 2) todo Process definitions
 
 	fmt.Println("ok")
 }
@@ -91,4 +82,107 @@ func lightweightChecks(processes []*Process, globalEnv *GlobalEnvironment) error
 	}
 
 	return nil
+}
+
+func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
+	labelledTypesEnv := produceLabelledSessionTypeEnvironment(*globalEnv.Types)
+	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions)
+
+	for _, j := range *globalEnv.FunctionDefinitions {
+		j.Body.typecheckForm(labelledTypesEnv, functionDefinitionsEnv)
+	}
+
+	return nil
+}
+
+// ------- Syntax directed typechecking
+type LabelledTypesEnv map[string]LabelledType
+type FunctionTypesEnv map[string]FunctionType
+
+func (p *SendForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *ReceiveForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *SelectForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *BranchForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *CaseForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *NewForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *CloseForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *ForwardForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *SplitForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *CallForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *WaitForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *CastForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *ShiftForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+func (p *PrintForm) typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv) {
+
+}
+
+// /// Fixed Environments
+//
+// labelledTypesEnv: map of labels to their session type (wrapped in a LabelledType struct)
+// This is constant and set once at the beginning. The information is obtained from the 'type A = ...' definitions.
+type LabelledType struct {
+	Name string
+	Type types.SessionType
+}
+
+func produceLabelledSessionTypeEnvironment(types []types.SessionTypeDefinition) LabelledTypesEnv {
+	labelledTypesEnv := make(LabelledTypesEnv)
+	for _, j := range types {
+		labelledTypesEnv[j.Name] = LabelledType{Type: j.SessionType, Name: j.Name}
+	}
+
+	return labelledTypesEnv
+}
+
+func labelledSessionTypeExists(labelledTypesEnv LabelledTypesEnv, key string) bool {
+	_, ok := labelledTypesEnv[key]
+
+	return ok
+}
+
+type FunctionType struct {
+	FunctionName string
+	Parameters   []Name
+	Type         types.SessionType
+}
+
+func produceFunctionDefinitionsEnvironment(functionDefs []FunctionDefinition) FunctionTypesEnv {
+	functionTypesEnv := make(FunctionTypesEnv)
+	for _, j := range functionDefs {
+		functionTypesEnv[j.FunctionName] = FunctionType{Type: j.Type, FunctionName: j.FunctionName, Parameters: j.Parameters}
+	}
+
+	return functionTypesEnv
+}
+
+func functionExists(functionTypesEnv FunctionTypesEnv, key string) bool {
+	_, ok := functionTypesEnv[key]
+
+	return ok
 }

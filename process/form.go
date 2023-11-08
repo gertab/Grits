@@ -13,6 +13,11 @@ type Form interface {
 	Polarity() Polarity
 	FreeNames() []Name
 	Substitute(Name, Name)
+
+	// Transition functions are used during evaluation
+	Transition(*Process, *RuntimeEnvironment)
+	TransitionNP(*Process, *RuntimeEnvironment)
+	typecheckForm(a LabelledTypesEnv, b FunctionTypesEnv)
 }
 
 type Polarity int

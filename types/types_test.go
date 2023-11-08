@@ -18,12 +18,10 @@ func TestSimpleStrings(t *testing.T) {
 		{NewReceiveType(label1, label2), "abc -o def"},
 		{NewSelectType([]BranchOption{{Label: "a", Session_type: label1}}), "+{a : abc}"},
 		{NewBranchCaseType([]BranchOption{{Label: "a", Session_type: label1}}), "&{a : abc}"},
-		// {"type E = +{a : (abc -o (abc -o &{a : abc, bb : def})), bb : def}", "+{a : abc -o abc -o &{a : abc, bb : def}, bb : def}"},
 	}
 
 	for i, c := range cases {
 		output := c.input.String()
-		// outputST := output[0].SessionType
 		if c.expected != output {
 			t.Errorf("error in case #%d: Got %s, expected %s\n", i, output, c.expected)
 		}
@@ -73,7 +71,6 @@ func TestNotEqualType(t *testing.T) {
 	branch_opt := []BranchOption{{Label: "bb", Session_type: label1}}
 	branch := NewBranchCaseType(branch_opt)
 
-	// Not equal types
 	cases := []struct {
 		input    SessionType
 		expected SessionType
@@ -131,7 +128,6 @@ func TestCopy(t *testing.T) {
 
 	for i, c := range cases {
 		output := c.input.String()
-		// outputST := output[0].SessionType
 		if c.expected != output {
 			t.Errorf("error in case #%d: Got %s, expected %s\n", i, output, c.expected)
 		}

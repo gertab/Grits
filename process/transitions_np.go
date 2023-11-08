@@ -28,10 +28,6 @@ func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
 	go process.transitionLoopNP(re)
 }
 
-type TransitionableNP interface {
-	TransitionNP(*Process, *RuntimeEnvironment)
-}
-
 // Entry point for each process transition
 func (process *Process) transitionLoopNP(re *RuntimeEnvironment) {
 	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", PolarityMap[process.Body.Polarity()], process.Body.String())
@@ -39,7 +35,7 @@ func (process *Process) transitionLoopNP(re *RuntimeEnvironment) {
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
 
-	process.Body.(TransitionableNP).TransitionNP(process, re)
+	process.Body.TransitionNP(process, re)
 }
 
 // When a process starts transitioning, a process chooses to transition as one of these forms:

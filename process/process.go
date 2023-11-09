@@ -6,6 +6,8 @@ import (
 	"strconv"
 )
 
+const printTypes = true
+
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
 	Body      Form
@@ -82,6 +84,10 @@ func (n *Name) String() string {
 		} else {
 			m = n.Ident
 		}
+	}
+
+	if printTypes && n.Type != nil {
+		m = m + "|" + n.Type.String() + "|"
 	}
 
 	if n.Initialized() {

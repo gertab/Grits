@@ -14,7 +14,7 @@ import (
 %union {
 	strval 			string
 	common_type		unexpandedProcessOrFunction
-	statements 			[]unexpandedProcessOrFunction
+	statements 		[]unexpandedProcessOrFunction
 	name 			process.Name
 	names 			[]process.Name
 	form 			process.Form

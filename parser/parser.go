@@ -34,6 +34,56 @@ type incompleteProcess struct {
 	Type      types.SessionType
 }
 
+func ParseString(program string) ([]*process.Process, *process.GlobalEnvironment, error) {
+	r := strings.NewReader(program)
+
+	allEnvironment, err := Parse(r)
+
+	if err != nil {
+		fmt.Println(err)
+		// panic("Parsing error!")
+		return nil, nil, err
+	}
+
+	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
+	// polarizedProcesses := polarizeProcesses(expandedProcesses)
+	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
+
+	return expandedProcesses, globalEnv, nil
+}
+
+func ParseFile(fileName string) ([]*process.Process, *process.GlobalEnvironment, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	// LexAndPrintTokens(file)
+	allEnvironment, err := Parse(file)
+
+	if err != nil {
+		fmt.Println(err)
+		// panic("Parsing error!")
+		return nil, nil, err
+	}
+
+	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
+	// polarizedProcesses := polarizeProcesses(expandedProcesses)
+	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
+
+	return expandedProcesses, globalEnv, nil
+}
+
+// func Check() {
+// 	processes, _ := ParseFile("parser/input.test")
+
+// 	for _, p := range processes {
+// 		fmt.Println(p.Body.String())
+// 		if p.FunctionDefinitions != nil {
+// 			fmt.Println(len(*p.FunctionDefinitions))
+// 		}
+// 	}
+// }
+
 func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvironment) {
 
 	var processes []*process.Process
@@ -129,56 +179,6 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 // 	}
 
 // 	return result, globalEnv
-// }
-
-func ParseFile(fileName string) ([]*process.Process, *process.GlobalEnvironment, error) {
-	file, err := os.Open(fileName)
-	if err != nil {
-		panic(err)
-	}
-	// LexAndPrintTokens(file)
-	allEnvironment, err := Parse(file)
-
-	if err != nil {
-		fmt.Println(err)
-		// panic("Parsing error!")
-		return nil, nil, err
-	}
-
-	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
-	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
-
-	return expandedProcesses, globalEnv, nil
-}
-
-func ParseString(program string) ([]*process.Process, *process.GlobalEnvironment, error) {
-	r := strings.NewReader(program)
-
-	allEnvironment, err := Parse(r)
-
-	if err != nil {
-		fmt.Println(err)
-		// panic("Parsing error!")
-		return nil, nil, err
-	}
-
-	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
-	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
-
-	return expandedProcesses, globalEnv, nil
-}
-
-// func Check() {
-// 	processes, _ := ParseFile("parser/input.test")
-
-// 	for _, p := range processes {
-// 		fmt.Println(p.Body.String())
-// 		if p.FunctionDefinitions != nil {
-// 			fmt.Println(len(*p.FunctionDefinitions))
-// 		}
-// 	}
 // }
 
 // // Forms used as shorthand notations

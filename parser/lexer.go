@@ -18,7 +18,6 @@ type lexer struct {
 	Errors  chan error
 
 	processesOrFunctionsRes []unexpandedProcessOrFunction
-	// functionDefinitionsRes []process.FunctionDefinition
 }
 
 // newLexer returns a new yacc-compatible lexer.

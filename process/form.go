@@ -18,7 +18,7 @@ type Form interface {
 	// Transition functions are used during evaluation
 	Transition(*Process, *RuntimeEnvironment)
 	TransitionNP(*Process, *RuntimeEnvironment)
-	typecheckForm(gammaNameTypes NamesTypesCtx, providerType types.SessionType, a LabelledTypesEnv, sigma FunctionTypesEnv)
+	typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, a LabelledTypesEnv, sigma FunctionTypesEnv)
 }
 
 type Polarity int

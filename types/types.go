@@ -178,6 +178,7 @@ func NewBranchOption(label string, session_type SessionType) *BranchOption {
 // Check for equality
 
 // Check equality between different forms
+// todo may need to account for equi-recursion of types
 func EqualType(type1, type2 SessionType) bool {
 	a := reflect.TypeOf(type1)
 	b := reflect.TypeOf(type2)

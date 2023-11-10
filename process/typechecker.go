@@ -117,6 +117,29 @@ type NamesTypesCtx map[string]NamesType       /* maps names to their types */
 // ... sigma FunctionTypesEnv           	 	<- keeps the mapping of pre-defined function definitions (let f() : A = ...)
 
 func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType, error) {
+
+	if name.IsSelf {
+		return nil, fmt.Errorf("found self, expected a client")
+	}
+
+	foundName, ok := gammaNameTypesCtx[name.Ident]
+
+	if ok {
+		// If linear then remove
+		delete(gammaNameTypesCtx, name.Ident)
+
+		return foundName.Type, nil
+	}
+
+	// Problem since the requested name was not found in the gamma
+	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
+}
+
+func consumeNameMaybeSelf(name Name, gammaNameTypesCtx NamesTypesCtx, providerType types.SessionType) (types.SessionType, error) {
+	if name.IsSelf {
+		return providerType, nil
+	}
+
 	foundName, ok := gammaNameTypesCtx[name.Ident]
 
 	if ok {
@@ -133,14 +156,14 @@ func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType,
 // */-o: send w<u, v>
 func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	if isProvider(p.to_c, providerShadowName) {
-		// MulR
+		// MulR: *
 		logRule("rule MulR")
 
-		provider, sendTypeOk := providerType.(*types.SendType)
+		providerSendType, sendTypeOk := providerType.(*types.SendType)
 
 		if sendTypeOk {
-			expectedLeftType := provider.Left
-			expectedRightType := provider.Right
+			expectedLeftType := providerSendType.Left
+			expectedRightType := providerSendType.Right
 			foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
 			foundRightType, errorRight := consumeName(p.continuation_c, gammaNameTypesCtx)
 
@@ -152,7 +175,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 				return errorRight
 			}
 
-			// The expected and found must match
+			// The expected and found types must match
 			if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
 				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
 			}
@@ -168,11 +191,49 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			// wrong type: A * B
 			return fmt.Errorf("expected %s to have a send type (A * B), but found type %s instead", p.String(), providerType.String())
 		}
+	} else if isProvider(p.continuation_c, providerShadowName) {
+		// ImpL: -o
+		logRule("rule ImpL")
+
+		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return errorClient
+		}
+
+		clientReceiveType, clientTypeOk := clientType.(*types.ReceiveType)
+
+		if clientTypeOk {
+			expectedLeftType := clientReceiveType.Left
+			expectedRightType := clientReceiveType.Right
+			foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
+			foundRightType, errorRight := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
+
+			if errorLeft != nil {
+				return errorLeft
+			}
+
+			if errorRight != nil {
+				return errorRight
+			}
+
+			// The expected and found types must match
+			if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
+				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
+			}
+
+			if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
+				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
+			}
+
+			// Set the types for the names
+			p.payload_c.Type = foundLeftType
+			p.continuation_c.Type = foundRightType
+		} else {
+			// wrong type: A -o B
+			return fmt.Errorf("expected %s to have a send type (A -o B), but found type %s instead", p.to_c.String(), clientType.String())
+		}
 	} else {
-		// MulR
-
-		logRule("rule MulL")
-
+		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In %s, self was not used appropriately", p.String())
 	}
 
 	// ensure that the remaining names in gamma are allow (i.e. memmx names imdendlin)

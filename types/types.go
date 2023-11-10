@@ -175,22 +175,67 @@ func NewBranchOption(label string, session_type SessionType) *BranchOption {
 	}
 }
 
-// Check for equality
+type LabelledTypesEnv map[string]LabelledType
+type LabelledType struct {
+	Name string
+	Type SessionType
+}
 
-// Check equality between different forms
-// todo may need to account for equi-recursion of types
-func EqualType(type1, type2 SessionType) bool {
+// Check for equality
+func EqualType(type1, type2 SessionType, labelledTypesEnv LabelledTypesEnv) bool {
+	return innerEqualType(type1, type2, make(map[string]bool), labelledTypesEnv)
+}
+
+// The snapshots maps keeps a snapshot of both types in case the types are unfolded. This ensures that the types do not keep unfolding infinitely.
+func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelledTypesEnv LabelledTypesEnv) bool {
 	a := reflect.TypeOf(type1)
 	b := reflect.TypeOf(type2)
+
+	f1, isLabel1 := type1.(*LabelType)
+	f2, isLabel2 := type2.(*LabelType)
+
+	// If neither is a label and neither type's match
+	if a != b && !isLabel1 && !isLabel2 {
+		return false
+	}
+
+	if isLabel1 || isLabel2 {
+		// Compare with existing snapshots
+		presentSnapshot := type1.String() + type2.String()
+
+		_, exists := snapshots[presentSnapshot]
+		if exists {
+			return true
+		}
+
+		// Expand label/s
+		// This fetch operation (from the map) should succeed since we already check that all labels used are defined
+		if isLabel1 {
+			type1 = labelledTypesEnv[f1.Label].Type
+
+		}
+
+		if isLabel2 {
+			type2 = labelledTypesEnv[f2.Label].Type
+		}
+
+		// Add new snapshot
+		newSnapshot := type1.String() + type2.String()
+		snapshots[newSnapshot] = true
+
+		return innerEqualType(type1, type2, snapshots, labelledTypesEnv)
+	}
+
+	// At this point, neither type1 nor type2 can be of LabelType
 	if a != b {
 		return false
 	}
 
 	switch interface{}(type1).(type) {
-	case *LabelType:
-		f1, ok1 := type1.(*LabelType)
-		f2, ok2 := type2.(*LabelType)
-		return ok1 && ok2 && f1.Label == f2.Label
+	// case *LabelType:
+	// 	f1, ok1 := type1.(*LabelType)
+	// 	f2, ok2 := type2.(*LabelType)
+	// 	return ok1 && ok2 && f1.Label == f2.Label
 
 	case *UnitType:
 		_, ok1 := type1.(*UnitType)
@@ -203,7 +248,7 @@ func EqualType(type1, type2 SessionType) bool {
 
 		if ok1 && ok2 {
 			// todo check if send type is commutative
-			return EqualType(f1.Left, f2.Left) && EqualType(f1.Right, f2.Right)
+			return innerEqualType(f1.Left, f2.Left, snapshots, labelledTypesEnv) && innerEqualType(f1.Right, f2.Right, snapshots, labelledTypesEnv)
 		}
 
 	case *ReceiveType:
@@ -212,7 +257,7 @@ func EqualType(type1, type2 SessionType) bool {
 
 		if ok1 && ok2 {
 			// todo check if receive type is commutative
-			return EqualType(f1.Left, f2.Left) && EqualType(f1.Right, f2.Right)
+			return innerEqualType(f1.Left, f2.Left, snapshots, labelledTypesEnv) && innerEqualType(f1.Right, f2.Right, snapshots, labelledTypesEnv)
 		}
 
 	case *SelectLabelType:
@@ -221,7 +266,7 @@ func EqualType(type1, type2 SessionType) bool {
 
 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
 			for index := range f1.Branches {
-				if !equalTypeBranch(f1.Branches[index], f2.Branches[index]) {
+				if !equalTypeBranch(f1.Branches[index], f2.Branches[index], snapshots, labelledTypesEnv) {
 					return false
 				}
 			}
@@ -236,7 +281,7 @@ func EqualType(type1, type2 SessionType) bool {
 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
 			// todo check if order matters
 			for index := range f1.Branches {
-				if !equalTypeBranch(f1.Branches[index], f2.Branches[index]) {
+				if !equalTypeBranch(f1.Branches[index], f2.Branches[index], snapshots, labelledTypesEnv) {
 					return false
 				}
 			}
@@ -247,18 +292,103 @@ func EqualType(type1, type2 SessionType) bool {
 		return true
 	}
 
-	fmt.Printf("todo implement EqualType for type %s\n", a)
+	fmt.Printf("issue in EqualType for type %s\n", a)
 	return false
 }
 
-func equalTypeBranch(option1, option2 BranchOption) bool {
+func equalTypeBranch(option1, option2 BranchOption, snapshots map[string]bool, labelledTypesEnv LabelledTypesEnv) bool {
 
 	if option1.Label != option2.Label {
 		return false
 	}
 
-	return EqualType(option1.Session_type, option2.Session_type)
+	return innerEqualType(option1.Session_type, option2.Session_type, snapshots, labelledTypesEnv)
 }
+
+// // Compares types on a syntax level.
+// // E.g. if type A = 1 -o 1,
+// // then equalSyntacticType(1 -o 1, 1 -o 1) = true
+// // then equalSyntacticType(A, 1 -o 1) = false
+// func equalSyntacticType(type1, type2 SessionType) bool {
+// 	a := reflect.TypeOf(type1)
+// 	b := reflect.TypeOf(type2)
+// 	if a != b {
+// 		return false
+// 	}
+
+// 	switch interface{}(type1).(type) {
+// 	case *LabelType:
+// 		f1, ok1 := type1.(*LabelType)
+// 		f2, ok2 := type2.(*LabelType)
+// 		return ok1 && ok2 && f1.Label == f2.Label
+
+// 	case *UnitType:
+// 		_, ok1 := type1.(*UnitType)
+// 		_, ok2 := type2.(*UnitType)
+// 		return ok1 && ok2
+
+// 	case *SendType:
+// 		f1, ok1 := type1.(*SendType)
+// 		f2, ok2 := type2.(*SendType)
+
+// 		if ok1 && ok2 {
+// 			// todo check if send type is commutative
+// 			return equalSyntacticType(f1.Left, f2.Left) && equalSyntacticType(f1.Right, f2.Right)
+// 		}
+
+// 	case *ReceiveType:
+// 		f1, ok1 := type1.(*ReceiveType)
+// 		f2, ok2 := type2.(*ReceiveType)
+
+// 		if ok1 && ok2 {
+// 			// todo check if receive type is commutative
+// 			return equalSyntacticType(f1.Left, f2.Left) && equalSyntacticType(f1.Right, f2.Right)
+// 		}
+
+// 	case *SelectLabelType:
+// 		f1, ok1 := type1.(*SelectLabelType)
+// 		f2, ok2 := type2.(*SelectLabelType)
+
+// 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
+// 			for index := range f1.Branches {
+// 				if !equalSyntacticTypeBranch(f1.Branches[index], f2.Branches[index]) {
+// 					return false
+// 				}
+// 			}
+
+// 			return true
+// 		}
+
+// 	case *BranchCaseType:
+// 		f1, ok1 := type1.(*BranchCaseType)
+// 		f2, ok2 := type2.(*BranchCaseType)
+
+// 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
+// 			// todo check if order matters
+// 			for index := range f1.Branches {
+// 				if !equalSyntacticTypeBranch(f1.Branches[index], f2.Branches[index]) {
+// 					return false
+// 				}
+// 			}
+
+// 			return true
+// 		}
+// 	case *WIPType:
+// 		return true
+// 	}
+
+// 	fmt.Printf("todo implement EqualType for type %s\n", a)
+// 	return false
+// }
+
+// func equalSyntacticTypeBranch(option1, option2 BranchOption) bool {
+
+// 	if option1.Label != option2.Label {
+// 		return false
+// 	}
+
+// 	return equalSyntacticType(option1.Session_type, option2.Session_type)
+// }
 
 // Takes a type and returns a (separate) clone
 func CopyType(orig SessionType) SessionType {

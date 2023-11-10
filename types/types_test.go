@@ -53,7 +53,7 @@ func TestEqualType(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if !EqualType(c.input, c.expected) {
+		if !EqualType(c.input, c.expected, make(LabelledTypesEnv)) {
 			t.Errorf("error (EqualType) in case #%d: Got %s, expected %s\n", i, c.expected.String(), c.expected)
 		}
 	}
@@ -86,7 +86,7 @@ func TestNotEqualType(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if EqualType(c.input, c.expected) {
+		if EqualType(c.input, c.expected, make(LabelledTypesEnv)) {
 			t.Errorf("error (EqualType) in case #%d: Got %s, expected %s\n", i, c.input.String(), c.expected.String())
 		}
 	}

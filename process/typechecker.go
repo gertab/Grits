@@ -36,8 +36,10 @@ func typecheckFunctionsAndProcesses(processes []*Process, globalEnv *GlobalEnvir
 
 	// We can initiate the more heavyweight typechecking
 	// 1) Typecheck function definitions
-	typecheckFunctionDefinitions(globalEnv)
-
+	err = typecheckFunctionDefinitions(globalEnv)
+	if err != nil {
+		errorChan <- err
+	}
 	// 2) todo Process definitions
 }
 
@@ -89,7 +91,10 @@ func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 		gammaNameTypesCtx := produceNameTypesCtx(funcDef.Parameters)
 		providerType := funcDef.Type
 
-		funcDef.Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv)
+		err := funcDef.Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -105,112 +110,124 @@ type NamesTypesCtx map[string]NamesType       /* maps names to their types */
 // Each form has a dedicated typechecking function
 
 // typecheckForm uses these parameters:
-// ... gammaNameTypesCtx NamesTypesCtx   <- names in context to be used (in case of linearity, ...)
-// ... providerShadowName *Name          <- name of the process providing on (typically nil, since self is used instead)
-// ... providerType types.SessionType    <- the type of the provider (i.e. type of self)
-// ... labelledTypesEnv LabelledTypesEnv <- keeps the mapping of pre-defined types (type A = ...)
-// ... sigma FunctionTypesEnv            <- keeps the mapping of pre-defined function definitions (let f() : A = ...)
+// ... gammaNameTypesCtx NamesTypesCtx   		<- names in context to be used (in case of linearity, ...)
+// ... providerShadowName *Name          		<- name of the process providing on (typically nil, since self is used instead)
+// ... providerType types.SessionType    		<- the type of the provider (i.e. type of self)
+// ... labelledTypesEnv types.LabelledTypesEnv 	<- keeps the mapping of pre-defined types (type A = ...)
+// ... sigma FunctionTypesEnv           	 	<- keeps the mapping of pre-defined function definitions (let f() : A = ...)
 
-func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) types.SessionType {
+func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType, error) {
 	foundName, ok := gammaNameTypesCtx[name.Ident]
 
 	if ok {
 		// If linear then remove
 		delete(gammaNameTypesCtx, name.Ident)
 
-		return foundName.Type
+		return foundName.Type, nil
 	}
 
 	// Problem since the requested name was not found in the gamma
-	panic("Problem since the requested name was not found in the gamma. todo set cool error message")
-	// return ok
+	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
 }
 
 // */-o: send w<u, v>
-func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
+func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	if isProvider(p.to_c, providerShadowName) {
 		// MulR
+		logRule("rule MulR")
+
 		provider, sendTypeOk := providerType.(*types.SendType)
 
 		if sendTypeOk {
 			expectedLeftType := provider.Left
 			expectedRightType := provider.Right
-			foundLeftType := consumeName(p.payload_c, gammaNameTypesCtx)
-			foundRightType := consumeName(p.continuation_c, gammaNameTypesCtx)
+			foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
+			foundRightType, errorRight := consumeName(p.continuation_c, gammaNameTypesCtx)
+
+			if errorLeft != nil {
+				return errorLeft
+			}
+
+			if errorRight != nil {
+				return errorRight
+			}
 
 			// The expected and found must match
 			if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
-				panic("errorrrr")
+				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
 			}
 
 			if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
-				panic("errorrrr")
+				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
 			}
 
 			// Set the types for the names
 			p.payload_c.Type = foundLeftType
 			p.continuation_c.Type = foundRightType
 		} else {
-			// error
+			// wrong type: A * B
+			return fmt.Errorf("expected %s to have a send type (A * B), but found type %s instead", p.String(), providerType.String())
 		}
+	} else {
+		// MulR
 
-		fmt.Println(p.String())
+		logRule("rule MulL")
+
 	}
 
 	// ensure that the remaining names in gamma are allow (i.e. memmx names imdendlin)
 	if len(gammaNameTypesCtx) > 0 {
-		panic("non linear names left in gamma")
+		return fmt.Errorf("linearity requires that no names are left behind, however there were %d names left", len(gammaNameTypesCtx))
 	}
 
 	// ImpL
 
 	// at this point gammaNameTypesCtx should not contain linear names
+	return nil
 }
 
-func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
 
-func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
-func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) {
-
+func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	return nil
 }
 
-// /// Fixed Environments
-//
-// This is constant and set once at the beginning. The information is obtained from the 'type A = ...' definitions.
+// /// Fixed Environments: Set once and only read from
 
 type FunctionType struct {
 	FunctionName string
@@ -247,10 +264,12 @@ func produceNameTypesCtx(names []Name) NamesTypesCtx {
 	return namesTypesCtx
 }
 
-func nameTypeExists(labelledTypesEnv NamesTypesCtx, key string) bool {
-	_, ok := labelledTypesEnv[key]
+func nameTypeExists(namesTypesCtx NamesTypesCtx, key string) bool {
+	_, ok := namesTypesCtx[key]
 	return ok
 }
+
+// /// Util functions
 
 // we check whether a channel is the provider (i.e. either self of same as the explicit provider name)
 // E.g. the channel being sent to is the provider for these cases:
@@ -266,4 +285,8 @@ func isProvider(name Name, providerShadowName *Name) bool {
 	}
 
 	return false
+}
+
+func logRule(s string) {
+	fmt.Println(s)
 }

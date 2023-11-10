@@ -207,7 +207,7 @@ func TestEqualType(t *testing.T) {
 		type E = F // these should be avoided
 		type F = E`
 
-	// Ensures that input1
+	// Ensures that input1 and input2 are equivalent
 	cases := []struct {
 		input1 string
 		input2 string
@@ -335,8 +335,15 @@ func TestTypecheckIncorrectPrograms(t *testing.T) {
 		"type A = B",
 		"prc[a] : A = close self",
 		"let f() : 1 -o A = close self",
-		// // MulL (extra non used names)
-		// "let f(c : 1, a : 1, b : 1) : 1 * 1 = send self<a, b>",
+		// MulL (extra non used names)
+		"let f(c : 1, a : 1, b : 1) : 1 * 1 = send self<a, b>",
+		// MulL (missing names)
+		"let f(b : 1) : 1 * 1 = send self<a, b>",
+		// MulL (incorrect self type)
+		"let f(a : 1, b : 1) : &{a : 1} = send self<a, b>",
+		"let f(a : 1, b : 1) : 1 * &{a : 1} = send self<a, b>",
+		// MulL (incorrect self type)
+		"let f(a : &{a : 1}, b : &{b : 1}) : &{a : 1} * 1 = send self<a, b>",
 		// // MulR (wrong types)
 		// "let f(a : 1 -o 1, b : 1) : 1 * 1 = send self<a, b>",
 		// "let f(a : 1, b : 1 -o 1) : 1 * 1 = send self<a, b>",

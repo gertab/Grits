@@ -11,23 +11,27 @@ const program = `
 type A = +{l : 1, r : 1}
 type B = 1 * A
 
-let f1(a : A, b : 1 * A) : A * B = send self<a, b>
-// let f2(a : 1) : 1 * 1 = send self<a, b>
-// let f3(a : 1, b : 1, c : 1) : 1 * 1 = send self<a, b>
+let f2(a : 1, b : &{a : 1}) : &{a : 1} * &{a : 1} = send self<a, b>
 
-let f0(a : 1, b : 1) : 1 * 1 = p_new <- +new (send self<a, b>); <a1, b2> <- recv p_new; wait a1; wait b2; close self
 
-prc[x] = +f1(a_orig, b_orig)
-prc[a_orig] = close self
-prc[b_orig] = close self
+// let f1(a : A, b : 1 * A) : A * B = send self<a, b>
+
+// let f0(a : 1, b : 1) : 1 * 1 = p_new <- +new (send self<a, b>); <a1, b2> <- recv p_new; wait a1; wait b2; close self
+
+// prc[x] = +f1(a_orig, b_orig)
+// prc[a_orig] = close self
+// prc[b_orig] = close self
 `
 const program_no_errors = `
 let f1(a : 1, b : 1) : 1 * 1 = send self<a, b>
+
+type A = +{l : 1, r : 1}
+let f2(a : A, b : 1 * A) : A * B = send self<a, b>
 `
 
 const program_with_errors = `
-let f2(a : 1) : 1 * 1 = send self<a, b>
-let f3(a : 1, b : 1, c : 1) : 1 * 1 = send self<a, b>
+let f1(a : 1) : 1 * 1 = send self<a, b>
+let f2(a : 1, b : 1, c : 1) : 1 * 1 = send self<a, b>
 `
 
 // let f2(x : 1, y : 1) : 1 * 1 = send x<y, self>

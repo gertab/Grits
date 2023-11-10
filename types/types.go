@@ -181,6 +181,16 @@ type LabelledType struct {
 	Type SessionType
 }
 
+// labelledTypesEnv: map of labels to their session type (wrapped in a LabelledType struct)
+func ProduceLabelledSessionTypeEnvironment(typeDefs []SessionTypeDefinition) LabelledTypesEnv {
+	labelledTypesEnv := make(LabelledTypesEnv)
+	for _, j := range typeDefs {
+		labelledTypesEnv[j.Name] = LabelledType{Type: j.SessionType, Name: j.Name}
+	}
+
+	return labelledTypesEnv
+}
+
 // Check for equality
 func EqualType(type1, type2 SessionType, labelledTypesEnv LabelledTypesEnv) bool {
 	return innerEqualType(type1, type2, make(map[string]bool), labelledTypesEnv)
@@ -208,15 +218,28 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 			return true
 		}
 
+		if isLabel1 && isLabel2 && f1.Label == f2.Label {
+			return true
+		}
+
 		// Expand label/s
 		// This fetch operation (from the map) should succeed since we already check that all labels used are defined
 		if isLabel1 {
-			type1 = labelledTypesEnv[f1.Label].Type
-
+			labelledType, ok1 := labelledTypesEnv[f1.Label]
+			if ok1 {
+				type1 = labelledType.Type
+			} else {
+				return false
+			}
 		}
 
 		if isLabel2 {
-			type2 = labelledTypesEnv[f2.Label].Type
+			labelledType, ok2 := labelledTypesEnv[f2.Label]
+			if ok2 {
+				type2 = labelledType.Type
+			} else {
+				return false
+			}
 		}
 
 		// Add new snapshot

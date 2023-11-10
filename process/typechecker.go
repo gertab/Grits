@@ -82,7 +82,7 @@ func lightweightChecks(processes []*Process, globalEnv *GlobalEnvironment) error
 }
 
 func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
-	labelledTypesEnv := produceLabelledSessionTypeEnvironment(*globalEnv.Types)
+	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
 	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions)
 
 	for _, funcDef := range *globalEnv.FunctionDefinitions {
@@ -210,27 +210,7 @@ func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 
 // /// Fixed Environments
 //
-// labelledTypesEnv: map of labels to their session type (wrapped in a LabelledType struct)
 // This is constant and set once at the beginning. The information is obtained from the 'type A = ...' definitions.
-// type LabelledType struct {
-// 	Name string
-// 	Type types.SessionType
-// }
-
-func produceLabelledSessionTypeEnvironment(typeDefs []types.SessionTypeDefinition) types.LabelledTypesEnv {
-	labelledTypesEnv := make(types.LabelledTypesEnv)
-	for _, j := range typeDefs {
-		labelledTypesEnv[j.Name] = types.LabelledType{Type: j.SessionType, Name: j.Name}
-	}
-
-	return labelledTypesEnv
-}
-
-func labelledSessionTypeExists(labelledTypesEnv types.LabelledTypesEnv, key string) bool {
-	_, ok := labelledTypesEnv[key]
-
-	return ok
-}
 
 type FunctionType struct {
 	FunctionName string

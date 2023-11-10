@@ -26,14 +26,14 @@ func compareOutputTypes(t *testing.T, got []types.SessionType, expected []types.
 	}
 
 	for index := range got {
-		if !types.EqualType(got[index], expected[index]) {
+		if !types.EqualType(got[index], expected[index], make(types.LabelledTypesEnv)) {
 			t.Errorf("[%d] got %s, expected %s\n", index, got[index].String(), expected[index].String())
 		}
 	}
 }
 
-func compareOutputType(t *testing.T, got types.SessionType, expected types.SessionType) bool {
-	if !types.EqualType(got, expected) {
+func compareOutputType(t *testing.T, got types.SessionType, expected types.SessionType, labelledTypesEnv types.LabelledTypesEnv) bool {
+	if !types.EqualType(got, expected, labelledTypesEnv) {
 		t.Errorf("got %s, expected %s\n", got.String(), expected.String())
 		return false
 	}
@@ -135,7 +135,7 @@ func TestSimpleTypes(t *testing.T) {
 	for i, c := range cases {
 		output := *parseGetEnvironment(c.input).Types
 		outputST := output[0].SessionType
-		if !compareOutputType(t, outputST, c.expected) {
+		if !compareOutputType(t, outputST, c.expected, make(types.LabelledTypesEnv)) {
 			t.Errorf("error in case #%d\n", i)
 		}
 	}
@@ -168,14 +168,13 @@ func TestTypes(t *testing.T) {
 	for i, c := range cases {
 		output := *parseGetEnvironment(c.input).Types
 		outputST := output[0].SessionType
-		if !compareOutputType(t, outputST, c.expected) {
+		if !compareOutputType(t, outputST, c.expected, make(types.LabelledTypesEnv)) {
 			t.Errorf("error in case #%d\n", i)
 		}
 	}
 }
 
 func TestSimpleTypesStrings(t *testing.T) {
-
 	cases := []struct {
 		input    string
 		expected string
@@ -194,6 +193,77 @@ func TestSimpleTypesStrings(t *testing.T) {
 		outputST := output[0].SessionType
 		if c.expected != outputST.String() {
 			t.Errorf("error in case #%d: Got %s, expected %s\n", i, outputST.String(), c.expected)
+		}
+	}
+}
+
+func TestEqualType(t *testing.T) {
+
+	commonProgram :=
+		`type A = 1 -o 1
+		type B = &{a : A}
+		type C = +{a : D}
+		type D = 1 * C
+		type E = F // these should be avoided
+		type F = E`
+
+	// Ensures that input1
+	cases := []struct {
+		input1 string
+		input2 string
+	}{
+		{"abc", "abc"},
+		{"A", "A"},
+		{"&{a : (1 -o 1)}", "B"},
+		{"D", "1 * C"},
+		{"1 * +{a : D}", "1 * C"},
+		{"1 * +{a : D}", "D"},
+		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "D"},
+		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "1 * C"},
+		{"E", "F"},
+	}
+
+	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types
+	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(sessionTypeDefinitions)
+
+	for i, c := range cases {
+		input1 := *parseGetEnvironment("type X = " + c.input1).Types
+		input2 := *parseGetEnvironment("type X = " + c.input2).Types
+		input1ST := input1[0].SessionType
+		input2ST := input2[0].SessionType
+		if !compareOutputType(t, input1ST, input2ST, labelledTypesEnv) {
+			t.Errorf("error in case #%d\n", i)
+		}
+	}
+}
+
+func TestNotEqualType(t *testing.T) {
+
+	commonProgram :=
+		`type A = 1 -o 1
+		type B = &{a : A}
+		type C = +{a : D}
+		type D = 1 * C`
+
+	cases := []struct {
+		input1 string
+		input2 string
+	}{
+		{"abc", "dd"},
+		{"1 * +{a : D}", "C"},
+		{"1 * +{a : C}", "D"},
+	}
+
+	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types
+	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(sessionTypeDefinitions)
+	for i, c := range cases {
+		input1 := *parseGetEnvironment("type X = " + c.input1).Types
+		input2 := *parseGetEnvironment("type X = " + c.input2).Types
+		input1ST := input1[0].SessionType
+		input2ST := input2[0].SessionType
+
+		if types.EqualType(input1ST, input2ST, labelledTypesEnv) {
+			t.Errorf("error (EqualType) in case #%d: Got %s == %s, Expected %s != %s\n", i, c.input1, c.input2, c.input1, c.input2)
 		}
 	}
 }

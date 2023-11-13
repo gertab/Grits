@@ -390,3 +390,40 @@ func ProduceLabelledSessionTypeEnvironment(typeDefs []SessionTypeDefinition) Lab
 
 	return labelledTypesEnv
 }
+
+// Weaenable types allow for channels to be dropped
+func IsWeakenable(sessionType SessionType) bool {
+	// todo implement
+	fmt.Println("todo: IsWeakenable")
+
+	return true
+}
+
+// func IsContractable(sessionType SessionType) bool {
+// 	// todo implement
+// 	fmt.Println("todo: IsContractable")
+
+// 	return true
+// }
+
+// Used to unroll a type only if needed (i.e. reached label)
+func Unfold(orig SessionType, labelledTypesEnv LabelledTypesEnv) SessionType {
+	if orig == nil {
+		return nil
+	}
+
+	labelSessionType, labelType := orig.(*LabelType)
+
+	if labelType {
+		unfoldedSessionType, exists := labelledTypesEnv[labelSessionType.Label]
+
+		if exists {
+			// This could potentially cause an infinite loop if non-contractive types are used
+			return Unfold(unfoldedSessionType.Type, labelledTypesEnv)
+		} else {
+			return nil
+		}
+	} else {
+		return orig
+	}
+}

@@ -190,6 +190,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		// MulR: *
 		logRule("rule MulR")
 
+		providerType = types.Unfold(providerType, labelledTypesEnv)
 		// The type of the provider must be SendType
 		providerSendType, sendTypeOk := providerType.(*types.SendType)
 
@@ -233,6 +234,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			return errorClient
 		}
 
+		clientType = types.Unfold(clientType, labelledTypesEnv)
 		// The type of the client must be ReceiveType
 		clientReceiveType, clientTypeOk := clientType.(*types.ReceiveType)
 
@@ -284,6 +286,8 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	if isProvider(p.from_c, providerShadowName) {
 		// ImpR: -o
 		logRule("rule ImpR")
+
+		providerType = types.Unfold(providerType, labelledTypesEnv)
 		// The type of the provider must be ReceiveType
 		providerReceiveType, receiveTypeOk := providerType.(*types.ReceiveType)
 
@@ -319,6 +323,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 		}
 	} else if isProvider(p.payload_c, providerShadowName) || isProvider(p.continuation_c, providerShadowName) {
+		// providerType = types.Unfold(providerType, labelledTypesEnv)
 		// _, receiveTypeOk := providerType.(*types.ReceiveType)
 
 		// if receiveTypeOk {
@@ -335,6 +340,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 			return errorClient
 		}
 
+		clientType = types.Unfold(clientType, labelledTypesEnv)
 		// The type of the client must be SendType
 		clientSendType, clientTypeOk := clientType.(*types.SendType)
 
@@ -389,6 +395,8 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	// EndR: 1
 	logRule("rule EndR")
+	providerType = types.Unfold(providerType, labelledTypesEnv)
+
 	if isProvider(p.from_c, providerShadowName) {
 		providerUnitType, unitTypeOk := providerType.(*types.UnitType)
 
@@ -426,6 +434,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			return errorClient
 		}
 
+		clientType = types.Unfold(clientType, labelledTypesEnv)
 		// The type of the client must be UnitType
 		clientUnitType, clientTypeOk := clientType.(*types.UnitType)
 
@@ -442,6 +451,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		}
 	} else {
 		// Waiting on the wrong name
+		providerType = types.Unfold(providerType, labelledTypesEnv)
 		_, unitTypeOk := providerType.(*types.UnitType)
 
 		if unitTypeOk {
@@ -486,42 +496,31 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 // drop w; ...
 func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	// EndL: 1
+	// Drop
 	logRule("rule Drp")
 
-	return nil
+	// Can only wait for a client (not self)
+	if !isProvider(p.client_c, providerShadowName) {
+		clientType, errorClient := consumeName(p.client_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return errorClient
+		}
 
-	// // Can only wait for a client (not self)
-	// if !isProvider(p.to_c, providerShadowName) {
-	// 	clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
-	// 	if errorClient != nil {
-	// 		return errorClient
-	// 	}
+		if types.IsWeakenable(clientType) {
+			// Set type
+			p.client_c.Type = clientType
 
-	// 	// The type of the client must be UnitType
-	// 	clientUnitType, clientTypeOk := clientType.(*types.UnitType)
+			// Continue checking the remaining process
+			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
-	// 	if clientTypeOk {
-	// 		// Set type
-	// 		p.to_c.Type = clientUnitType
-
-	// 		// Continue checking the remaining process
-	// 		checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
-
-	// 		return checkContinuation
-	// 	} else {
-	// 		return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientUnitType.String())
-	// 	}
-	// } else {
-	// 	// Waiting on the wrong name
-	// 	_, unitTypeOk := providerType.(*types.UnitType)
-
-	// 	if unitTypeOk {
-	// 		return fmt.Errorf("expected '%s' to have a wait on a 'non-self' channel instead (%s is acting as self)", p.String(), p.to_c.String())
-	// 	} else {
-	// 		return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
-	// 	}
-	// }
+			return checkContinuation
+		} else {
+			return fmt.Errorf("expected '%s' to have a weakenable type, but found the non-weakenable type '%s' instead", p.client_c.String(), clientType.String())
+		}
+	} else {
+		// Wrongly dropping self
+		return fmt.Errorf("expected '%s' to have a drop on a 'non-self' channel instead (i.e. incorrectly dropping '%s')", p.String(), p.client_c.String())
+	}
 }
 
 func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {

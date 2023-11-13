@@ -271,12 +271,12 @@ func TestSimpleFunctionDefinitions(t *testing.T) {
 	}{
 		{"type A = 1", 0},
 		{"prc[a] = close self", 0},
-		{"let f() = close self", 1},
-		{"let f(a, b, c) = close self", 1},
-		{"let f(a : 1, b : 1, c : 1) = close self", 1},
-		{"let f(a : 1, b : 1, c : 1) : 1 = close self", 1},
+		{"let f() : 1= close self", 1},
+		// {"let f(a, b, c) = close self", 1},
+		// {"let f(a : 1, b : 1, c : 1) = close self", 1},
+		{"let f(a : 1) : 1 = wait a; close self", 1},
 		{`type A = 1
-		let f(a : 1, b : 1, c : 1) : A = close self`, 1},
+		let f(a : 1) : A = drop a; close self`, 1},
 	}
 
 	for i, c := range cases {

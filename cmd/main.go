@@ -8,8 +8,11 @@ import (
 
 const program = `
 
-type A = +{l : 1, r : 1}
+// type A = +{l : 1, r : 1}
 type B = 1 * A
+
+type A = 1 -o 1
+let f1() : A = <x, y> <- recv self; wait x; close y
 
 prc[pid1] = drop kk; send self<pid3, self>
 prc[pid2] = <a, b> <- recv pid1; drop gg; wait a; close self

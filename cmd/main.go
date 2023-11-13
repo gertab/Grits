@@ -11,8 +11,7 @@ const program = `
 type A = +{l : 1, r : 1}
 type B = 1 * A
 
-let f2(a : 1 -o 1, b : 1) : 1 = send a<b, c>
-
+let f2(a : 1 -o 1, c : 1) : 1 = send a<self, c>
 
 
 // let f1(a : A, b : 1 * A) : A * B = send self<a, b>

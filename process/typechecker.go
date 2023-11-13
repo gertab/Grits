@@ -159,6 +159,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		// MulR: *
 		logRule("rule MulR")
 
+		// The type of the provider must be SendType
 		providerSendType, sendTypeOk := providerType.(*types.SendType)
 
 		if sendTypeOk {
@@ -200,6 +201,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			return errorClient
 		}
 
+		// The type of the client must be ReceiveType
 		clientReceiveType, clientTypeOk := clientType.(*types.ReceiveType)
 
 		if clientTypeOk {
@@ -232,16 +234,17 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			// wrong type: A -o B
 			return fmt.Errorf("expected %s to have a send type (A -o B), but found type %s instead", p.to_c.String(), clientType.String())
 		}
+	} else if isProvider(p.payload_c, providerShadowName) {
+		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In %s, self was used as as payload", p.String())
 	} else {
 		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In %s, self was not used appropriately", p.String())
 	}
 
 	// ensure that the remaining names in gamma are allow (i.e. memmx names imdendlin)
+	// todo change to allow weakenable variables
 	if len(gammaNameTypesCtx) > 0 {
 		return fmt.Errorf("linearity requires that no names are left behind, however there were %d names left", len(gammaNameTypesCtx))
 	}
-
-	// ImpL
 
 	// at this point gammaNameTypesCtx should not contain linear names
 	return nil

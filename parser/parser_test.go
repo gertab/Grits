@@ -19,19 +19,6 @@ func compareOutputProgram(t *testing.T, got []process.Form, expected []process.F
 	}
 }
 
-func compareOutputTypes(t *testing.T, got []types.SessionType, expected []types.SessionType) {
-	if len(got) != len(expected) {
-		t.Errorf("len of got %d, does not match len of expected %d\n", len(got), len(expected))
-		return
-	}
-
-	for index := range got {
-		if !types.EqualType(got[index], expected[index], make(types.LabelledTypesEnv)) {
-			t.Errorf("[%d] got %s, expected %s\n", index, got[index].String(), expected[index].String())
-		}
-	}
-}
-
 func compareOutputType(t *testing.T, got types.SessionType, expected types.SessionType, labelledTypesEnv types.LabelledTypesEnv) bool {
 	if !types.EqualType(got, expected, labelledTypesEnv) {
 		t.Errorf("got %s, expected %s\n", got.String(), expected.String())

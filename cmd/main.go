@@ -11,7 +11,12 @@ const program = `
 type A = +{l : 1, r : 1}
 type B = 1 * A
 
-let f2(a : 1 -o 1, c : 1) : 1 = send a<self, c>
+// ok
+// let f1() : (1 -o 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y
+let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>
+
+// not ok
+// let f2() : 1 * 1 = <x, y> <- recv self; close y
 
 
 // let f1(a : A, b : 1 * A) : A * B = send self<a, b>

@@ -178,11 +178,11 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			// The expected and found types must match
 			if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
+				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
 			}
 
 			if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
+				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
 			}
 
 			// Set the types for the names
@@ -190,7 +190,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			p.continuation_c.Type = foundRightType
 		} else {
 			// wrong type: A * B
-			return fmt.Errorf("expected %s to have a send type (A * B), but found type %s instead", p.String(), providerType.String())
+			return fmt.Errorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.String(), providerType.String())
 		}
 	} else if isProvider(p.continuation_c, providerShadowName) {
 		// ImpL: -o
@@ -220,11 +220,11 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			// The expected and found types must match
 			if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
+				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
 			}
 
 			if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of %s to be %s, but found type %s instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
+				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
 			}
 
 			// Set the types for the names
@@ -232,12 +232,12 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			p.continuation_c.Type = foundRightType
 		} else {
 			// wrong type: A -o B
-			return fmt.Errorf("expected %s to have a send type (A -o B), but found type %s instead", p.to_c.String(), clientType.String())
+			return fmt.Errorf("expected '%s' to have a send type (A -o B), but found type '%s' instead", p.to_c.String(), clientType.String())
 		}
 	} else if isProvider(p.payload_c, providerShadowName) {
-		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In %s, self was used as as payload", p.String())
+		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was used as a payload", p.String())
 	} else {
-		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In %s, self was not used appropriately", p.String())
+		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was not used appropriately", p.String())
 	}
 
 	// ensure that the remaining names in gamma are allow (i.e. memmx names imdendlin)
@@ -250,7 +250,43 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	return nil
 }
 
+// */-o: <x, y> <- recv w; P
 func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	if isProvider(p.from_c, providerShadowName) {
+		// ImpR: -o
+		logRule("rule ImpR")
+		// The type of the provider must be ReceiveType
+		providerReceiveType, receiveTypeOk := providerType.(*types.ReceiveType)
+
+		if receiveTypeOk {
+			newLeftType := providerReceiveType.Left
+			newRightType := providerReceiveType.Right
+
+			if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
+				nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
+				// Names are not fresh [todo check if needed]
+				return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
+			}
+
+			gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
+			// gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
+
+			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, newRightType, labelledTypesEnv, sigma)
+
+			return checkContinuation
+		} else {
+			// wrong type: A -o B
+			return fmt.Errorf("expected '%s' to have a receive type (A -o B), but found type '%s' instead", p.String(), providerType.String())
+
+		}
+	} else if isProvider(p.payload_c, providerShadowName) || isProvider(p.continuation_c, providerShadowName) {
+		return fmt.Errorf("you cannot assign self to a new channel (%s)", p.String())
+	} else {
+		// MulL: *
+		logRule("rule MulL")
+
+	}
+
 	return nil
 }
 

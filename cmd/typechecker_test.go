@@ -31,6 +31,33 @@ func runThroughTypechecker(t *testing.T, cases []string, pass bool) {
 	}
 }
 
+// Typechecker -> these programs should pass the typechecker
+func TestTypecheckCorrectPrograms(t *testing.T) {
+
+	cases := []string{
+		"type A = 1",
+		"let f() : 1 = close self",
+		// send
+		// MulR
+		"let f(a : 1, b : 1) : 1 * 1 = send self<a, b>",
+		`type A = +{l1 : 1}
+			type B = 1 -o 1
+			let f(a : A, b : B) : A * B = send self<a, b>`,
+		// ImpL
+		"let f2(a : 1 -o 1, b : 1) : 1 = send a<b, self>",
+		`type A = +{l1 : 1}
+			type B = 1 * 1
+			let f(a : A -o B, b : A) : B = send a<b, self>`,
+		// receive
+		// ImpR
+		"let f1() : 1 -o 1 = <x, y> <- recv self; close y",
+		"let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send y<x, b>",
+		"let f1() : (1 -o 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
 // Typechecker -> these programs should fail
 func TestTypecheckIncorrectPrograms(t *testing.T) {
 	cases := []string{
@@ -57,29 +84,10 @@ func TestTypecheckIncorrectPrograms(t *testing.T) {
 		// MulR/ImpL
 		"let f2(a : 1 -o 1, b : 1) : 1 = send a<b, c>",
 		"let f2(a : 1 -o 1, c : 1) : 1 = send a<self, c>",
+		// ImpR
+		"let f2() : 1 * 1 = <x, y> <- recv self; close y",
+		"let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>",
 	}
 
 	runThroughTypechecker(t, cases, false)
-}
-
-// Typechecker -> these programs should pass the typechecker
-func TestTypecheckCorrectPrograms(t *testing.T) {
-
-	cases := []string{
-		"type A = 1",
-		"let f() : 1 = close self",
-		// send
-		// MulR
-		"let f(a : 1, b : 1) : 1 * 1 = send self<a, b>",
-		`type A = +{l1 : 1}
-		type B = 1 -o 1
-		let f(a : A, b : B) : A * B = send self<a, b>`,
-		// ImpL
-		"let f2(a : 1 -o 1, b : 1) : 1 = send a<b, self>",
-		`type A = +{l1 : 1}
-		type B = 1 * 1
-		let f(a : A -o B, b : A) : B = send a<b, self>`,
-	}
-
-	runThroughTypechecker(t, cases, true)
 }

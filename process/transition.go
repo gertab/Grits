@@ -545,7 +545,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// todo check if this is needed: process.finishedRule(FWD, "[forward, client]", "", re)
 		process.terminateForward(re)
 
-	} else {
+	} else if f.Polarity() == POSITIVE {
 		// +ve
 		// problematic
 		// PASSIVE: wait before acting
@@ -592,6 +592,8 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		process.finishedRule(FWD, "[fwd]", "(+ve)", re)
 		process.transitionLoop(re)
+	} else if f.Polarity() == UNKNOWN {
+		re.error(process, "forward has an unknown polarity")
 	}
 }
 

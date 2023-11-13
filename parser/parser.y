@@ -105,9 +105,8 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewCall($2, $4, process.NEGATIVE) }
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
-/* forward without explitit polarities */
-/* | FORWARD name name
-		{ $$ = process.NewForward($2, $3) } */
+		   | /* forward without explicit polarities */ FORWARD name name
+				{ $$ = process.NewForward($2, $3, process.UNKNOWN) } 
 		   | /* forward (+ve) */ PLUS FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, process.POSITIVE) }
 		   | /* forward (-ve) */ MINUS FORWARD name name

@@ -105,7 +105,7 @@ func TestTypecheckCorrectUnit(t *testing.T) {
 	cases := []string{
 		// Close
 		// EndR
-		/* 0 */ "let f1() : 1 = close self",
+		"let f1() : 1 = close self",
 		// EndL
 		"let f1(x : 1) : 1 = wait x; close self",
 		"let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close self",
@@ -117,12 +117,40 @@ func TestTypecheckCorrectUnit(t *testing.T) {
 func TestTypecheckIncorrectUnit(t *testing.T) {
 	cases := []string{
 		// EndR
-		/* 0 */ "let f1(u : 1) : 1 = close u",
+		"let f1(u : 1) : 1 = close u",
 		"let f1(u : 1 * 1) : 1 = close self",
 		"let f1() : 1 * 1 = close self",
 		// EndL
 		"let f1() : 1 = wait self; close self",
 		"let f1(g : 1 * 1, x : 1) : 1 = wait x; close self",
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+func TestTypecheckCorrectForward(t *testing.T) {
+
+	cases := []string{
+		// ID
+		"let f1(x : 1 * 1) : 1 * 1 = fwd self x",
+		"let f1(x : 1 * 1) : 1 * 1 = fwd self x",
+		"let f1() : 1 -o 1 = <x, y> <- recv self; fwd y x",
+		"let f1(g : (&{a : 1})) : 1 -o (&{a : 1}) = <x, y> <- recv self; wait x; fwd y g",
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectForward(t *testing.T) {
+	cases := []string{
+		// ID
+		"let f1(x : 1 * 1) : 1 = fwd self x",
+		"let f1(x : 1 * 1) : 1 -o 1 = fwd self x",
+		"let f1(x : &{hello : 1}) : 1 = fwd self x",
+		"let f1(x : 1 * 1) : 1 * 1 = fwd x self",
+		"let f1(x : 1 * 1, y : 1) : 1 * 1 = fwd self x",
+		"let f1(g : (+{a : 1})) : 1 -o (&{a : 1}) = <x, y> <- recv self; wait x; fwd y g",
+		"let f1(x : 1 * 1, y : 1 * 1) : 1 * 1 = fwd x y",
 	}
 
 	runThroughTypechecker(t, cases, false)

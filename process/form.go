@@ -656,6 +656,7 @@ func (p *ForwardForm) FreeNames() []Name {
 }
 
 func (p *ForwardForm) Polarity() Polarity {
+	// todo get polarity from the type
 	return p.polarity
 }
 

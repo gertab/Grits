@@ -10,6 +10,8 @@ func Typecheck(processes []*Process, globalEnv *GlobalEnvironment) error {
 	errorChan := make(chan error)
 	doneChan := make(chan bool)
 
+	fmt.Println("Initiating typechecking")
+
 	// Running in a separate process allows us to break the typechecking part as soon as the first
 	// error is found
 	go typecheckFunctionsAndProcesses(processes, globalEnv, errorChan, doneChan)
@@ -382,6 +384,8 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
+
+// 1 : close w
 func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	// EndR: 1
 	logRule("rule EndR")
@@ -410,10 +414,12 @@ func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	return err
 }
 
+// 1 : wait w; ...
 func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	// EndL: 1
 	logRule("rule EndL")
 
+	// Can only wait for a client (not self)
 	if !isProvider(p.to_c, providerShadowName) {
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
@@ -427,6 +433,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			// Set type
 			p.to_c.Type = clientUnitType
 
+			// Continue checking the remaining process
 			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
 			return checkContinuation
@@ -445,8 +452,36 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	}
 }
 
+// fwd w u
 func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	return nil
+	// ID: 1
+	logRule("rule ID")
+
+	if isProvider(p.from_c, providerShadowName) {
+		return fmt.Errorf("forwarding to self (%s) is not allowed. Use 'fwd %s %s' instead)", p.String(), p.from_c.String(), p.to_c.String())
+	}
+
+	if !isProvider(p.to_c, providerShadowName) {
+		return fmt.Errorf("not forwarding on self (%s). Expected forward to refer to self (fwd %s %s)", p.String(), p.from_c.String(), p.to_c.String())
+	}
+
+	clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
+	if errorClient != nil {
+		return errorClient
+	}
+
+	if !types.EqualType(providerType, clientType, labelledTypesEnv) {
+		return fmt.Errorf("problem in %s. Type of %s (%s) and %s (%s) do do not match", p.String(), p.to_c.String(), providerType.String(), p.from_c.String(), clientType.String())
+	}
+
+	// Set types
+	p.to_c.Type = providerType
+	p.from_c.Type = clientType
+
+	// make sure that no variables are left in gamma
+	err := linearGammaContext(gammaNameTypesCtx)
+
+	return err
 }
 func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil

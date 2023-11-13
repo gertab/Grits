@@ -9,9 +9,17 @@ import (
 const program = `
 
 // type A = +{l : 1, r : 1}
-type B = 1 * A
+
+// type A = B
+// type B = 1 -o 1
+
+// non-contractive
+type C = D
+type D = E
+type E = C
 
 type A = 1 -o 1
+
 let f1() : A = <x, y> <- recv self; wait x; close y
 
 prc[pid1] = drop kk; send self<pid3, self>

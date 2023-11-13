@@ -15,7 +15,8 @@ type SessionType interface {
 	String() string
 
 	// used for inner checks
-	checkLabelledTypes(typeDefNames map[string]bool) error
+	checkLabelledTypes(LabelledTypesEnv) error
+	isContractive(LabelledTypesEnv, map[string]bool) bool
 }
 
 // Label
@@ -391,6 +392,11 @@ func ProduceLabelledSessionTypeEnvironment(typeDefs []SessionTypeDefinition) Lab
 	return labelledTypesEnv
 }
 
+func LabelledTypedExists(labelledTypesEnv LabelledTypesEnv, key string) bool {
+	_, ok := labelledTypesEnv[key]
+	return ok
+}
+
 // Weaenable types allow for channels to be dropped
 func IsWeakenable(sessionType SessionType) bool {
 	// todo implement
@@ -418,7 +424,7 @@ func Unfold(orig SessionType, labelledTypesEnv LabelledTypesEnv) SessionType {
 		unfoldedSessionType, exists := labelledTypesEnv[labelSessionType.Label]
 
 		if exists {
-			// This could potentially cause an infinite loop if non-contractive types are used
+			// This could potentially cause an infinite loop if non-contractive types are used, however we already make sure that only contractive types are used
 			return Unfold(unfoldedSessionType.Type, labelledTypesEnv)
 		} else {
 			return nil

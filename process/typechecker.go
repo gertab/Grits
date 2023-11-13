@@ -50,7 +50,7 @@ func typecheckFunctionsAndProcesses(processes []*Process, globalEnv *GlobalEnvir
 // Ensures that types only referred to existing labelled types
 func lightweightChecks(processes []*Process, globalEnv *GlobalEnvironment) error {
 
-	// First check the labelled types (i.e. type A = ...)
+	// First analyse the labelled types (i.e. type A = ...)
 	err := types.SanityChecksTypeDefinitions(*globalEnv.Types)
 
 	if err != nil {
@@ -118,71 +118,6 @@ type NamesTypesCtx map[string]NamesType       /* maps names to their types */
 // ... providerType types.SessionType    		<- the type of the provider (i.e. type of self)
 // ... labelledTypesEnv types.LabelledTypesEnv 	<- keeps the mapping of pre-defined types (type A = ...)
 // ... sigma FunctionTypesEnv           	 	<- keeps the mapping of pre-defined function definitions (let f() : A = ...)
-
-func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType, error) {
-
-	if name.IsSelf {
-		return nil, fmt.Errorf("found self, expected a client")
-	}
-
-	foundName, ok := gammaNameTypesCtx[name.Ident]
-
-	if ok {
-		// If linear then remove
-		delete(gammaNameTypesCtx, name.Ident)
-
-		return foundName.Type, nil
-	}
-
-	// Problem since the requested name was not found in the gamma
-	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
-}
-
-func consumeNameMaybeSelf(name Name, gammaNameTypesCtx NamesTypesCtx, providerType types.SessionType) (types.SessionType, error) {
-	if name.IsSelf {
-		return providerType, nil
-	}
-
-	foundName, ok := gammaNameTypesCtx[name.Ident]
-
-	if ok {
-		// If linear then remove
-		delete(gammaNameTypesCtx, name.Ident)
-
-		return foundName.Type, nil
-	}
-
-	// Problem since the requested name was not found in the gamma
-	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
-}
-
-func stringifyContext(gammaNameTypesCtx NamesTypesCtx) string {
-	if len(gammaNameTypesCtx) == 0 {
-		return ""
-	}
-
-	var buffer bytes.Buffer
-
-	for k := range gammaNameTypesCtx {
-		buffer.WriteString(k)
-		buffer.WriteString("; ")
-	}
-
-	str := buffer.String()
-
-	return str[:len(str)-2]
-}
-
-// Enforce linearity, i.e. ensure that there are no variables left in Gamma
-func linearGammaContext(gammaNameTypesCtx NamesTypesCtx) error {
-	// todo change to allow weakenable variables (although drop prevents this)
-	if len(gammaNameTypesCtx) > 0 {
-		return fmt.Errorf("linearity requires that no names are left behind, however there were %d names (%s) left", len(gammaNameTypesCtx), stringifyContext(gammaNameTypesCtx))
-	}
-
-	// Ok, no unwanted variables left in gamma
-	return nil
-}
 
 // */-o: send w<u, v>
 func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
@@ -597,6 +532,73 @@ func isProvider(name Name, providerShadowName *Name) bool {
 	}
 
 	return false
+}
+
+// Takes a name from gamma. If the name is not found, then return error
+func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType, error) {
+
+	if name.IsSelf {
+		return nil, fmt.Errorf("found self, expected a client")
+	}
+
+	foundName, ok := gammaNameTypesCtx[name.Ident]
+
+	if ok {
+		// If linear then remove
+		delete(gammaNameTypesCtx, name.Ident)
+
+		return foundName.Type, nil
+	}
+
+	// Problem since the requested name was not found in the gamma
+	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
+}
+
+// Takes a name from gamma. If the name is 'self', then return the provider type instead of fetching it from gamma
+func consumeNameMaybeSelf(name Name, gammaNameTypesCtx NamesTypesCtx, providerType types.SessionType) (types.SessionType, error) {
+	if name.IsSelf {
+		return providerType, nil
+	}
+
+	foundName, ok := gammaNameTypesCtx[name.Ident]
+
+	if ok {
+		// If linear then remove
+		delete(gammaNameTypesCtx, name.Ident)
+
+		return foundName.Type, nil
+	}
+
+	// Problem since the requested name was not found in the gamma
+	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
+}
+
+func stringifyContext(gammaNameTypesCtx NamesTypesCtx) string {
+	if len(gammaNameTypesCtx) == 0 {
+		return ""
+	}
+
+	var buffer bytes.Buffer
+
+	for k := range gammaNameTypesCtx {
+		buffer.WriteString(k)
+		buffer.WriteString("; ")
+	}
+
+	str := buffer.String()
+
+	return str[:len(str)-2]
+}
+
+// Enforce linearity, i.e. ensure that there are no variables left in Gamma
+func linearGammaContext(gammaNameTypesCtx NamesTypesCtx) error {
+	// todo change to allow weakenable variables (although drop prevents this)
+	if len(gammaNameTypesCtx) > 0 {
+		return fmt.Errorf("linearity requires that no names are left behind, however there were %d names (%s) left", len(gammaNameTypesCtx), stringifyContext(gammaNameTypesCtx))
+	}
+
+	// Ok, no unwanted variables left in gamma
+	return nil
 }
 
 func logRule(s string) {

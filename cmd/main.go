@@ -11,8 +11,9 @@ const program = `
 type A = +{l : 1, r : 1}
 type B = 1 * A
 
-// ok
-let f1(u : 1 * 1) : 1 = <x, y> <- recv u; close y
+let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close self
+
+// let f1(u : 1 * 1) : 1 = <x, y> <- recv u; close y
 // let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>
 
 // not ok

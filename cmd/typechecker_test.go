@@ -32,7 +32,7 @@ func runThroughTypechecker(t *testing.T, cases []string, pass bool) {
 }
 
 // Typechecker -> these programs should pass the typechecker
-func TestTypecheckCorrectPrograms(t *testing.T) {
+func TestTypecheckCorrectSendReceive(t *testing.T) {
 
 	cases := []string{
 		/* 0 */ "type A = 1",
@@ -50,18 +50,18 @@ func TestTypecheckCorrectPrograms(t *testing.T) {
 			let f(a : A -o B, b : A) : B = send a<b, self>`,
 		// receive
 		// ImpR
-		"let f1() : 1 -o 1 = <x, y> <- recv self; close y",
+		"let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close y",
 		"let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send y<x, b>",
-		"let f1() : (1 * 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
+		"let f1() : (1 * 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; wait x2; wait y2; close y",
 		// MulL
-		"let f1(u : 1 * 1) : 1 = <x, y> <- recv u; close y",
+		"let f1(u : 1 * 1) : 1 = <x, y> <- recv u; wait x; wait y; close self",
 	}
 
 	runThroughTypechecker(t, cases, true)
 }
 
 // Typechecker -> these programs should fail
-func TestTypecheckIncorrectPrograms(t *testing.T) {
+func TestTypecheckIncorrectSendReceive(t *testing.T) {
 	cases := []string{
 		/* 0 */ "type A = B",
 		"prc[a] : A = close self",
@@ -95,6 +95,34 @@ func TestTypecheckIncorrectPrograms(t *testing.T) {
 		/* 20 */
 		"let f1(u : 1 * 1) : 1 = <self, y> <- recv u; close y",
 		"let f1() : (1 -o 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+func TestTypecheckCorrectUnit(t *testing.T) {
+
+	cases := []string{
+		// Close
+		// EndR
+		/* 0 */ "let f1() : 1 = close self",
+		// EndL
+		"let f1(x : 1) : 1 = wait x; close self",
+		"let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close self",
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectUnit(t *testing.T) {
+	cases := []string{
+		// EndR
+		/* 0 */ "let f1(u : 1) : 1 = close u",
+		"let f1(u : 1 * 1) : 1 = close self",
+		"let f1() : 1 * 1 = close self",
+		// EndL
+		"let f1() : 1 = wait self; close self",
+		"let f1(g : 1 * 1, x : 1) : 1 = wait x; close self",
 	}
 
 	runThroughTypechecker(t, cases, false)

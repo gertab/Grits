@@ -1,6 +1,7 @@
 package process
 
 import (
+	"bytes"
 	"fmt"
 	"phi/types"
 )
@@ -153,6 +154,34 @@ func consumeNameMaybeSelf(name Name, gammaNameTypesCtx NamesTypesCtx, providerTy
 	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
 }
 
+func stringifyContext(gammaNameTypesCtx NamesTypesCtx) string {
+	if len(gammaNameTypesCtx) == 0 {
+		return ""
+	}
+
+	var buffer bytes.Buffer
+
+	for k := range gammaNameTypesCtx {
+		buffer.WriteString(k)
+		buffer.WriteString("; ")
+	}
+
+	str := buffer.String()
+
+	return str[:len(str)-2]
+}
+
+// Enforce linearity, i.e. ensure that there are no variables left in Gamma
+func linearGammaContext(gammaNameTypesCtx NamesTypesCtx) error {
+	// todo change to allow weakenable variables (although drop prevents this)
+	if len(gammaNameTypesCtx) > 0 {
+		return fmt.Errorf("linearity requires that no names are left behind, however there were %d names (%s) left", len(gammaNameTypesCtx), stringifyContext(gammaNameTypesCtx))
+	}
+
+	// Ok, no unwanted variables left in gamma
+	return nil
+}
+
 // */-o: send w<u, v>
 func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	if isProvider(p.to_c, providerShadowName) {
@@ -186,6 +215,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			}
 
 			// Set the types for the names
+			p.to_c.Type = providerSendType
 			p.payload_c.Type = foundLeftType
 			p.continuation_c.Type = foundRightType
 		} else {
@@ -228,6 +258,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			}
 
 			// Set the types for the names
+			p.to_c.Type = clientReceiveType
 			p.payload_c.Type = foundLeftType
 			p.continuation_c.Type = foundRightType
 		} else {
@@ -240,14 +271,10 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was not used appropriately", p.String())
 	}
 
-	// ensure that the remaining names in gamma are allow (i.e. memmx names imdendlin)
-	// todo change to allow weakenable variables
-	if len(gammaNameTypesCtx) > 0 {
-		return fmt.Errorf("linearity requires that no names are left behind, however there were %d names left", len(gammaNameTypesCtx))
-	}
+	// make sure that no variables are left in gamma
+	err := linearGammaContext(gammaNameTypesCtx)
 
-	// at this point gammaNameTypesCtx should not contain linear names
-	return nil
+	return err
 }
 
 // */-o: <x, y> <- recv w; P
@@ -277,6 +304,10 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 			gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
 			// gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
 
+			p.from_c.Type = providerReceiveType
+			p.payload_c.Type = newLeftType
+			p.continuation_c.Type = newRightType
+
 			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, newRightType, labelledTypesEnv, sigma)
 
 			return checkContinuation
@@ -286,6 +317,12 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 		}
 	} else if isProvider(p.payload_c, providerShadowName) || isProvider(p.continuation_c, providerShadowName) {
+		// _, receiveTypeOk := providerType.(*types.ReceiveType)
+
+		// if receiveTypeOk {
+		// 	} else {
+		// todo check further type info
+		// 	}
 		return fmt.Errorf("you cannot assign self to a new channel (%s)", p.String())
 	} else {
 		// MulL: *
@@ -318,6 +355,10 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 			gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
 			gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
 
+			p.from_c.Type = clientSendType
+			p.payload_c.Type = newLeftType
+			p.continuation_c.Type = newRightType
+
 			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
 			return checkContinuation
@@ -342,8 +383,68 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 	return nil
 }
 func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	return nil
+	// EndR: 1
+	logRule("rule EndR")
+	if isProvider(p.from_c, providerShadowName) {
+		providerUnitType, unitTypeOk := providerType.(*types.UnitType)
+
+		if !unitTypeOk {
+			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
+		}
+
+		p.from_c.Type = providerUnitType
+	} else {
+		// Closing on the wrong name
+		_, unitTypeOk := providerType.(*types.UnitType)
+
+		if unitTypeOk {
+			return fmt.Errorf("expected '%s' to have a send on 'self' instead", p.String())
+		} else {
+			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
+		}
+	}
+
+	// make sure that no variables are left in gamma
+	err := linearGammaContext(gammaNameTypesCtx)
+
+	return err
 }
+
+func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	// EndL: 1
+	logRule("rule EndL")
+
+	if !isProvider(p.to_c, providerShadowName) {
+		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return errorClient
+		}
+
+		// The type of the client must be UnitType
+		clientUnitType, clientTypeOk := clientType.(*types.UnitType)
+
+		if clientTypeOk {
+			// Set type
+			p.to_c.Type = clientUnitType
+
+			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+			return checkContinuation
+		} else {
+			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientUnitType.String())
+		}
+	} else {
+		// Waiting on the wrong name
+		_, unitTypeOk := providerType.(*types.UnitType)
+
+		if unitTypeOk {
+			return fmt.Errorf("expected '%s' to have a wait on a 'non-self' channel instead (%s is acting as self)", p.String(), p.to_c.String())
+		} else {
+			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
+		}
+	}
+}
+
 func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
@@ -351,9 +452,6 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	return nil
 }
 func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	return nil
-}
-func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
 func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {

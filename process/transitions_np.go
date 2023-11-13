@@ -487,10 +487,23 @@ func (f *WaitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	TransitionByReceivingNP(process, f.to_c.Channel, clsRule, re)
 }
 
-// func (f *DropForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
-// 	fmt.Print("transition of drop: ")
-// 	fmt.Println(f.String())
-// }
+func (f *DropForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of drop: %s\n", f.String())
+
+	if f.client_c.IsSelf {
+		re.error(process, "Found a drop on self. Drop only works with other channels.")
+	}
+
+	dropRule := func() {
+		// Drop does not need to notify the clients being dropped
+		process.finishedRule(DROP, "[drop]", "", re)
+
+		process.Body = f.continuation_e
+		process.transitionLoopNP(re)
+	}
+
+	TransitionInternallyNP(process, dropRule, re)
+}
 
 // Special cases: Forward and Split [split is not a special case]
 func (f *ForwardForm) TransitionNP(process *Process, re *RuntimeEnvironment) {

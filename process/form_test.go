@@ -125,6 +125,11 @@ func TestBasicTokens(t *testing.T) {
 	output = append(output, input13.String())
 	expected = append(expected, "cont_c <- shift from_c; close self")
 
+	// Wait
+	input14 := NewDrop(to_c, end)
+	output = append(output, input14.String())
+	expected = append(expected, "drop to_c; close self")
+
 	compareOutput(t, output, expected)
 }
 

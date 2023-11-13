@@ -100,6 +100,14 @@ func TestBasicForms(t *testing.T) {
 	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewSplit(pay_c, cont_c, from_c, end, process.POSITIVE))
 
+	input = "wait from_c; close self"
+	output = append(output, parseGetBody(input))
+	expected = append(expected, process.NewWait(from_c, end))
+
+	input = "drop from_c; close self"
+	output = append(output, parseGetBody(input))
+	expected = append(expected, process.NewDrop(from_c, end))
+
 	compareOutputProgram(t, output, expected)
 }
 func TestSimpleTypes(t *testing.T) {

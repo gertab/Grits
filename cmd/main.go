@@ -11,7 +11,11 @@ const program = `
 type A = +{l : 1, r : 1}
 type B = 1 * A
 
-let f1(x : 1 * 1) : 1 * 1 = fwd x self
+prc[pid1] = drop kk; send self<pid3, self>
+prc[pid2] = <a, b> <- recv pid1; drop gg; wait a; close self
+prc[pid3] = close self
+
+// let f1(x : 1 * 1) : 1 * 1 = fwd x self
 
 "let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close self",
 

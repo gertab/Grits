@@ -483,6 +483,47 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 	return err
 }
+
+// drop w; ...
+func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	// EndL: 1
+	logRule("rule Drp")
+
+	return nil
+
+	// // Can only wait for a client (not self)
+	// if !isProvider(p.to_c, providerShadowName) {
+	// 	clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
+	// 	if errorClient != nil {
+	// 		return errorClient
+	// 	}
+
+	// 	// The type of the client must be UnitType
+	// 	clientUnitType, clientTypeOk := clientType.(*types.UnitType)
+
+	// 	if clientTypeOk {
+	// 		// Set type
+	// 		p.to_c.Type = clientUnitType
+
+	// 		// Continue checking the remaining process
+	// 		checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+	// 		return checkContinuation
+	// 	} else {
+	// 		return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientUnitType.String())
+	// 	}
+	// } else {
+	// 	// Waiting on the wrong name
+	// 	_, unitTypeOk := providerType.(*types.UnitType)
+
+	// 	if unitTypeOk {
+	// 		return fmt.Errorf("expected '%s' to have a wait on a 'non-self' channel instead (%s is acting as self)", p.String(), p.to_c.String())
+	// 	} else {
+	// 		return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
+	// 	}
+	// }
+}
+
 func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }

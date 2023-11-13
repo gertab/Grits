@@ -49,21 +49,21 @@ func EqualForm(form1, form2 Form) bool {
 		f2, ok2 := form2.(*SendForm)
 
 		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && f1.payload_c.Equal(f2.payload_c) && f1.to_c.Equal(f2.to_c) && f1.Polarity() == f2.Polarity()
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.payload_c.Equal(f2.payload_c) && f1.to_c.Equal(f2.to_c)
 		}
 	case *ReceiveForm:
 		f1, ok1 := form1.(*ReceiveForm)
 		f2, ok2 := form2.(*ReceiveForm)
 
 		if ok1 && ok2 {
-			return f1.payload_c.Equal(f2.payload_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
+			return f1.payload_c.Equal(f2.payload_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	case *SelectForm:
 		f1, ok1 := form1.(*SelectForm)
 		f2, ok2 := form2.(*SelectForm)
 
 		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.label.Equal(f2.label) && f1.Polarity() == f2.Polarity()
+			return f1.to_c.Equal(f2.to_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.label.Equal(f2.label)
 		}
 	case *CaseForm:
 		f1, ok1 := form1.(*CaseForm)
@@ -76,49 +76,49 @@ func EqualForm(form1, form2 Form) bool {
 				}
 			}
 
-			return f1.from_c.Equal(f2.from_c) && f1.Polarity() == f2.Polarity()
+			return f1.from_c.Equal(f2.from_c)
 		}
 	case *BranchForm:
 		f1, ok1 := form1.(*BranchForm)
 		f2, ok2 := form2.(*BranchForm)
 
 		if ok1 && ok2 {
-			return f1.label.Equal(f2.label) && f1.payload_c.Equal(f2.payload_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
+			return f1.label.Equal(f2.label) && f1.payload_c.Equal(f2.payload_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	case *CloseForm:
 		f1, ok1 := form1.(*CloseForm)
 		f2, ok2 := form2.(*CloseForm)
 
 		if ok1 && ok2 {
-			return f1.from_c.Equal(f2.from_c) && f1.Polarity() == f2.Polarity()
+			return f1.from_c.Equal(f2.from_c)
 		}
 	case *PrintForm:
 		f1, ok1 := form1.(*PrintForm)
 		f2, ok2 := form2.(*PrintForm)
 
 		if ok1 && ok2 {
-			return f1.name_c.Equal(f2.name_c) && f1.Polarity() == f2.Polarity()
+			return f1.name_c.Equal(f2.name_c)
 		}
 	case *NewForm:
 		f1, ok1 := form1.(*NewForm)
 		f2, ok2 := form2.(*NewForm)
 
 		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
+			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	case *ForwardForm:
 		f1, ok1 := form1.(*ForwardForm)
 		f2, ok2 := form2.(*ForwardForm)
 
 		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c) && f1.Polarity() == f2.Polarity()
+			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c)
 		}
 	case *SplitForm:
 		f1, ok1 := form1.(*SplitForm)
 		f2, ok2 := form2.(*SplitForm)
 
 		if ok1 && ok2 {
-			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
+			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	case *CallForm:
 		f1, ok1 := form1.(*CallForm)
@@ -139,30 +139,36 @@ func EqualForm(form1, form2 Form) bool {
 				}
 			}
 			// true
-			return f1.Polarity() == f2.Polarity()
+			return true
 		}
 	case *WaitForm:
 		f1, ok1 := form1.(*WaitForm)
 		f2, ok2 := form2.(*WaitForm)
 
 		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
+			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	case *CastForm:
 		f1, ok1 := form1.(*CastForm)
 		f2, ok2 := form2.(*CastForm)
 
 		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && f1.to_c.Equal(f2.to_c) && f1.Polarity() == f2.Polarity()
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.to_c.Equal(f2.to_c)
 		}
 	case *ShiftForm:
 		f1, ok1 := form1.(*ShiftForm)
 		f2, ok2 := form2.(*ShiftForm)
 
 		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e) && f1.Polarity() == f2.Polarity()
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
+	case *DropForm:
+		f1, ok1 := form1.(*DropForm)
+		f2, ok2 := form2.(*DropForm)
 
+		if ok1 && ok2 {
+			return f1.client_c.Equal(f2.client_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
 	}
 
 	fmt.Printf("todo implement EqualForm for type %s\n", a)
@@ -254,6 +260,12 @@ func CopyForm(orig Form) Form {
 		if ok {
 			cont := CopyForm(p.continuation_e)
 			return NewShift(p.continuation_c, p.from_c, cont)
+		}
+	case *DropForm:
+		p, ok := orig.(*DropForm)
+		if ok {
+			body := CopyForm(p.continuation_e)
+			return NewDrop(p.client_c, body)
 		}
 	// Debug
 	case *PrintForm:
@@ -882,6 +894,43 @@ func (p *ShiftForm) Polarity() Polarity {
 	} else {
 		return POSITIVE
 	}
+}
+
+// Drop: drop client_c; P
+type DropForm struct {
+	client_c       Name
+	continuation_e Form
+}
+
+func NewDrop(client_c Name, continuation_e Form) *DropForm {
+	return &DropForm{
+		client_c:       client_c,
+		continuation_e: continuation_e}
+}
+
+func (p *DropForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("drop ")
+	buf.WriteString(p.client_c.String())
+	buf.WriteString("; ")
+	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *DropForm) Substitute(old, new Name) {
+	p.client_c.Substitute(old, new)
+	p.continuation_e.Substitute(old, new)
+}
+
+func (p *DropForm) FreeNames() []Name {
+	var fn []Name
+	fn = appendIfNotSelf(p.client_c, fn)
+	fn = mergeTwoNamesList(fn, p.continuation_e.FreeNames())
+	return fn
+}
+
+func (p *DropForm) Polarity() Polarity {
+	return POSITIVE
 }
 
 // Print: print name_c

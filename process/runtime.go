@@ -250,6 +250,7 @@ const (
 	SHF             // uses Channel1 of the Message
 	SEL             // uses Channel1 and Label of the Message
 	CSE             // uses Channel1 and Label of the Message
+	DROP
 
 	// These can happen when a process is 'interactive' by transitioning internally
 	CUT
@@ -273,13 +274,14 @@ const (
 )
 
 var RuleString = map[Rule]string{
-	SND: "SND",
-	RCV: "RCV",
-	CLS: "CLS",
-	CST: "CST",
-	SHF: "SHF",
-	SEL: "SEL",
-	CSE: "CSE",
+	SND:  "SND",
+	RCV:  "RCV",
+	CLS:  "CLS",
+	CST:  "CST",
+	SHF:  "SHF",
+	SEL:  "SEL",
+	CSE:  "CSE",
+	DROP: "DROP",
 
 	CUT:   "CUT",
 	CALL:  "CALL",

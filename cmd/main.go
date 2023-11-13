@@ -12,8 +12,8 @@ type A = +{l : 1, r : 1}
 type B = 1 * A
 
 // ok
-// let f1() : (1 -o 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y
-let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>
+let f1(u : 1 * 1) : 1 = <x, y> <- recv u; close y
+// let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>
 
 // not ok
 // let f2() : 1 * 1 = <x, y> <- recv self; close y

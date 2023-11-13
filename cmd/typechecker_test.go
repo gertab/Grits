@@ -35,7 +35,7 @@ func runThroughTypechecker(t *testing.T, cases []string, pass bool) {
 func TestTypecheckCorrectPrograms(t *testing.T) {
 
 	cases := []string{
-		"type A = 1",
+		/* 0 */ "type A = 1",
 		"let f() : 1 = close self",
 		// send
 		// MulR
@@ -45,14 +45,16 @@ func TestTypecheckCorrectPrograms(t *testing.T) {
 			let f(a : A, b : B) : A * B = send self<a, b>`,
 		// ImpL
 		"let f2(a : 1 -o 1, b : 1) : 1 = send a<b, self>",
-		`type A = +{l1 : 1}
+		/* 5 */ `type A = +{l1 : 1}
 			type B = 1 * 1
 			let f(a : A -o B, b : A) : B = send a<b, self>`,
 		// receive
 		// ImpR
 		"let f1() : 1 -o 1 = <x, y> <- recv self; close y",
 		"let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send y<x, b>",
-		"let f1() : (1 -o 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
+		"let f1() : (1 * 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
+		// MulL
+		"let f1(u : 1 * 1) : 1 = <x, y> <- recv u; close y",
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -61,7 +63,7 @@ func TestTypecheckCorrectPrograms(t *testing.T) {
 // Typechecker -> these programs should fail
 func TestTypecheckIncorrectPrograms(t *testing.T) {
 	cases := []string{
-		"type A = B",
+		/* 0 */ "type A = B",
 		"prc[a] : A = close self",
 		"let f() : 1 -o A = close self",
 		// MulL (extra non used names)
@@ -69,24 +71,30 @@ func TestTypecheckIncorrectPrograms(t *testing.T) {
 		// MulL (missing names)
 		"let f(b : 1) : 1 * 1 = send self<a, b>",
 		// MulL (incorrect self type)
-		"let f(a : 1, b : 1) : &{a : 1} = send self<a, b>",
+		/* 5 */ "let f(a : 1, b : 1) : &{a : 1} = send self<a, b>",
 		"let f(a : 1, b : 1) : 1 * &{a : 1} = send self<a, b>",
 		// MulL (incorrect self type)
 		"let f(a : &{a : 1}, b : &{b : 1}) : &{a : 1} * 1 = send self<a, b>",
 		// MulL (wrong types)
 		"let f(a : 1 -o 1, b : 1) : 1 * 1 = send self<a, b>",
 		"let f(a : 1, b : &{a: 1}) : 1 * 1 = send self<a, b>",
-		"let f(a : 1, b : 1) : 1 * (1 * 1) = send self<a, b>",
+		/* 10 */ "let f(a : 1, b : 1) : 1 * (1 * 1) = send self<a, b>",
 		// ImpL
 		"let f2(a : 1 -o 1, b : 1) : +{x : 1} = send a<b, self>",
 		"let f2(a : 1 -o 1, b : +{x : 1}) : 1 = send a<b, self>",
 		"let f2(a : 1 * 1, b : 1) : 1 = send a<b, self>",
 		// MulR/ImpL
 		"let f2(a : 1 -o 1, b : 1) : 1 = send a<b, c>",
-		"let f2(a : 1 -o 1, c : 1) : 1 = send a<self, c>",
+		/* 15 */ "let f2(a : 1 -o 1, c : 1) : 1 = send a<self, c>",
 		// ImpR
 		"let f2() : 1 * 1 = <x, y> <- recv self; close y",
 		"let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>",
+		"let f1() : 1 -o 1 = <x, self> <- recv self; close y",
+		// MulL
+		"let f1(u : 1 -o 1) : 1 = <x, y> <- recv u; close y",
+		/* 20 */
+		"let f1(u : 1 * 1) : 1 = <self, y> <- recv u; close y",
+		"let f1() : (1 -o 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
 	}
 
 	runThroughTypechecker(t, cases, false)

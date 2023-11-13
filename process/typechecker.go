@@ -268,6 +268,12 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 				return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
 			}
 
+			if isProvider(p.payload_c, providerShadowName) ||
+				isProvider(p.continuation_c, providerShadowName) {
+				// Unwanted reference to self
+				return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
+			}
+
 			gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
 			// gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
 
@@ -285,9 +291,42 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		// MulL: *
 		logRule("rule MulL")
 
-	}
+		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return errorClient
+		}
 
-	return nil
+		// The type of the client must be SendType
+		clientSendType, clientTypeOk := clientType.(*types.SendType)
+
+		if clientTypeOk {
+			newLeftType := clientSendType.Left
+			newRightType := clientSendType.Right
+
+			if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
+				nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
+				// Names are not fresh [todo check if needed]
+				return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
+			}
+
+			if isProvider(p.payload_c, providerShadowName) ||
+				isProvider(p.continuation_c, providerShadowName) {
+				// Unwanted reference to self
+				return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
+			}
+
+			gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
+			gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
+
+			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+			return checkContinuation
+		} else {
+			// wrong type, expected A * B
+			return fmt.Errorf("expected '%s' to have a send type (A -o B), but found type '%s' instead", p.from_c.String(), clientType.String())
+
+		}
+	}
 }
 
 func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
@@ -344,11 +383,11 @@ func produceFunctionDefinitionsEnvironment(functionDefs []FunctionDefinition) Fu
 	return functionTypesEnv
 }
 
-func functionExists(functionTypesEnv FunctionTypesEnv, key string) bool {
-	_, ok := functionTypesEnv[key]
+// func functionExists(functionTypesEnv FunctionTypesEnv, key string) bool {
+// 	_, ok := functionTypesEnv[key]
 
-	return ok
-}
+// 	return ok
+// }
 
 type NamesType struct {
 	Name Name

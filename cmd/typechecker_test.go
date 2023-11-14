@@ -199,3 +199,33 @@ func TestTypecheckIncorrectDrop(t *testing.T) {
 
 	runThroughTypechecker(t, cases, false)
 }
+
+func TestTypecheckCorrectSelect(t *testing.T) {
+
+	cases := []string{
+		// Select
+		// EChoiceR
+		"let f1(cont : 1) : +{label1 : 1} = self.label1<cont>",
+		"let f1(cont : 1 -o 1) : +{label0 : 1, label1 : 1 -o 1} = self.label1<cont>",
+		// EChoiceL
+		"let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>",
+		"let f1(to_c : &{label0 : 1, label1 : 1 -o 1}) : 1 -o 1 = to_c.label1<self>",
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectSelect(t *testing.T) {
+	cases := []string{
+		// Select
+		// EChoiceR
+		"let f1(cont : 1) : &{label1 : 1} = self.label1<cont>",
+		"let f1(cont : 1 -o 1) : +{label0 : 1, label1 : 1 -o 1} = self.otherLabel<cont>",
+		"let f1(cont : 1) : +{label1 : 1} = a.label1<cont>",
+		// EChoiceL
+		"let f1(to_c : +{label1 : 1}) : 1 = to_c.label1<self>",
+		"let f1(to_c : &{label0 : 1, label1 : 1 -o 1}) : 1 -o 1 = to_c.label2<self>",
+	}
+
+	runThroughTypechecker(t, cases, false)
+}

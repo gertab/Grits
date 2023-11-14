@@ -37,8 +37,10 @@ func TestEqualType(t *testing.T) {
 	receive := NewReceiveType(label1, label2)
 	sel_opt := []BranchOption{{Label: "a", Session_type: label1}}
 	sel := NewSelectType(sel_opt)
-	branch_opt := []BranchOption{{Label: "bb", Session_type: label1}}
+	branch_opt := []BranchOption{{Label: "a", Session_type: label1}, {Label: "bb", Session_type: label2}}
 	branch := NewBranchCaseType(branch_opt)
+	branch_opt2 := []BranchOption{{Label: "bb", Session_type: label2}, {Label: "a", Session_type: label1}}
+	branch2 := NewBranchCaseType(branch_opt2)
 
 	cases := []struct {
 		input    SessionType
@@ -50,11 +52,12 @@ func TestEqualType(t *testing.T) {
 		{CopyType(receive), receive},
 		{CopyType(sel), sel},
 		{CopyType(branch), branch},
+		{branch, branch2},
 	}
 
 	for i, c := range cases {
 		if !EqualType(c.input, c.expected, make(LabelledTypesEnv)) {
-			t.Errorf("error (EqualType) in case #%d: Got %s, expected %s\n", i, c.expected.String(), c.expected)
+			t.Errorf("error (EqualType) in case #%d: Got %s, expected %s\n", i, c.input.String(), c.expected.String())
 		}
 	}
 }
@@ -70,6 +73,10 @@ func TestNotEqualType(t *testing.T) {
 	sel := NewSelectType(sel_opt)
 	branch_opt := []BranchOption{{Label: "bb", Session_type: label1}}
 	branch := NewBranchCaseType(branch_opt)
+	// branch_opt2 := []BranchOption{{Label: "cc", Session_type: label2}, {Label: "a", Session_type: label1}}
+	// branch2 := NewBranchCaseType(branch_opt2)
+	// branch_opt3 := []BranchOption{{Label: "a", Session_type: label1}, {Label: "bb", Session_type: label2}}
+	// branch3 := NewBranchCaseType(branch_opt3)
 
 	cases := []struct {
 		input    SessionType
@@ -83,6 +90,7 @@ func TestNotEqualType(t *testing.T) {
 		{CopyType(sel), NewSelectType([]BranchOption{{Label: "a", Session_type: label1}, {Label: "b", Session_type: label2}})},
 		{CopyType(branch), NewBranchCaseType([]BranchOption{{Label: "ff", Session_type: label1}})},
 		{CopyType(branch), NewBranchCaseType([]BranchOption{{Label: "ff", Session_type: label1}})},
+		// {branch2, branch3},
 	}
 
 	for i, c := range cases {

@@ -13,18 +13,15 @@ const program = `
 // type A = B
 // type B = 1 -o 1
 
-// non-contractive
-type C = D
-type D = E
-type E = C
+let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>"
+// let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>"
 
-type A = 1 -o 1
+// let f1(cont : 1) : +{label1 : 1} = a.label1<cont>
 
-let f1() : A = <x, y> <- recv self; wait x; close y
+// let f1(cont : 1) : &{label1 : 1} = self.label1<cont>
+// let f1(cont : 1 -o 1) : +{label0 : 1, label1 : 1 -o 1} = self.otherLabel<cont>
 
-prc[pid1] = drop kk; send self<pid3, self>
-prc[pid2] = <a, b> <- recv pid1; drop gg; wait a; close self
-prc[pid3] = close self
+
 
 // let f1(x : 1 * 1) : 1 * 1 = fwd x self
 

@@ -15,7 +15,7 @@ type SessionType interface {
 	String() string
 
 	// used for inner checks
-	checkLabelledTypes(LabelledTypesEnv) error
+	checkTypeLabels(LabelledTypesEnv) error
 	isContractive(LabelledTypesEnv, map[string]bool) bool
 }
 
@@ -273,13 +273,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 		f2, ok2 := type2.(*SelectLabelType)
 
 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
-			for index := range f1.Branches {
-				if !equalTypeBranch(f1.Branches[index], f2.Branches[index], snapshots, labelledTypesEnv) {
-					return false
-				}
-			}
-
-			return true
+			return equalTypeBranch(f1.Branches, f2.Branches, snapshots, labelledTypesEnv)
 		}
 
 	case *BranchCaseType:
@@ -288,13 +282,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 
 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
 			// todo check if order matters
-			for index := range f1.Branches {
-				if !equalTypeBranch(f1.Branches[index], f2.Branches[index], snapshots, labelledTypesEnv) {
-					return false
-				}
-			}
-
-			return true
+			return equalTypeBranch(f1.Branches, f2.Branches, snapshots, labelledTypesEnv)
 		}
 	case *WIPType:
 		return true
@@ -304,13 +292,23 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 	return false
 }
 
-func equalTypeBranch(option1, option2 BranchOption, snapshots map[string]bool, labelledTypesEnv LabelledTypesEnv) bool {
-
-	if option1.Label != option2.Label {
+func equalTypeBranch(options1, options2 []BranchOption, snapshots map[string]bool, labelledTypesEnv LabelledTypesEnv) bool {
+	if len(options1) != len(options2) {
 		return false
 	}
 
-	return innerEqualType(option1.Session_type, option2.Session_type, snapshots, labelledTypesEnv)
+	// match each label to the other set
+	for index := range options1 {
+		for index2 := range options2 {
+			if options1[index].Label == options2[index2].Label {
+				if !innerEqualType(options1[index].Session_type, options2[index2].Session_type, snapshots, labelledTypesEnv) {
+					return false
+				}
+			}
+		}
+	}
+
+	return true
 }
 
 // Takes a type and returns a (separate) clone
@@ -432,4 +430,15 @@ func Unfold(orig SessionType, labelledTypesEnv LabelledTypesEnv) SessionType {
 	} else {
 		return orig
 	}
+}
+
+// Lookup branches by label
+func FetchSelectBranch(branches []BranchOption, label string) (SessionType, bool) {
+	for _, branch := range branches {
+		if branch.Label == label {
+			return branch.Session_type, true
+		}
+	}
+
+	return nil, false
 }

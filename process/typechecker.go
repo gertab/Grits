@@ -110,14 +110,15 @@ type NamesTypesCtx map[string]NamesType       /* maps names to their types */
 ////////////////////////////////////////////////////////////////
 ///////////////// Syntax directed typechecking /////////////////
 ////////////////////////////////////////////////////////////////
+
 // Each form has a dedicated typechecking function
 
 // typecheckForm uses these parameters:
-// ... gammaNameTypesCtx NamesTypesCtx   		<- names in context to be used (in case of linearity, ...)
-// ... providerShadowName *Name          		<- name of the process providing on (typically nil, since self is used instead)
-// ... providerType types.SessionType    		<- the type of the provider (i.e. type of self)
-// ... labelledTypesEnv types.LabelledTypesEnv 	<- keeps the mapping of pre-defined types (type A = ...)
-// ... sigma FunctionTypesEnv           	 	<- keeps the mapping of pre-defined function definitions (let f() : A = ...)
+// -> gammaNameTypesCtx NamesTypesCtx   		<- names in context to be used (in case of linearity, ...)
+// -> providerShadowName *Name          		<- name of the process providing on (nil when name 'self' is used instead)
+// -> providerType types.SessionType    		<- the type of the provider (i.e. type of provider name 'self')
+// -> labelledTypesEnv types.LabelledTypesEnv 	<- [read-only] keeps the mapping of pre-defined types (type A = ...)
+// -> sigma FunctionTypesEnv           	 		<- [read-only] keeps the mapping of pre-defined function definitions (let f() : A = ...)
 
 // */-o: send w<u, v>
 func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
@@ -313,8 +314,90 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	}
 }
 
+// Internal/External Choice: w.l<u>
 func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	return nil
+	if isProvider(p.to_c, providerShadowName) {
+		// IChoiceR: +{label1: T1, ...}
+		logRule("rule IChoiceR")
+
+		providerType = types.Unfold(providerType, labelledTypesEnv)
+		// The type of the provider must be SelectLabelType
+		providerSelectLabelType, selectLabelTypeOk := providerType.(*types.SelectLabelType)
+
+		if selectLabelTypeOk {
+
+			// Match branch by label
+			continuationType, continuationTypeFound := types.FetchSelectBranch(providerSelectLabelType.Branches, p.label.L)
+
+			if continuationTypeFound {
+				foundContinuationType, errorContinuationType := consumeName(p.continuation_c, gammaNameTypesCtx)
+
+				if errorContinuationType != nil {
+					return errorContinuationType
+				}
+
+				if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
+					return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+				}
+
+				p.to_c.Type = providerSelectLabelType
+				p.continuation_c.Type = continuationType
+				// return nil
+			} else {
+				return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), providerSelectLabelType.String())
+			}
+		} else {
+			// wrong type, expected +{...}
+			return fmt.Errorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.String(), providerType.String())
+		}
+	} else if isProvider(p.continuation_c, providerShadowName) {
+		// EChoiceL: &{label1: T1, ...}
+		logRule("rule EChoiceL")
+
+		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return errorClient
+		}
+
+		clientType = types.Unfold(clientType, labelledTypesEnv)
+		// The type of the client must be BranchCaseType
+		clientBranchCaseType, clientTypeOk := clientType.(*types.BranchCaseType)
+
+		if clientTypeOk {
+			// Match branch by label
+			continuationType, continuationTypeFound := types.FetchSelectBranch(clientBranchCaseType.Branches, p.label.L)
+
+			if continuationTypeFound {
+				foundContinuationType, errorContinuationType := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
+
+				if errorContinuationType != nil {
+					return errorContinuationType
+				}
+
+				if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
+					return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+				}
+
+				// Type ok
+
+				p.to_c.Type = clientBranchCaseType
+				p.continuation_c.Type = continuationType
+				// return nil
+			} else {
+				return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), clientBranchCaseType.String())
+			}
+		} else {
+			// wrong type, expected &{...}
+			return fmt.Errorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.String(), clientType.String())
+		}
+	} else {
+		return fmt.Errorf("expected '%s' to either receive or send label on 'self', e.g. self.%s<%s> or %s.%s<self>", p.String(), p.label.String(), p.to_c.String(), p.continuation_c.String(), p.label.String())
+	}
+
+	// make sure that no variables are left in gamma
+	err := linearGammaContext(gammaNameTypesCtx)
+
+	return err
 }
 func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil

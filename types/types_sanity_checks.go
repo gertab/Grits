@@ -19,7 +19,7 @@ func SanityChecksTypeDefinitions(typesDefs []SessionTypeDefinition) error {
 
 	// Check that all labelled reference point to a defined type
 	for _, j := range typesDefs {
-		err := j.SessionType.checkLabelledTypes(labelledTypesEnv)
+		err := j.SessionType.checkTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -38,7 +38,7 @@ func SanityChecksTypeDefinitions(typesDefs []SessionTypeDefinition) error {
 			return fmt.Errorf("session type definition for %s (= %s) is not contractive", j.Name, j.SessionType.String())
 		}
 
-		err := j.SessionType.checkLabelledTypes(labelledTypesEnv)
+		err := j.SessionType.checkTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -58,7 +58,7 @@ func SanityChecksType(types []SessionType, typesDefs []SessionTypeDefinition) er
 	labelledTypesEnv := ProduceLabelledSessionTypeEnvironment(typesDefs)
 
 	for _, j := range types {
-		err := j.checkLabelledTypes(labelledTypesEnv)
+		err := j.checkTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -69,47 +69,35 @@ func SanityChecksType(types []SessionType, typesDefs []SessionTypeDefinition) er
 }
 
 // Check whether a reference to a session type label exists
+//
 // Example:
 //
 //	type A = 1			[correct]
 //	type B = A -o 1  	[correct]
 //	type C = A -o D		[incorrect, because D is undefined]
-func (q *LabelType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) error {
+//
+// Ensures also the branches are made up of unique labels
+func (q *LabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	if !LabelledTypedExists(labelledTypesEnv, q.Label) {
 		return fmt.Errorf("error calling undefined label type '%s'", q.String())
 	}
 
 	return nil
 }
-func (q *WIPType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) error {
+func (q *WIPType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	return nil
 }
-func (q *UnitType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) error {
+func (q *UnitType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	return nil
 }
-func (q *SendType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) error {
-	err := q.Left.checkLabelledTypes(labelledTypesEnv)
+func (q *SendType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+	err := q.Left.checkTypeLabels(labelledTypesEnv)
 
 	if err != nil {
 		return err
 	}
 
-	err = q.Right.checkLabelledTypes(labelledTypesEnv)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-func (q *ReceiveType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) error {
-	err := q.Left.checkLabelledTypes(labelledTypesEnv)
-
-	if err != nil {
-		return err
-	}
-
-	err = q.Right.checkLabelledTypes(labelledTypesEnv)
+	err = q.Right.checkTypeLabels(labelledTypesEnv)
 
 	if err != nil {
 		return err
@@ -117,9 +105,35 @@ func (q *ReceiveType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) erro
 
 	return nil
 }
-func (q *SelectLabelType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) error {
+func (q *ReceiveType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+	err := q.Left.checkTypeLabels(labelledTypesEnv)
+
+	if err != nil {
+		return err
+	}
+
+	err = q.Right.checkTypeLabels(labelledTypesEnv)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (q *SelectLabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+
+	existingLabels := make(map[string]bool)
+
 	for _, j := range q.Branches {
-		err := j.Session_type.checkLabelledTypes(labelledTypesEnv)
+		// Check for unique labels
+		_, exists := existingLabels[j.Label]
+
+		if exists {
+			return fmt.Errorf("duplicate label '%s' found in type '%s'", j.Label, q.String())
+		}
+
+		// Checking inside the branch
+		err := j.Session_type.checkTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -128,9 +142,19 @@ func (q *SelectLabelType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) 
 
 	return nil
 }
-func (q *BranchCaseType) checkLabelledTypes(labelledTypesEnv LabelledTypesEnv) error {
+func (q *BranchCaseType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+	existingLabels := make(map[string]bool)
+
 	for _, j := range q.Branches {
-		err := j.Session_type.checkLabelledTypes(labelledTypesEnv)
+		// Check for unique labels
+		_, exists := existingLabels[j.Label]
+
+		if exists {
+			return fmt.Errorf("duplicate label '%s' found in type '%s'", j.Label, q.String())
+		}
+
+		// Checking inside the branch
+		err := j.Session_type.checkTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err

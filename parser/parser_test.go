@@ -216,6 +216,7 @@ func TestEqualType(t *testing.T) {
 		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "D"},
 		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "1 * C"},
 		{"E", "F"},
+		{"&{a : (1 -o 1), b : 1}", "&{b : 1, a : (1 -o 1)}"},
 	}
 
 	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types

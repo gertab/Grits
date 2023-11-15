@@ -73,10 +73,10 @@ func TestNotEqualType(t *testing.T) {
 	sel := NewSelectType(sel_opt)
 	branch_opt := []BranchOption{{Label: "bb", Session_type: label1}}
 	branch := NewBranchCaseType(branch_opt)
-	// branch_opt2 := []BranchOption{{Label: "cc", Session_type: label2}, {Label: "a", Session_type: label1}}
-	// branch2 := NewBranchCaseType(branch_opt2)
-	// branch_opt3 := []BranchOption{{Label: "a", Session_type: label1}, {Label: "bb", Session_type: label2}}
-	// branch3 := NewBranchCaseType(branch_opt3)
+	branch_opt2 := []BranchOption{{Label: "cc", Session_type: label2}, {Label: "a", Session_type: label1}}
+	branch2 := NewBranchCaseType(branch_opt2)
+	branch_opt3 := []BranchOption{{Label: "a", Session_type: label1}, {Label: "bb", Session_type: label2}}
+	branch3 := NewBranchCaseType(branch_opt3)
 
 	cases := []struct {
 		input    SessionType
@@ -90,7 +90,7 @@ func TestNotEqualType(t *testing.T) {
 		{CopyType(sel), NewSelectType([]BranchOption{{Label: "a", Session_type: label1}, {Label: "b", Session_type: label2}})},
 		{CopyType(branch), NewBranchCaseType([]BranchOption{{Label: "ff", Session_type: label1}})},
 		{CopyType(branch), NewBranchCaseType([]BranchOption{{Label: "ff", Session_type: label1}})},
-		// {branch2, branch3},
+		{branch2, branch3},
 	}
 
 	for i, c := range cases {

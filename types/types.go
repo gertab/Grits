@@ -292,23 +292,37 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 	return false
 }
 
+// Compare branches in an unordered way. Here we are assuming that both branches contain unique labels
 func equalTypeBranch(options1, options2 []BranchOption, snapshots map[string]bool, labelledTypesEnv LabelledTypesEnv) bool {
 	if len(options1) != len(options2) {
 		return false
 	}
 
-	// match each label to the other set
-	for index := range options1 {
-		for index2 := range options2 {
-			if options1[index].Label == options2[index2].Label {
-				if !innerEqualType(options1[index].Session_type, options2[index2].Session_type, snapshots, labelledTypesEnv) {
-					return false
-				}
+	// Match each label to the other set
+	for _, b := range options1 {
+		matchingBranch, foundMatchingBranch := matchBranchByLabel(options2, b.Label)
+		if foundMatchingBranch {
+			if !innerEqualType(b.Session_type, matchingBranch.Session_type, snapshots, labelledTypesEnv) {
+				// If inner types do not match, then stop checking
+				return false
 			}
+		} else {
+			return false
 		}
 	}
 
 	return true
+}
+
+// Lookup branches by label
+func matchBranchByLabel(branches []BranchOption, label string) (*BranchOption, bool) {
+	for index := range branches {
+		if branches[index].Label == label {
+			return &branches[index], true
+		}
+	}
+
+	return nil, false
 }
 
 // Takes a type and returns a (separate) clone

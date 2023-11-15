@@ -1,6 +1,6 @@
 /* SND rule */
 
 prc[pid1]: <a, b> <- recv pid2; close self
-prc[pid2]: send self<pid3, self>
+prc[pid2]: send self<pid3, pid4>
 
 

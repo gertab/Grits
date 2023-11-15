@@ -13,28 +13,22 @@ const program = `
 // type A = B
 // type B = 1 -* 1
 
-// ok
-// let f1() : (1 * 1) -* 1 = 
-	// <x, y> <- recv self; 
-	// <xx, yy> <- recv x; 
-	// wait xx; 
-	// wait yy; 
-	// close y
-
-let f1(x : +{label1 : (1 * 1) * 1 }) : 1 = 
-		case x (
-			label1<a> => <x, y> <- recv a; 
-						 <xx, yy> <- recv x; 
-						 wait xx; 
-						 wait y; 
-						 wait yy; 
-						 close self
-		) 
+// type B = &{label33 : 1}
+// let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
+// 			<x, y> <- recv self; send y<a, x>
 
 // let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
 // 			case self (label1<a> => close self
 // 					  |label2<a> => close self
 // 					  |label3<a> => close self) 
+
+let f3(x : 1 -* 1, y : 1) : 1 * 1 = send x<y, self>
+let f4(y2 : 1) : 1 = +f3(y2)
+
+// not ok
+// let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
+// let f6(x2 : 1 -* 1, y2 : 1) : &{label : 1} = +f5(x2, y2)
+
 // let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
 // 			case self (label2<a> => close self
 // 					  |label3<a> => close self

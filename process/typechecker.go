@@ -138,7 +138,9 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		expectedLeftType := providerSendType.Left
 		expectedRightType := providerSendType.Right
 		foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
+		foundLeftType = types.Unfold(foundLeftType, labelledTypesEnv)
 		foundRightType, errorRight := consumeName(p.continuation_c, gammaNameTypesCtx)
+		foundRightType = types.Unfold(foundRightType, labelledTypesEnv)
 
 		if errorLeft != nil {
 			return errorLeft
@@ -183,7 +185,12 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		expectedLeftType := clientReceiveType.Left
 		expectedRightType := clientReceiveType.Right
 		foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
-		foundRightType, errorRight := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
+		foundRightType, errorRight := consumeNameMaybeSelf(p.continuation_c, providerShadowName, gammaNameTypesCtx, providerType)
+
+		expectedLeftType = types.Unfold(expectedLeftType, labelledTypesEnv)
+		expectedRightType = types.Unfold(expectedRightType, labelledTypesEnv)
+		foundLeftType = types.Unfold(foundLeftType, labelledTypesEnv)
+		foundRightType = types.Unfold(foundRightType, labelledTypesEnv)
 
 		if errorLeft != nil {
 			return errorLeft
@@ -234,12 +241,14 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		}
 
 		newLeftType := providerReceiveType.Left
+		newLeftType = types.Unfold(newLeftType, labelledTypesEnv)
 		newRightType := providerReceiveType.Right
+		newRightType = types.Unfold(newRightType, labelledTypesEnv)
 
 		if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
 			nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
 			// Names are not fresh [todo check if needed]
-			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
+			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names in %s", p.payload_c.String(), p.continuation_c.String(), p.String())
 		}
 
 		// todo maybe remove check
@@ -250,7 +259,6 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		}
 
 		gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
-		// gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
 
 		p.from_c.Type = providerReceiveType
 		p.payload_c.Type = newLeftType
@@ -371,7 +379,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 		continuationType, continuationTypeFound := types.FetchSelectBranch(clientBranchCaseType.Branches, p.label.L)
 
 		if continuationTypeFound {
-			foundContinuationType, errorContinuationType := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
+			foundContinuationType, errorContinuationType := consumeNameMaybeSelf(p.continuation_c, providerShadowName, gammaNameTypesCtx, providerType)
 
 			if errorContinuationType != nil {
 				return errorContinuationType
@@ -644,10 +652,79 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	}
 }
 
-func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+
+	// Check that function exists
+	functionSignature, exists := sigma[p.functionName]
+	if !exists {
+		return fmt.Errorf("function '%s' is undefined", p.String())
+	}
+
+	// Check that the arity matches
+	if len(functionSignature.Parameters)+1 == len(p.parameters) {
+		// Parameters being passed include a reference to 'self' as the first element
+
+		foundProviderType, errorProvider := consumeNameMaybeSelf(p.parameters[0], providerShadowName, gammaNameTypesCtx, providerType)
+		if errorProvider != nil {
+			return errorProvider
+		}
+
+		// Check type of self
+		if !types.EqualType(foundProviderType, functionSignature.Type, labelledTypesEnv) {
+			return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[0].String(), foundProviderType.String(), functionSignature.Type.String())
+		}
+
+		// Check types of each parameter
+		for i := 1; i < len(p.parameters); i++ {
+
+			foundParamType, paramTypeError := consumeName(p.parameters[i], gammaNameTypesCtx)
+
+			if paramTypeError != nil {
+				return paramTypeError
+			}
+
+			expectedType := functionSignature.Parameters[i-1].Type
+
+			if !types.EqualType(foundParamType, expectedType, labelledTypesEnv) {
+				return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
+			}
+		}
+	} else if len(functionSignature.Parameters) == len(p.parameters) {
+		// 'self' is not included in the parameters
+
+		// Check type of self
+		if !types.EqualType(providerType, functionSignature.Type, labelledTypesEnv) {
+			providerName := "self"
+			if providerShadowName != nil {
+				providerName = providerShadowName.String()
+			}
+
+			return fmt.Errorf("type error in function call '%s'. Provider '%s' has type '%s', but %s expects '%s'", p.String(), providerName, providerType.String(), p.functionName, functionSignature.Type.String())
+		}
+
+		// Check types of each parameter
+		for i := 0; i < len(p.parameters); i++ {
+			foundParamType, paramTypeError := consumeName(p.parameters[i], gammaNameTypesCtx)
+
+			if paramTypeError != nil {
+				return paramTypeError
+			}
+
+			expectedType := functionSignature.Parameters[i].Type
+
+			if !types.EqualType(foundParamType, expectedType, labelledTypesEnv) {
+				return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
+			}
+		}
+	} else {
+		// Wrong number of parameters
+		return fmt.Errorf("wrong number of parameters in function call '%s'. Expected %d, but found %d parameters", p.String(), len(functionSignature.Parameters), len(p.parameters))
+	}
+
 	return nil
 }
-func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+
+func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
 func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
@@ -676,12 +753,6 @@ func produceFunctionDefinitionsEnvironment(functionDefs []FunctionDefinition) Fu
 
 	return functionTypesEnv
 }
-
-// func functionExists(functionTypesEnv FunctionTypesEnv, key string) bool {
-// 	_, ok := functionTypesEnv[key]
-
-// 	return ok
-// }
 
 type NamesType struct {
 	Name Name
@@ -741,8 +812,12 @@ func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType,
 }
 
 // Takes a name from gamma. If the name is 'self', then return the provider type instead of fetching it from gamma
-func consumeNameMaybeSelf(name Name, gammaNameTypesCtx NamesTypesCtx, providerType types.SessionType) (types.SessionType, error) {
+func consumeNameMaybeSelf(name Name, providerShadowName *Name, gammaNameTypesCtx NamesTypesCtx, providerType types.SessionType) (types.SessionType, error) {
 	if name.IsSelf {
+		return providerType, nil
+	}
+
+	if providerShadowName != nil && providerShadowName.Ident == name.Ident {
 		return providerType, nil
 	}
 

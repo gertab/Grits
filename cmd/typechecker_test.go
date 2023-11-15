@@ -103,6 +103,9 @@ func TestTypecheckIncorrectSendReceive(t *testing.T) {
 		/* 20 */
 		"let f1(u : 1 * 1) : 1 = <self, y> <- recv u; close y",
 		"let f1() : (1 -* 1) -* 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
+		`type B = &{label33 : 1}
+		let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
+					<x, y> <- recv self; send y<a, x>`,
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -249,15 +252,34 @@ func TestTypecheckCorrectBranch(t *testing.T) {
 				case self (
 					label1<a> => <x, y> <- recv a; send y<x, b>
 				)`,
-		`let f1(x : +{label1 : (1 * 1) * 1 }) : 1 = 
-		case x (
+		`let f1() : &{label1 : (1 * 1) -* 1 } = 
+		case self (
 			label1<a> => <x, y> <- recv a; 
 						 <xx, yy> <- recv x; 
 						 wait xx; 
-						 wait y; 
 						 wait yy; 
-						 close self
-		)`,
+						 close y
+						//  close self
+		) `,
+		// IChoiceL
+		"let f1(x : +{label1 : 1}) : 1 = case x (label1<a> => wait a; close self)",
+		`let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : 1 = 
+		case x (label1<a> => wait a; close self
+			   |label2<a> => drop a; close self
+			   |label3<a> => wait a; close self)`,
+
+		`let f1(x : +{label1 : (1 * 1) * 1 }) : 1 = 
+		case x (label1<a> => <x, y> <- recv a; 
+						     <xx, yy> <- recv x; 
+						     wait xx; 
+						     wait y; 
+						     wait yy; 
+						     close self)`,
+		`type B = &{label33 : 1}
+		let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
+							case x ( label2<a> => <x, y> <- recv self; send y<a, x>
+								| label3<a> => <x, y> <- recv self; send y<a, x>
+								| label1<a> => <x, y> <- recv self; send y<a, x>)`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -293,6 +315,45 @@ func TestTypecheckIncorrectBranch(t *testing.T) {
 							wait yy; 
 							close self
 			)`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+func TestTypecheckCorrectFunctionCall(t *testing.T) {
+
+	cases := []string{
+		// FunctionCall
+		`let f1() : 1 = close self
+		let f2() : 1 = +f1()`,
+		`let f3(x : 1 -* 1, y : 1) : 1 = send x<y, self>
+		let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(x2, y2)`,
+		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
+		let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
+		// Explicit self
+		`let f1() : 1 = close self
+		let f2() : 1 -* 1 = <x, y> <- recv self; +f1(y)`,
+		`let f3(x : 1 -* 1, y : 1) : 1 = send x<y, self>
+		let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(self, x2, y2)`,
+		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
+		let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = +f5(self, x2, y2)`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectFunctionCall(t *testing.T) {
+	cases := []string{
+		// FunctionCall
+		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
+		let f6(x2 : 1 -* 1, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
+		// Explicit self
+		`let f1() : 1 = close self
+		let f2() : 1 -* (1 * 1) = <x, y> <- recv self; +f1(y)`,
+		`let f3(x : 1 -* 1, y : 1) : 1 * 1 = send x<y, self>
+		let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(y2)`,
+		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
+		let f6(x2 : 1 -* &{label2 : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
 	}
 
 	runThroughTypechecker(t, cases, false)

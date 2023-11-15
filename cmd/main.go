@@ -13,9 +13,45 @@ const program = `
 // type A = B
 // type B = 1 -* 1
 
-let f1(to_c : &{label : 1}) : 1 = to_c.label1<self>"
+// ok
+// let f1() : (1 * 1) -* 1 = 
+	// <x, y> <- recv self; 
+	// <xx, yy> <- recv x; 
+	// wait xx; 
+	// wait yy; 
+	// close y
 
-// let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>"
+let f1(x : +{label1 : (1 * 1) * 1 }) : 1 = 
+		case x (
+			label1<a> => <x, y> <- recv a; 
+						 <xx, yy> <- recv x; 
+						 wait xx; 
+						 wait y; 
+						 wait yy; 
+						 close self
+		) 
+
+// let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+// 			case self (label1<a> => close self
+// 					  |label2<a> => close self
+// 					  |label3<a> => close self) 
+// let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+// 			case self (label2<a> => close self
+// 					  |label3<a> => close self
+// 					  |label1<a> => close self) 
+
+
+// should fail
+// let f2() : &{label1 : 1, label3 : 1} = 
+// 			case self (label1<a> => close self
+// 					  |label2<a> => close self
+// 					  |label3<a> => close self) 
+
+
+// let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+// 			case self (label1<a> => close self) 
+
+// let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>
 
 // let f1(cont : 1) : +{label1 : 1} = a.label1<cont>
 

@@ -130,37 +130,38 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		// The type of the provider must be SendType
 		providerSendType, sendTypeOk := providerType.(*types.SendType)
 
-		if sendTypeOk {
-			expectedLeftType := providerSendType.Left
-			expectedRightType := providerSendType.Right
-			foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
-			foundRightType, errorRight := consumeName(p.continuation_c, gammaNameTypesCtx)
-
-			if errorLeft != nil {
-				return errorLeft
-			}
-
-			if errorRight != nil {
-				return errorRight
-			}
-
-			// The expected and found types must match
-			if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
-			}
-
-			if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
-			}
-
-			// Set the types for the names
-			p.to_c.Type = providerSendType
-			p.payload_c.Type = foundLeftType
-			p.continuation_c.Type = foundRightType
-		} else {
+		if !sendTypeOk {
 			// wrong type: A * B
 			return fmt.Errorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.String(), providerType.String())
 		}
+
+		expectedLeftType := providerSendType.Left
+		expectedRightType := providerSendType.Right
+		foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
+		foundRightType, errorRight := consumeName(p.continuation_c, gammaNameTypesCtx)
+
+		if errorLeft != nil {
+			return errorLeft
+		}
+
+		if errorRight != nil {
+			return errorRight
+		}
+
+		// The expected and found types must match
+		if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
+			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
+		}
+
+		if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
+			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
+		}
+
+		// Set the types for the names
+		p.to_c.Type = providerSendType
+		p.payload_c.Type = foundLeftType
+		p.continuation_c.Type = foundRightType
+
 	} else if isProvider(p.continuation_c, providerShadowName) {
 		// ImpL: -*
 		logRule("rule ImpL")
@@ -174,37 +175,37 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		// The type of the client must be ReceiveType
 		clientReceiveType, clientTypeOk := clientType.(*types.ReceiveType)
 
-		if clientTypeOk {
-			expectedLeftType := clientReceiveType.Left
-			expectedRightType := clientReceiveType.Right
-			foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
-			foundRightType, errorRight := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
-
-			if errorLeft != nil {
-				return errorLeft
-			}
-
-			if errorRight != nil {
-				return errorRight
-			}
-
-			// The expected and found types must match
-			if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
-			}
-
-			if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
-				return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
-			}
-
-			// Set the types for the names
-			p.to_c.Type = clientReceiveType
-			p.payload_c.Type = foundLeftType
-			p.continuation_c.Type = foundRightType
-		} else {
+		if !clientTypeOk {
 			// wrong type: A -* B
-			return fmt.Errorf("expected '%s' to have a send type (A -* B), but found type '%s' instead", p.to_c.String(), clientType.String())
+			return fmt.Errorf("expected '%s' to have a receive type (A -* B), but found type '%s' instead", p.to_c.String(), clientType.String())
 		}
+
+		expectedLeftType := clientReceiveType.Left
+		expectedRightType := clientReceiveType.Right
+		foundLeftType, errorLeft := consumeName(p.payload_c, gammaNameTypesCtx)
+		foundRightType, errorRight := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
+
+		if errorLeft != nil {
+			return errorLeft
+		}
+
+		if errorRight != nil {
+			return errorRight
+		}
+
+		// The expected and found types must match
+		if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
+			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
+		}
+
+		if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
+			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
+		}
+
+		// Set the types for the names
+		p.to_c.Type = clientReceiveType
+		p.payload_c.Type = foundLeftType
+		p.continuation_c.Type = foundRightType
 	} else if isProvider(p.payload_c, providerShadowName) {
 		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was used as a payload", p.String())
 	} else {
@@ -227,37 +228,37 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		// The type of the provider must be ReceiveType
 		providerReceiveType, receiveTypeOk := providerType.(*types.ReceiveType)
 
-		if receiveTypeOk {
-			newLeftType := providerReceiveType.Left
-			newRightType := providerReceiveType.Right
-
-			if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
-				nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
-				// Names are not fresh [todo check if needed]
-				return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
-			}
-
-			if isProvider(p.payload_c, providerShadowName) ||
-				isProvider(p.continuation_c, providerShadowName) {
-				// Unwanted reference to self
-				return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
-			}
-
-			gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
-			// gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
-
-			p.from_c.Type = providerReceiveType
-			p.payload_c.Type = newLeftType
-			p.continuation_c.Type = newRightType
-
-			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, newRightType, labelledTypesEnv, sigma)
-
-			return checkContinuation
-		} else {
+		if !receiveTypeOk {
 			// wrong type: A -* B
 			return fmt.Errorf("expected '%s' to have a receive type (A -* B), but found type '%s' instead", p.String(), providerType.String())
-
 		}
+
+		newLeftType := providerReceiveType.Left
+		newRightType := providerReceiveType.Right
+
+		if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
+			nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
+			// Names are not fresh [todo check if needed]
+			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
+		}
+
+		// todo maybe remove check
+		if isProvider(p.payload_c, providerShadowName) ||
+			isProvider(p.continuation_c, providerShadowName) {
+			// Unwanted reference to self
+			return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
+		}
+
+		gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
+		// gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
+
+		p.from_c.Type = providerReceiveType
+		p.payload_c.Type = newLeftType
+		p.continuation_c.Type = newRightType
+
+		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, newRightType, labelledTypesEnv, sigma)
+
+		return continuationError
 	} else if isProvider(p.payload_c, providerShadowName) || isProvider(p.continuation_c, providerShadowName) {
 		// providerType = types.Unfold(providerType, labelledTypesEnv)
 		// _, receiveTypeOk := providerType.(*types.ReceiveType)
@@ -280,37 +281,36 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		// The type of the client must be SendType
 		clientSendType, clientTypeOk := clientType.(*types.SendType)
 
-		if clientTypeOk {
-			newLeftType := clientSendType.Left
-			newRightType := clientSendType.Right
-
-			if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
-				nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
-				// Names are not fresh [todo check if needed]
-				return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
-			}
-
-			if isProvider(p.payload_c, providerShadowName) ||
-				isProvider(p.continuation_c, providerShadowName) {
-				// Unwanted reference to self
-				return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
-			}
-
-			gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
-			gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
-
-			p.from_c.Type = clientSendType
-			p.payload_c.Type = newLeftType
-			p.continuation_c.Type = newRightType
-
-			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
-
-			return checkContinuation
-		} else {
+		if !clientTypeOk {
 			// wrong type, expected A * B
-			return fmt.Errorf("expected '%s' to have a send type (A -* B), but found type '%s' instead", p.from_c.String(), clientType.String())
-
+			return fmt.Errorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.from_c.String(), clientType.String())
 		}
+
+		newLeftType := clientSendType.Left
+		newRightType := clientSendType.Right
+
+		if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
+			nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
+			// Names are not fresh [todo check if needed]
+			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
+		}
+
+		if isProvider(p.payload_c, providerShadowName) ||
+			isProvider(p.continuation_c, providerShadowName) {
+			// Unwanted reference to self
+			return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
+		}
+
+		gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
+		gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newRightType}
+
+		p.from_c.Type = clientSendType
+		p.payload_c.Type = newLeftType
+		p.continuation_c.Type = newRightType
+
+		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+		return continuationError
 	}
 }
 
@@ -324,31 +324,30 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 		// The type of the provider must be SelectLabelType
 		providerSelectLabelType, selectLabelTypeOk := providerType.(*types.SelectLabelType)
 
-		if selectLabelTypeOk {
-
-			// Match branch by label
-			continuationType, continuationTypeFound := types.FetchSelectBranch(providerSelectLabelType.Branches, p.label.L)
-
-			if continuationTypeFound {
-				foundContinuationType, errorContinuationType := consumeName(p.continuation_c, gammaNameTypesCtx)
-
-				if errorContinuationType != nil {
-					return errorContinuationType
-				}
-
-				if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
-					return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
-				}
-
-				p.to_c.Type = providerSelectLabelType
-				p.continuation_c.Type = continuationType
-				// return nil
-			} else {
-				return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), providerSelectLabelType.String())
-			}
-		} else {
+		if !selectLabelTypeOk {
 			// wrong type, expected +{...}
 			return fmt.Errorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.String(), providerType.String())
+		}
+
+		// Match branch by label
+		continuationType, continuationTypeFound := types.FetchSelectBranch(providerSelectLabelType.Branches, p.label.L)
+
+		if continuationTypeFound {
+			foundContinuationType, errorContinuationType := consumeName(p.continuation_c, gammaNameTypesCtx)
+
+			if errorContinuationType != nil {
+				return errorContinuationType
+			}
+
+			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
+				return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+			}
+
+			p.to_c.Type = providerSelectLabelType
+			p.continuation_c.Type = continuationType
+			// return nil
+		} else {
+			return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), providerSelectLabelType.String())
 		}
 	} else if isProvider(p.continuation_c, providerShadowName) {
 		// EChoiceL: &{label1: T1, ...}
@@ -363,32 +362,32 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 		// The type of the client must be BranchCaseType
 		clientBranchCaseType, clientTypeOk := clientType.(*types.BranchCaseType)
 
-		if clientTypeOk {
-			// Match branch by label
-			continuationType, continuationTypeFound := types.FetchSelectBranch(clientBranchCaseType.Branches, p.label.L)
-
-			if continuationTypeFound {
-				foundContinuationType, errorContinuationType := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
-
-				if errorContinuationType != nil {
-					return errorContinuationType
-				}
-
-				if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
-					return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
-				}
-
-				// Type ok
-
-				p.to_c.Type = clientBranchCaseType
-				p.continuation_c.Type = continuationType
-				// return nil
-			} else {
-				return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), clientBranchCaseType.String())
-			}
-		} else {
+		if !clientTypeOk {
 			// wrong type, expected &{...}
 			return fmt.Errorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.String(), clientType.String())
+		}
+
+		// Match branch by label
+		continuationType, continuationTypeFound := types.FetchSelectBranch(clientBranchCaseType.Branches, p.label.L)
+
+		if continuationTypeFound {
+			foundContinuationType, errorContinuationType := consumeNameMaybeSelf(p.continuation_c, gammaNameTypesCtx, providerType)
+
+			if errorContinuationType != nil {
+				return errorContinuationType
+			}
+
+			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
+				return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+			}
+
+			// Type ok
+
+			// Set types
+			p.to_c.Type = clientBranchCaseType
+			p.continuation_c.Type = continuationType
+		} else {
+			return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), clientBranchCaseType.String())
 		}
 	} else {
 		return fmt.Errorf("expected '%s' to either receive or send label on 'self', e.g. self.%s<%s> or %s.%s<self>", p.String(), p.label.String(), p.to_c.String(), p.continuation_c.String(), p.label.String())
@@ -399,12 +398,116 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 
 	return err
 }
-func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	return nil
-}
+
+// Case: case from_c ( branches )
 func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	if isProvider(p.from_c, providerShadowName) {
+		// EChoiceR: &{label1: T1, ...}
+		logRule("rule EChoiceR")
+
+		providerType = types.Unfold(providerType, labelledTypesEnv)
+		// The type of the provider must be BranchCaseType
+		providerBranchCaseType, branchCaseTypeOk := providerType.(*types.BranchCaseType)
+
+		if !branchCaseTypeOk {
+			// wrong type, expected &{...}
+			return fmt.Errorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.String(), providerType.String())
+		}
+
+		labelsChecked := []string{}
+
+		// Check each branch individually
+		for _, curBranchForm := range p.branches {
+			// Pick each branch ast and match it with its type using the label
+			expectedBranchType, typeFound := types.LookupBranchByLabel(providerBranchCaseType.Branches, curBranchForm.label.L)
+
+			labelsChecked = append(labelsChecked, curBranchForm.label.L)
+
+			if !typeFound {
+				return fmt.Errorf("branch labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), providerBranchCaseType.String())
+			}
+
+			// Set type
+			curBranchForm.payload_c.Type = expectedBranchType.Session_type
+
+			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, &curBranchForm.payload_c, expectedBranchType.Session_type, labelledTypesEnv, sigma)
+
+			if continuationError != nil {
+				return continuationError
+			}
+		}
+
+		if len(labelsChecked) < len(providerBranchCaseType.Branches) {
+			labels := extractUnusedLabels(providerBranchCaseType.Branches, labelsChecked)
+
+			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, providerBranchCaseType.String(), p.String())
+		}
+
+		// Set type of case
+		p.from_c.Type = providerBranchCaseType
+	} else {
+		// IChoiceL: +{label1: T1, ...}
+		logRule("rule IChoiceL")
+
+		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return errorClient
+		}
+
+		clientType = types.Unfold(clientType, labelledTypesEnv)
+		// The type of the client must be SelectLabelType
+		clientSelectLabelType, clientTypeOk := clientType.(*types.SelectLabelType)
+
+		if !clientTypeOk {
+			// wrong type, expected +{...}
+			return fmt.Errorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.String(), clientType.String())
+		}
+
+		labelsChecked := []string{}
+
+		// Check each branch individually
+		for _, curBranchForm := range p.branches {
+			// Pick each branch ast and match it with its type using the label
+			expectedBranchType, typeFound := types.LookupBranchByLabel(clientSelectLabelType.Branches, curBranchForm.label.L)
+
+			labelsChecked = append(labelsChecked, curBranchForm.label.L)
+
+			if !typeFound {
+				return fmt.Errorf("case labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), clientSelectLabelType.String())
+			}
+
+			// curBranchForm.payload_c cannot exist in gammaNameTypesCtx
+			gammaNameTypesCtx[curBranchForm.payload_c.Ident] = NamesType{Type: expectedBranchType.Session_type}
+
+			// Set type
+			curBranchForm.payload_c.Type = expectedBranchType.Session_type
+
+			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+			if continuationError != nil {
+				return continuationError
+			}
+		}
+
+		if len(labelsChecked) < len(clientSelectLabelType.Branches) {
+			labels := extractUnusedLabels(clientSelectLabelType.Branches, labelsChecked)
+
+			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, clientSelectLabelType.String(), p.String())
+		}
+
+		// Set type of case
+		p.from_c.Type = clientSelectLabelType
+	}
+
 	return nil
 }
+
+// Branch: label<payload_c> => continuation_e
+func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	panic("this should never be called directly")
+	// return nil
+}
+
 func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
@@ -461,9 +564,9 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			p.to_c.Type = clientUnitType
 
 			// Continue checking the remaining process
-			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+			continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
-			return checkContinuation
+			return continuationError
 		} else {
 			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientUnitType.String())
 		}
@@ -529,9 +632,9 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			p.client_c.Type = clientType
 
 			// Continue checking the remaining process
-			checkContinuation := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+			continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
-			return checkContinuation
+			return continuationError
 		} else {
 			return fmt.Errorf("expected '%s' to have a weakenable type, but found the non-weakenable type '%s' instead", p.client_c.String(), clientType.String())
 		}
@@ -634,7 +737,7 @@ func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType,
 	}
 
 	// Problem since the requested name was not found in the gamma
-	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
+	return nil, fmt.Errorf("problem since the requested name (%s) was not found in gamma. todo set cool error message", name.String())
 }
 
 // Takes a name from gamma. If the name is 'self', then return the provider type instead of fetching it from gamma
@@ -653,7 +756,7 @@ func consumeNameMaybeSelf(name Name, gammaNameTypesCtx NamesTypesCtx, providerTy
 	}
 
 	// Problem since the requested name was not found in the gamma
-	return nil, fmt.Errorf("problem since the requested name was not found in the gamma. todo set cool error message")
+	return nil, fmt.Errorf("problem since the requested name (%s) was not found in gamma. todo set cool error message", name.String())
 }
 
 func stringifyContext(gammaNameTypesCtx NamesTypesCtx) string {
@@ -676,12 +779,30 @@ func stringifyContext(gammaNameTypesCtx NamesTypesCtx) string {
 // Enforce linearity, i.e. ensure that there are no variables left in Gamma
 func linearGammaContext(gammaNameTypesCtx NamesTypesCtx) error {
 	// todo change to allow weakenable variables (although drop prevents this)
-	if len(gammaNameTypesCtx) > 0 {
+	if len(gammaNameTypesCtx) == 1 {
+		return fmt.Errorf("linearity requires that no names are left behind, however there is one names (%s) left", stringifyContext(gammaNameTypesCtx))
+	} else if len(gammaNameTypesCtx) > 1 {
 		return fmt.Errorf("linearity requires that no names are left behind, however there were %d names (%s) left", len(gammaNameTypesCtx), stringifyContext(gammaNameTypesCtx))
 	}
 
 	// Ok, no unwanted variables left in gamma
 	return nil
+}
+
+func extractUnusedLabels(branches []types.BranchOption, labels []string) string {
+	// One or more branches are not exhausted
+	uncheckedBranches := types.GetUncheckedBranches(branches, labels)
+
+	var labelsNotChecked bytes.Buffer
+	for i, j := range uncheckedBranches {
+		labelsNotChecked.WriteString(j.Label)
+
+		if i < len(uncheckedBranches)-1 {
+			labelsNotChecked.WriteString(", ")
+		}
+	}
+
+	return labelsNotChecked.String()
 }
 
 func logRule(s string) {

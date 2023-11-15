@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+
+	"golang.org/x/exp/slices"
 )
 
 type SessionTypeDefinition struct {
@@ -300,7 +302,7 @@ func equalTypeBranch(options1, options2 []BranchOption, snapshots map[string]boo
 
 	// Match each label to the other set
 	for _, b := range options1 {
-		matchingBranch, foundMatchingBranch := matchBranchByLabel(options2, b.Label)
+		matchingBranch, foundMatchingBranch := LookupBranchByLabel(options2, b.Label)
 		if foundMatchingBranch {
 			if !innerEqualType(b.Session_type, matchingBranch.Session_type, snapshots, labelledTypesEnv) {
 				// If inner types do not match, then stop checking
@@ -314,8 +316,8 @@ func equalTypeBranch(options1, options2 []BranchOption, snapshots map[string]boo
 	return true
 }
 
-// Lookup branches by label
-func matchBranchByLabel(branches []BranchOption, label string) (*BranchOption, bool) {
+// Lookup branch by label
+func LookupBranchByLabel(branches []BranchOption, label string) (*BranchOption, bool) {
 	for index := range branches {
 		if branches[index].Label == label {
 			return &branches[index], true
@@ -323,6 +325,19 @@ func matchBranchByLabel(branches []BranchOption, label string) (*BranchOption, b
 	}
 
 	return nil, false
+}
+
+// Given a list of branch, this function returns the sub-list of branches that are not in the list of labelsChecked
+func GetUncheckedBranches(branches []BranchOption, labelsChecked []string) []BranchOption {
+	result := []BranchOption{}
+
+	for _, branch := range branches {
+		if !slices.Contains(labelsChecked, branch.Label) {
+			result = append(result, branch)
+		}
+	}
+
+	return result
 }
 
 // Takes a type and returns a (separate) clone

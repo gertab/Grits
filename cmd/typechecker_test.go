@@ -118,7 +118,7 @@ func TestTypecheckCorrectUnit(t *testing.T) {
 		let f1() : A = close self`,
 		// EndL
 		"let f1(x : 1) : 1 = wait x; close self",
-		"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close self",
+		"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close y",
 		`type A = 1
 		let f1(x : A) : A = wait x; close self`,
 	}
@@ -204,7 +204,7 @@ func TestTypecheckCorrectSelect(t *testing.T) {
 
 	cases := []string{
 		// Select
-		// EChoiceR
+		// IChoiceR
 		"let f1(cont : 1) : +{label1 : 1} = self.label1<cont>",
 		"let f1(cont : 1 -* 1) : +{label0 : 1, label1 : 1 -* 1} = self.label1<cont>",
 		// EChoiceL
@@ -218,13 +218,81 @@ func TestTypecheckCorrectSelect(t *testing.T) {
 func TestTypecheckIncorrectSelect(t *testing.T) {
 	cases := []string{
 		// Select
-		// EChoiceR
+		// IChoiceR
 		"let f1(cont : 1) : &{label1 : 1} = self.label1<cont>",
 		"let f1(cont : 1 -* 1) : +{label0 : 1, label1 : 1 -* 1} = self.otherLabel<cont>",
 		"let f1(cont : 1) : +{label1 : 1} = a.label1<cont>",
 		// EChoiceL
 		"let f1(to_c : +{label1 : 1}) : 1 = to_c.label1<self>",
 		"let f1(to_c : &{label0 : 1, label1 : 1 -* 1}) : 1 -* 1 = to_c.label2<self>",
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+func TestTypecheckCorrectBranch(t *testing.T) {
+
+	cases := []string{
+		// Branch
+		// EChoiceR
+		"let f1() : &{label1 : 1} = case self (label1<a> => close self)",
+		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+					case self (label1<a> => close self
+							  |label2<a> => close self
+							  |label3<a> => close self)`,
+		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+					case self (label2<a> => close self
+							  |label3<a> => close self
+							  |label1<a> => close self)`,
+		`type A = 1 -* (1 * 1)
+		let f1(b : 1) : &{label1 : A} = 
+				case self (
+					label1<a> => <x, y> <- recv a; send y<x, b>
+				)`,
+		`let f1(x : +{label1 : (1 * 1) * 1 }) : 1 = 
+		case x (
+			label1<a> => <x, y> <- recv a; 
+						 <xx, yy> <- recv x; 
+						 wait xx; 
+						 wait y; 
+						 wait yy; 
+						 close self
+		)`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectBranch(t *testing.T) {
+	cases := []string{
+		// Branch
+		// EChoiceR
+		// Wrong type
+		"let f1() : +{label1 : 1} = case self (label1<a> => close self)",
+		// Missing labels in type
+		`let f2() : &{label1 : 1, label3 : 1} = 
+			case self (label1<a> => close self
+					  |label2<a> => close self
+					  |label3<a> => close self)`,
+		// Missing labels in branch
+		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+					case self (label1<a> => close self
+							|label3<a> => close self)`,
+		// Incorrect inner type
+		`type A = 1 -* (1 -* 1)
+		let f1(b : 1) : &{label1 : A} = 
+				case self (
+					label1<a> => <x, y> <- recv a; send y<x, b>
+				)`,
+		`let f1(x : +{label1 : (1 -* 1) * 1 }) : 1 = 
+			case x (
+				label1<a> => <x, y> <- recv a; 
+							<xx, yy> <- recv x; 
+							wait xx; 
+							wait y; 
+							wait yy; 
+							close self
+			)`,
 	}
 
 	runThroughTypechecker(t, cases, false)

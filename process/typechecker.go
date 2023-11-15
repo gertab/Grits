@@ -688,6 +688,9 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			if !types.EqualType(foundParamType, expectedType, labelledTypesEnv) {
 				return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
 			}
+
+			// Set types
+			p.parameters[i].Type = foundParamType
 		}
 	} else if len(functionSignature.Parameters) == len(p.parameters) {
 		// 'self' is not included in the parameters
@@ -715,13 +718,22 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			if !types.EqualType(foundParamType, expectedType, labelledTypesEnv) {
 				return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
 			}
+
+			// Set types
+			p.parameters[i].Type = foundParamType
 		}
 	} else {
 		// Wrong number of parameters
 		return fmt.Errorf("wrong number of parameters in function call '%s'. Expected %d, but found %d parameters", p.String(), len(functionSignature.Parameters), len(p.parameters))
 	}
 
-	return nil
+	// Set type
+	p.ProviderType = functionSignature.Type
+
+	// make sure that no variables are left in gamma
+	err := linearGammaContext(gammaNameTypesCtx)
+
+	return err
 }
 
 func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {

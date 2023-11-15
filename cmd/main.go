@@ -8,6 +8,30 @@ import (
 
 const program = `
 
+
+type A = &{label1 : 1, label2 : 1, label3 : 1}
+
+let f1() : A = case self (label1<a> => close a
+					     |label2<a> => close a
+					     |label3<a> => close a) 
+
+let f2(x : A) : 1 = x.label1<self>
+
+let f3() : A -* 1 = <x, y> <- recv self; +f2(x)
+
+let f4(aa : A -* 1, bb: A) : 1 = send aa<bb, self>
+
+prc[a] = -f3()
+prc[b] = -f1()
+prc[c] = -f4(a, b)
+
+prc[d] = -f3(self)
+prc[e] = -f1(self)
+prc[f] = -f4(self, d, e)
+
+
+
+
 // type A = +{l : 1, r : 1}
 
 // type A = B
@@ -17,13 +41,31 @@ const program = `
 // let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
 // 			<x, y> <- recv self; send y<a, x>
 
-// let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
-// 			case self (label1<a> => close self
-// 					  |label2<a> => close self
-// 					  |label3<a> => close self) 
+// type A = &{label1 : 1, label2 : 1, label3 : 1}
+// let f2() : A = 
+// 			case self (label1<a> => close a
+// 					  |label2<a> => close a
+// 					  |label3<a> => close a) 
 
-let f3(x : 1 -* 1, y : 1) : 1 * 1 = send x<y, self>
-let f4(y2 : 1) : 1 = +f3(y2)
+// let f3(x : A) : 1 = x.label1<self>
+
+// prc[a] = <x, y> <- recv self; +f3(self, x)
+// prc[b] = +f2(self)
+// prc[c] = send a<b, self>
+
+// prc[a, b, c, d] = send self<x, y>
+
+// prc[m] = <f, g> <- recv a; wait f; wait g; close self
+// prc[n] = <f, g> <- recv b; wait f; wait g; close self
+// prc[o] = <f, g> <- recv c; wait f; wait g; close self
+// prc[p] = <f, g> <- recv d; wait f; wait g; close self
+
+// prc[x] = close self
+// prc[y] = close self
+
+
+// let f3(x : 1 -* 1, y : 1) : 1 * 1 = send x<y, self>
+// let f4(y2 : 1) : 1 = +f3(y2)
 
 // not ok
 // let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>

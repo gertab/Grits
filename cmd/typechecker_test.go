@@ -332,7 +332,7 @@ func TestTypecheckCorrectFunctionCall(t *testing.T) {
 		let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
 		// Explicit self
 		`let f1() : 1 = close self
-		let f2() : 1 -* 1 = <x, y> <- recv self; +f1(y)`,
+		let f2() : 1 -* 1 = <x, y> <- recv self; drop x; +f1(y)`,
 		`let f3(x : 1 -* 1, y : 1) : 1 = send x<y, self>
 		let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(self, x2, y2)`,
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>

@@ -296,15 +296,46 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 		arity := len(f.parameters)
 		functionCall := GetFunctionByNameArity(*re.GlobalEnvironment.FunctionDefinitions, f.functionName, arity)
 
+		includingSelf := false
+
 		if functionCall == nil {
-			re.errorf(process, "Function %s does not exist.\n", f.String())
+			// Check also in the case the first parameter passed is 'self'
+			if arity > 0 {
+				functionCall = GetFunctionByNameArity(*re.GlobalEnvironment.FunctionDefinitions, f.functionName, arity-1)
+				includingSelf = (functionCall != nil)
+			}
+
+			if functionCall == nil {
+				re.errorf(process, "Function %s does not exist.\n", f.String())
+			}
 		}
 
-		// Function found
-		functionCallBody := functionCall.Body
+		// Function found. Important to copy the body, to keep the original untouched
+		functionCallBody := CopyForm(functionCall.Body)
 
-		for i := range functionCall.Parameters {
-			functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
+		if includingSelf {
+			// In case when a function is called using explicit self,
+			// e.g. f(self, x1, x2) or f(w, x1, x2) where w has IsSelf true,
+			// then if a function is defined as
+			// 		let f[w : A, ...] = ...     <- then w has to be replaced by the new provider
+			// 		let f(...) : A = ...     <- then do nothing since there is no explicit provider
+			if functionCall.Provider != nil {
+				functionCallBody.Substitute(*functionCall.Provider, f.parameters[0])
+			}
+
+			for i := 1; i < len(f.parameters); i++ {
+				functionCallBody.Substitute(functionCall.Parameters[i-1], f.parameters[i])
+			}
+		} else {
+			for i := range functionCall.Parameters {
+				functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
+			}
+
+			// todo
+			// if functionCall.Provider != nil {
+			// 	// this has to be done s
+			// 	functionCallBody.Substitute(functionCall.Provider, functionCall.Provider that has IsSelf)
+			// }
 		}
 
 		process.Body = functionCallBody
@@ -314,17 +345,18 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 		process.transitionLoop(re)
 	}
 
-	// TransitionInternally(process, callRule, re)
+	// Always perform DUP before CALL, so that if self is passed as the first parameter, then we can safely substitute the first provider
+	TransitionInternally(process, callRule, re)
 
-	// Always perform CALL before DUP
-	prioritiseCallRule := true
+	// // Always perform CALL before DUP
+	// prioritiseCallRule := true
 
-	if len(process.Providers) > 1 && !prioritiseCallRule {
-		// Split process if needed
-		process.performDUPrule(re)
-	} else {
-		callRule()
-	}
+	// if len(process.Providers) > 1 && !prioritiseCallRule {
+	// 	// Split process if needed
+	// 	process.performDUPrule(re)
+	// } else {
+	// 	callRule()
+	// }
 }
 
 func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
@@ -394,7 +426,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// case self (...)
 
 		cseRule := func(message Message) {
-			re.logProcess(LOGRULEDETAILS, process, "[case, provider] finished receiving on self")
+			re.logProcessf(LOGRULEDETAILS, process, "[case, provider] finished receiving on self. Received label '%s'\n", message.Label.String())
 
 			if message.Rule != CSE {
 				re.errorf(process, "expected CSE, found %s\n", RuleString[message.Rule])

@@ -728,6 +728,7 @@ func (p *SplitForm) Polarity() Polarity {
 type CallForm struct {
 	functionName string
 	parameters   []Name
+	ProviderType types.SessionType
 	polarity     Polarity
 }
 
@@ -762,6 +763,7 @@ func (p *CallForm) FreeNames() []Name {
 }
 
 func (p *CallForm) Polarity() Polarity {
+	// todo ProviderType
 	return p.polarity
 }
 

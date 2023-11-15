@@ -164,6 +164,7 @@ type FunctionDefinition struct {
 	FunctionName string
 	Parameters   []Name
 	Type         types.SessionType // Session type for 'self'
+	Provider     *Name             // Optional name to be used instead of 'self'
 }
 
 func (function *FunctionDefinition) Arity() int {

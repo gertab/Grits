@@ -77,7 +77,7 @@ func NewSendType(left, right SessionType) *SendType {
 	}
 }
 
-// Receive: A -o B
+// Receive: A -* B
 type ReceiveType struct {
 	Left  SessionType
 	Right SessionType
@@ -87,7 +87,7 @@ func (q *ReceiveType) String() string {
 	var buffer bytes.Buffer
 	// buffer.WriteString("(")
 	buffer.WriteString(q.Left.String())
-	buffer.WriteString(" -o ")
+	buffer.WriteString(" -* ")
 	buffer.WriteString(q.Right.String())
 	// buffer.WriteString(")")
 	return buffer.String()

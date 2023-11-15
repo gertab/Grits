@@ -122,7 +122,7 @@ func TestSimpleTypes(t *testing.T) {
 		{"type A = 1", unitType},
 		{"type A = abc", labelType1},
 		{"type B = abc * def", types.NewSendType(labelType1, labelType2)},
-		{"type C = abc -o def", types.NewReceiveType(labelType1, labelType2)},
+		{"type C = abc -* def", types.NewReceiveType(labelType1, labelType2)},
 		{"type C = +{a : abc}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1)})},
 		{"type D = &{a : abc}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1)})},
 	}
@@ -148,16 +148,16 @@ func TestTypes(t *testing.T) {
 		{"type A = (1)", unitType},
 		{"type A = (abc)", labelType1},
 		{"type B = (abc * def)", types.NewSendType(labelType1, labelType2)},
-		{"type C = (abc -o def)", types.NewReceiveType(labelType1, labelType2)},
+		{"type C = (abc -* def)", types.NewReceiveType(labelType1, labelType2)},
 		{"type C = +{a : abc, bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})},
 		{"type D = &{a : abc, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})},
 		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})), *types.NewBranchOption("bb", labelType2)})},
 		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})), *types.NewBranchOption("bb", labelType2)})},
-		{"type E = (abc -o (abc -o def))", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
-		{"type E = abc -o (abc -o def)", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
-		{"type E = abc -o abc -o def", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
-		{"type E = +{a : (abc -o (abc -o def)), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))), *types.NewBranchOption("bb", labelType2)})},
-		{"type E = +{a : (abc -o (abc -o &{a : abc, bb : def})), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})))), *types.NewBranchOption("bb", labelType2)})},
+		{"type E = (abc -* (abc -* def))", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
+		{"type E = abc -* (abc -* def)", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
+		{"type E = abc -* abc -* def", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
+		{"type E = +{a : (abc -* (abc -* def)), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))), *types.NewBranchOption("bb", labelType2)})},
+		{"type E = +{a : (abc -* (abc -* &{a : abc, bb : def})), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})))), *types.NewBranchOption("bb", labelType2)})},
 	}
 
 	for i, c := range cases {
@@ -177,10 +177,10 @@ func TestSimpleTypesStrings(t *testing.T) {
 		{"type A = 1", "1"},
 		{"type A = abc", "abc"},
 		{"type B = abc * def", "abc * def"},
-		{"type C = abc -o def", "abc -o def"},
+		{"type C = abc -* def", "abc -* def"},
 		{"type C = +{a : abc}", "+{a : abc}"},
 		{"type D = &{a : abc}", "&{a : abc}"},
-		{"type E = +{a : (abc -o (abc -o &{a : abc, bb : def})), bb : def}", "+{a : abc -o abc -o &{a : abc, bb : def}, bb : def}"},
+		{"type E = +{a : (abc -* (abc -* &{a : abc, bb : def})), bb : def}", "+{a : abc -* abc -* &{a : abc, bb : def}, bb : def}"},
 	}
 
 	for i, c := range cases {
@@ -195,7 +195,7 @@ func TestSimpleTypesStrings(t *testing.T) {
 func TestEqualType(t *testing.T) {
 
 	commonProgram :=
-		`type A = 1 -o 1
+		`type A = 1 -* 1
 		type B = &{a : A}
 		type C = +{a : D}
 		type D = 1 * C
@@ -209,14 +209,14 @@ func TestEqualType(t *testing.T) {
 	}{
 		{"abc", "abc"},
 		{"A", "A"},
-		{"&{a : (1 -o 1)}", "B"},
+		{"&{a : (1 -* 1)}", "B"},
 		{"D", "1 * C"},
 		{"1 * +{a : D}", "1 * C"},
 		{"1 * +{a : D}", "D"},
 		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "D"},
 		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "1 * C"},
 		{"E", "F"},
-		{"&{a : (1 -o 1), b : 1}", "&{b : 1, a : (1 -o 1)}"},
+		{"&{a : (1 -* 1), b : 1}", "&{b : 1, a : (1 -* 1)}"},
 	}
 
 	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types
@@ -236,7 +236,7 @@ func TestEqualType(t *testing.T) {
 func TestNotEqualType(t *testing.T) {
 
 	commonProgram :=
-		`type A = 1 -o 1
+		`type A = 1 -* 1
 		type B = &{a : A}
 		type C = +{a : D}
 		type D = 1 * C`

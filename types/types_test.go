@@ -15,7 +15,7 @@ func TestSimpleStrings(t *testing.T) {
 		{NewUnitType(), "1"},
 		{label1, "abc"},
 		{NewSendType(label1, label2), "abc * def"},
-		{NewReceiveType(label1, label2), "abc -o def"},
+		{NewReceiveType(label1, label2), "abc -* def"},
 		{NewSelectType([]BranchOption{{Label: "a", Session_type: label1}}), "+{a : abc}"},
 		{NewBranchCaseType([]BranchOption{{Label: "a", Session_type: label1}}), "&{a : abc}"},
 	}
@@ -119,7 +119,7 @@ func TestCopy(t *testing.T) {
 		{CopyType(unit), "1"},
 		{CopyType(label1), "abc"},
 		{CopyType(send), "abc * def"},
-		{CopyType(receive), "abc -o def"},
+		{CopyType(receive), "abc -* def"},
 		{CopyType(sel), "+{a : abc}"},
 		{CopyType(branch), "&{bb : abc}"},
 	}

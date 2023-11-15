@@ -120,7 +120,7 @@ type NamesTypesCtx map[string]NamesType       /* maps names to their types */
 // -> labelledTypesEnv types.LabelledTypesEnv 	<- [read-only] keeps the mapping of pre-defined types (type A = ...)
 // -> sigma FunctionTypesEnv           	 		<- [read-only] keeps the mapping of pre-defined function definitions (let f() : A = ...)
 
-// */-o: send w<u, v>
+// */-*: send w<u, v>
 func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	if isProvider(p.to_c, providerShadowName) {
 		// MulR: *
@@ -162,7 +162,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			return fmt.Errorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.String(), providerType.String())
 		}
 	} else if isProvider(p.continuation_c, providerShadowName) {
-		// ImpL: -o
+		// ImpL: -*
 		logRule("rule ImpL")
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
@@ -202,8 +202,8 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			p.payload_c.Type = foundLeftType
 			p.continuation_c.Type = foundRightType
 		} else {
-			// wrong type: A -o B
-			return fmt.Errorf("expected '%s' to have a send type (A -o B), but found type '%s' instead", p.to_c.String(), clientType.String())
+			// wrong type: A -* B
+			return fmt.Errorf("expected '%s' to have a send type (A -* B), but found type '%s' instead", p.to_c.String(), clientType.String())
 		}
 	} else if isProvider(p.payload_c, providerShadowName) {
 		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was used as a payload", p.String())
@@ -217,10 +217,10 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	return err
 }
 
-// */-o: <x, y> <- recv w; P
+// */-*: <x, y> <- recv w; P
 func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	if isProvider(p.from_c, providerShadowName) {
-		// ImpR: -o
+		// ImpR: -*
 		logRule("rule ImpR")
 
 		providerType = types.Unfold(providerType, labelledTypesEnv)
@@ -254,8 +254,8 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 			return checkContinuation
 		} else {
-			// wrong type: A -o B
-			return fmt.Errorf("expected '%s' to have a receive type (A -o B), but found type '%s' instead", p.String(), providerType.String())
+			// wrong type: A -* B
+			return fmt.Errorf("expected '%s' to have a receive type (A -* B), but found type '%s' instead", p.String(), providerType.String())
 
 		}
 	} else if isProvider(p.payload_c, providerShadowName) || isProvider(p.continuation_c, providerShadowName) {
@@ -308,7 +308,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 			return checkContinuation
 		} else {
 			// wrong type, expected A * B
-			return fmt.Errorf("expected '%s' to have a send type (A -o B), but found type '%s' instead", p.from_c.String(), clientType.String())
+			return fmt.Errorf("expected '%s' to have a send type (A -* B), but found type '%s' instead", p.from_c.String(), clientType.String())
 
 		}
 	}

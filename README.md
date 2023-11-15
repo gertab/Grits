@@ -135,7 +135,7 @@ When processes transition, the list of the transitions is sent as a message.
          | + { <branch_type> }
          | & { <branch_type> }
          | <type> * <type>
-         | <type> -o <type>
+         | <type> -* <type>
          | ( <type> )
 
 <branch_type> ::= <label> : <type> [ , <branch_type> ]

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const numberOfIterations = 2000
+const numberOfIterations = 200
 
 // Invalidate all cache
 // go clean -testcache

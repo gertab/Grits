@@ -11,29 +11,30 @@ const program = `
 // type A = +{l : 1, r : 1}
 
 // type A = B
-// type B = 1 -o 1
+// type B = 1 -* 1
 
-let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>"
+let f1(to_c : &{label : 1}) : 1 = to_c.label1<self>"
+
 // let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>"
 
 // let f1(cont : 1) : +{label1 : 1} = a.label1<cont>
 
 // let f1(cont : 1) : &{label1 : 1} = self.label1<cont>
-// let f1(cont : 1 -o 1) : +{label0 : 1, label1 : 1 -o 1} = self.otherLabel<cont>
+// let f1(cont : 1 -* 1) : +{label0 : 1, label1 : 1 -* 1} = self.otherLabel<cont>
 
 
 
 // let f1(x : 1 * 1) : 1 * 1 = fwd x self
 
-"let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close self",
+"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close self",
 
 
 // prc[b_orig] = +f1(x)
 
-// let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close self
+// let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close self
 
 // let f1(u : 1 * 1) : 1 = <x, y> <- recv u; close y
-// let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>
+// let f2(b : 1) : 1 -* (1 * 1) = <x, y> <- recv self; send x<y, b>
 
 // not ok
 // let f2() : 1 * 1 = <x, y> <- recv self; close y
@@ -65,7 +66,7 @@ let f2(a : 1, b : 1, c : 1) : 1 * 1 = send self<a, b>
 // prc[pid2] = send self<pid3, self>
 
 // type C = 1 * 1
-// type D = 1 -o 1
+// type D = 1 -* 1
 
 // let func3(next_pid : D) : C = send self< next_pid, self>
 // let func2(next_pid : &{a : 1, c : 1}) : &{a : 1, c : 1} = send self< next_pid, self>
@@ -75,7 +76,7 @@ let f2(a : 1, b : 1, c : 1) : 1 * 1 = send self<a, b>
 // undefined label reference
 // type B = &{a : unknownlabel, c : 1}
 // type E = 1 * X
-// type A = +{a : (1 -o &{a : FF * 1}), c : 1}
+// type A = +{a : (1 -* &{a : FF * 1}), c : 1}
 // let func2(next_pid : B) : &{a : ssss, c : 1} = send self< next_pid, self>
 // prc[pid1] : &{a : ssss, c : 1} = <a, b> <- recv pid2; wait a; close self
 
@@ -106,9 +107,9 @@ type Select2 = +{a : b, c : d}
 type Branch = &{a : b}
 type Branch2 = &{a : b, c : d}
 type Send = a * b
-type Receive = c -o b
+type Receive = c -* b
 type Brack = (a)
-type Complex = +{a : (x -o &{a : f * g}), c : d}
+type Complex = +{a : (x -* &{a : f * g}), c : d}
 `
 const program33 = `
 type Unit = 1

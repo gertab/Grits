@@ -322,8 +322,11 @@ func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos
 			return LANGLE, "<", startPos, endPos
 		}
 	case '-':
-		// Can be - or -o
-		if ch2 == 'o' {
+		// Can be - or -* (or -o)
+		if ch2 == '*' {
+			// is -o
+			return LOLLI, "-*", startPos, endPos
+		} else if ch2 == 'o' {
 			// is -o
 			return LOLLI, "-o", startPos, endPos
 		} else {

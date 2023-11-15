@@ -41,23 +41,23 @@ func TestTypecheckCorrectSendReceive(t *testing.T) {
 		// MulR
 		"let f(a : 1, b : 1) : 1 * 1 = send self<a, b>",
 		`type A = +{l1 : 1}
-			type B = 1 -o 1
+			type B = 1 -* 1
 			let f(a : A, b : B) : A * B = send self<a, b>`,
 		`type A = 1 * 1
 		let f(a : 1, b : 1) : A = send self<a, b>`,
 		// ImpL
-		"let f2(a : 1 -o 1, b : 1) : 1 = send a<b, self>",
+		"let f2(a : 1 -* 1, b : 1) : 1 = send a<b, self>",
 		/* 5 */ `type A = +{l1 : 1}
 			type B = 1 * 1
-			let f(a : A -o B, b : A) : B = send a<b, self>`,
-		`type A = 1 -o 1
+			let f(a : A -* B, b : A) : B = send a<b, self>`,
+		`type A = 1 -* 1
 		let f2(a : A, b : 1) : 1 = send a<b, self>`,
 		// receive
 		// ImpR
-		"let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close y",
-		"let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send y<x, b>",
-		"let f1() : (1 * 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; wait x2; wait y2; close y",
-		`type A = 1 -o 1
+		"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close y",
+		"let f2(b : 1) : 1 -* (1 * 1) = <x, y> <- recv self; send y<x, b>",
+		"let f1() : (1 * 1) -* 1 = <x, y> <- recv self; <x2, y2> <- recv x; wait x2; wait y2; close y",
+		`type A = 1 -* 1
 		let f1() : A = <x, y> <- recv self; wait x; close y`,
 		// MulL
 		"let f1(u : 1 * 1) : 1 = <x, y> <- recv u; wait x; wait y; close self",
@@ -73,7 +73,7 @@ func TestTypecheckIncorrectSendReceive(t *testing.T) {
 	cases := []string{
 		/* 0 */ "type A = B",
 		"prc[a] : A = close self",
-		"let f() : 1 -o A = close self",
+		"let f() : 1 -* A = close self",
 		// MulL (extra non used names)
 		"let f(c : 1, a : 1, b : 1) : 1 * 1 = send self<a, b>",
 		// MulL (missing names)
@@ -84,25 +84,25 @@ func TestTypecheckIncorrectSendReceive(t *testing.T) {
 		// MulL (incorrect self type)
 		"let f(a : &{a : 1}, b : &{b : 1}) : &{a : 1} * 1 = send self<a, b>",
 		// MulL (wrong types)
-		"let f(a : 1 -o 1, b : 1) : 1 * 1 = send self<a, b>",
+		"let f(a : 1 -* 1, b : 1) : 1 * 1 = send self<a, b>",
 		"let f(a : 1, b : &{a: 1}) : 1 * 1 = send self<a, b>",
 		/* 10 */ "let f(a : 1, b : 1) : 1 * (1 * 1) = send self<a, b>",
 		// ImpL
-		"let f2(a : 1 -o 1, b : 1) : +{x : 1} = send a<b, self>",
-		"let f2(a : 1 -o 1, b : +{x : 1}) : 1 = send a<b, self>",
+		"let f2(a : 1 -* 1, b : 1) : +{x : 1} = send a<b, self>",
+		"let f2(a : 1 -* 1, b : +{x : 1}) : 1 = send a<b, self>",
 		"let f2(a : 1 * 1, b : 1) : 1 = send a<b, self>",
 		// MulR/ImpL
-		"let f2(a : 1 -o 1, b : 1) : 1 = send a<b, c>",
-		/* 15 */ "let f2(a : 1 -o 1, c : 1) : 1 = send a<self, c>",
+		"let f2(a : 1 -* 1, b : 1) : 1 = send a<b, c>",
+		/* 15 */ "let f2(a : 1 -* 1, c : 1) : 1 = send a<self, c>",
 		// ImpR
 		"let f2() : 1 * 1 = <x, y> <- recv self; close y",
-		"let f2(b : 1) : 1 -o (1 * 1) = <x, y> <- recv self; send x<y, b>",
-		"let f1() : 1 -o 1 = <x, self> <- recv self; close y",
+		"let f2(b : 1) : 1 -* (1 * 1) = <x, y> <- recv self; send x<y, b>",
+		"let f1() : 1 -* 1 = <x, self> <- recv self; close y",
 		// MulL
-		"let f1(u : 1 -o 1) : 1 = <x, y> <- recv u; close y",
+		"let f1(u : 1 -* 1) : 1 = <x, y> <- recv u; close y",
 		/* 20 */
 		"let f1(u : 1 * 1) : 1 = <self, y> <- recv u; close y",
-		"let f1() : (1 -o 1) -o 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
+		"let f1() : (1 -* 1) -* 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -118,7 +118,7 @@ func TestTypecheckCorrectUnit(t *testing.T) {
 		let f1() : A = close self`,
 		// EndL
 		"let f1(x : 1) : 1 = wait x; close self",
-		"let f1() : 1 -o 1 = <x, y> <- recv self; wait x; close self",
+		"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close self",
 		`type A = 1
 		let f1(x : A) : A = wait x; close self`,
 	}
@@ -146,8 +146,8 @@ func TestTypecheckCorrectForward(t *testing.T) {
 		// ID
 		"let f1(x : 1 * 1) : 1 * 1 = fwd self x",
 		"let f1(x : 1 * 1) : 1 * 1 = fwd self x",
-		"let f1() : 1 -o 1 = <x, y> <- recv self; fwd y x",
-		"let f1(g : (&{a : 1})) : 1 -o (&{a : 1}) = <x, y> <- recv self; wait x; fwd y g",
+		"let f1() : 1 -* 1 = <x, y> <- recv self; fwd y x",
+		"let f1(g : (&{a : 1})) : 1 -* (&{a : 1}) = <x, y> <- recv self; wait x; fwd y g",
 		`type A = 1 * 1
 		type B = 1 * 1
 		let f1(x : A) : B = fwd self x`,
@@ -160,11 +160,11 @@ func TestTypecheckIncorrectForward(t *testing.T) {
 	cases := []string{
 		// ID
 		"let f1(x : 1 * 1) : 1 = fwd self x",
-		"let f1(x : 1 * 1) : 1 -o 1 = fwd self x",
+		"let f1(x : 1 * 1) : 1 -* 1 = fwd self x",
 		"let f1(x : &{hello : 1}) : 1 = fwd self x",
 		"let f1(x : 1 * 1) : 1 * 1 = fwd x self",
 		"let f1(x : 1 * 1, y : 1) : 1 * 1 = fwd self x",
-		"let f1(g : (+{a : 1})) : 1 -o (&{a : 1}) = <x, y> <- recv self; wait x; fwd y g",
+		"let f1(g : (+{a : 1})) : 1 -* (&{a : 1}) = <x, y> <- recv self; wait x; fwd y g",
 		"let f1(x : 1 * 1, y : 1 * 1) : 1 * 1 = fwd x y",
 	}
 
@@ -191,8 +191,8 @@ func TestTypecheckIncorrectDrop(t *testing.T) {
 		"let f1(x : 1 * 1) : 1 * 1 = drop g; fwd self x",
 		"let f1(x : 1 * 1, g : &{a : 1}) : 1 * 1 = drop self; fwd self x",
 		// Drop and use later
-		"let f1() : 1 -o 1 = <x, y> <- recv self; drop x; wait x; close y",
-		"let f1() : 1 -o 1 = drop x; <x, y> <- recv self;  wait x; close y",
+		"let f1() : 1 -* 1 = <x, y> <- recv self; drop x; wait x; close y",
+		"let f1() : 1 -* 1 = drop x; <x, y> <- recv self;  wait x; close y",
 		// Missed drop
 		"let f1(x : 1 * 1, g : &{a : 1}) : 1 * 1 = fwd self x",
 	}
@@ -206,10 +206,10 @@ func TestTypecheckCorrectSelect(t *testing.T) {
 		// Select
 		// EChoiceR
 		"let f1(cont : 1) : +{label1 : 1} = self.label1<cont>",
-		"let f1(cont : 1 -o 1) : +{label0 : 1, label1 : 1 -o 1} = self.label1<cont>",
+		"let f1(cont : 1 -* 1) : +{label0 : 1, label1 : 1 -* 1} = self.label1<cont>",
 		// EChoiceL
 		"let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>",
-		"let f1(to_c : &{label0 : 1, label1 : 1 -o 1}) : 1 -o 1 = to_c.label1<self>",
+		"let f1(to_c : &{label0 : 1, label1 : 1 -* 1}) : 1 -* 1 = to_c.label1<self>",
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -220,11 +220,11 @@ func TestTypecheckIncorrectSelect(t *testing.T) {
 		// Select
 		// EChoiceR
 		"let f1(cont : 1) : &{label1 : 1} = self.label1<cont>",
-		"let f1(cont : 1 -o 1) : +{label0 : 1, label1 : 1 -o 1} = self.otherLabel<cont>",
+		"let f1(cont : 1 -* 1) : +{label0 : 1, label1 : 1 -* 1} = self.otherLabel<cont>",
 		"let f1(cont : 1) : +{label1 : 1} = a.label1<cont>",
 		// EChoiceL
 		"let f1(to_c : +{label1 : 1}) : 1 = to_c.label1<self>",
-		"let f1(to_c : &{label0 : 1, label1 : 1 -o 1}) : 1 -o 1 = to_c.label2<self>",
+		"let f1(to_c : &{label0 : 1, label1 : 1 -* 1}) : 1 -* 1 = to_c.label2<self>",
 	}
 
 	runThroughTypechecker(t, cases, false)

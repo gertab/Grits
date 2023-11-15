@@ -73,8 +73,8 @@ func SanityChecksType(types []SessionType, typesDefs []SessionTypeDefinition) er
 // Example:
 //
 //	type A = 1			[correct]
-//	type B = A -o 1  	[correct]
-//	type C = A -o D		[incorrect, because D is undefined]
+//	type B = A -* 1  	[correct]
+//	type C = A -* D		[incorrect, because D is undefined]
 //
 // Ensures also the branches are made up of unique labels
 func (q *LabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {

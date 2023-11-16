@@ -104,6 +104,11 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 			// Package all processes
 			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, p.proc.Type, process.LINEAR)
 			processes = append(processes, new_p)
+
+			// todo if len(providers) == 1, then you can reference the provider directly instead of using self
+			// for this we have to traverse the ast and replace any occurrence of the provider[0] with the same one having IsSelf = true
+			// todo if len(providers) > 1, then you cannot reference one of the providers directly (must use self)
+
 		}
 	}
 

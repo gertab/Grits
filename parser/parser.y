@@ -133,8 +133,8 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 	Snew, Cast, Shift
 	Acquire, Accept, Push, Detach, Release
 */
-		   | /* print - for debugging */ PRINT name
-		   			{ $$ = process.NewPrint($2) };
+		   | /* print - for debugging */ PRINT name SEQUENCE expression
+		   			{ $$ = process.NewPrint($2, $4) };
  
 branches :   /* empty */         										 { $$ = nil }
          |               LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = []*process.BranchForm{process.NewBranch(process.Label{L: $1}, $3, $6)} }

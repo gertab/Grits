@@ -126,6 +126,7 @@ func (n *Name) Substitute(old, new Name) {
 		n.IsSelf = new.IsSelf
 		n.ControlChannel = new.ControlChannel
 		n.Polarity = new.Polarity
+		// n.Type = new.Type [type should remain the same, as set by the typechecker]
 		if new.Ident != "" {
 			// not sure if this works
 			n.Ident = new.Ident
@@ -133,15 +134,13 @@ func (n *Name) Substitute(old, new Name) {
 		}
 	} else {
 		if n.Ident == old.Ident {
-			// fmt.Print("\t")
-			// fmt.Print(n.String())
-			// fmt.Println("match")
 			n.Ident = new.Ident
 			n.Channel = new.Channel
 			n.ChannelID = new.ChannelID
 			n.IsSelf = new.IsSelf
 			n.Polarity = new.Polarity
 			n.ControlChannel = new.ControlChannel
+			// n.Type = new.Type
 		}
 	}
 }

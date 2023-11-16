@@ -763,8 +763,17 @@ func (f *ShiftForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 // Debug
 func (f *PrintForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
-	fmt.Print("transition of print: ")
-	fmt.Println(f.String())
+	re.logProcessf(LOGRULEDETAILS, process, "transition of print: %s\n", f.String())
+
+	printRule := func() {
+		fmt.Printf("Output from %s: %s\n", NamesToString(process.Providers), f.name_c.String())
+		process.finishedRule(PRINT, "[print]", "", re)
+
+		process.Body = f.continuation_e
+		process.transitionLoopNP(re)
+	}
+
+	TransitionInternallyNP(process, printRule, re)
 }
 
 // // To keep the log/monitor update with the currently running processes and the transition rules

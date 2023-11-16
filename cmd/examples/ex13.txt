@@ -1,0 +1,11 @@
+// performs DUP at the top level
+
+prc[a, b, c, d] = send self<x, y>
+
+prc[m] = <f, g> <- recv a; wait f; wait g; close self
+prc[n] = <f, g> <- recv b; wait f; wait g; close self
+prc[o] = <f, g> <- recv c; wait f; wait g; close self
+prc[p] = <f, g> <- recv d; wait f; wait g; close self
+
+prc[x] = close self
+prc[y] = close self

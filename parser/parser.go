@@ -96,34 +96,16 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 			functions = append(functions, p.function)
 		} else if p.kind == TYPE_DEF {
 			types = append(types, p.session_type)
-		}
-	}
+		} else if p.kind == PROCESS {
+			// Processes may have multiple names:
+			// 		e.g. prc[a, b, c, d]: send self<...>
+			// This remains one process with multiple providers
 
-	// First step is to duplicate process having multiple names:
-	// 		e.g. prc[a, b, c, d]: send self<...>
-	// becomes 4 separate processes
-
-	// This is wrong because you can have a free name pointing to another process that becomes duplicated (which shouldn't unless shareable)
-	// Todo change this to a split construct:
-	//   <a, b, c, d> <- split ...
-
-	// todo maybe throw list of names in OtherProviders
-	// Pull all processes
-	for _, p := range u.procsAndFuns {
-		// for _, n := range p.Providers {
-		if p.kind == PROCESS {
+			// Package all processes
 			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, p.proc.Type, process.LINEAR)
 			processes = append(processes, new_p)
 		}
-		// }
 	}
-
-	// The next step is to get rid of all the macros
-	// this is not easy since some macros may need type information
-	// todo
-	// for _, p := range processes {
-	// 	p.Body.
-	// }
 
 	return processes, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}
 }

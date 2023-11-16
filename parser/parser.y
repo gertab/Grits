@@ -92,28 +92,28 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewSelect($1, process.Label{L: $3}, $5) }
 		   | /* case */ CASE name LPAREN branches RPAREN 
 		   			{ $$ = process.NewCase($2, $4) }
-/* new without explicit polarities */	
-/* | name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression 
-		{ $$ = process.NewNew($1, $5, $8) } */
+		   | /* new (without explicit polarities) */ name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression 
+					{ $$ = process.NewNew($1, $5, $8, process.UNKNOWN) } 
 		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW LPAREN expression RPAREN SEQUENCE expression 
 					{ $$ = process.NewNew($1, $6, $9, process.POSITIVE) } 
 		   | /* new (-ve) */ name LEFT_ARROW MINUS NEW LPAREN expression RPAREN SEQUENCE expression 
 					{ $$ = process.NewNew($1, $6, $9, process.NEGATIVE) } 
+		   | /* call (without explicit polarities) */ LABEL LPAREN optional_names RPAREN
+		   			{ $$ = process.NewCall($1, $3, process.UNKNOWN) }
 		   | /* call (+ve) */ PLUS LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, process.POSITIVE) }
 		   | /* call (-ve) */ MINUS LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, process.NEGATIVE) }
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
-		   | /* forward without explicit polarities */ FORWARD name name
+		   | /* forward (without explicit polarities) */ FORWARD name name
 				{ $$ = process.NewForward($2, $3, process.UNKNOWN) } 
 		   | /* forward (+ve) */ PLUS FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, process.POSITIVE) }
 		   | /* forward (-ve) */ MINUS FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, process.NEGATIVE) }
-/* split without explicit polarities */
-/* | LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
-	{ $$ = process.NewSplit($2, $4, $8, $10) } */
+		   | /* split (without explicit polarities) */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
+		   			{ $$ = process.NewSplit($2, $4, $8, $10, process.UNKNOWN) }
 		   | /* split (+ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW PLUS SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $9, $11, process.POSITIVE) }
 		   | /* split (-ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW MINUS SPLIT name SEQUENCE expression

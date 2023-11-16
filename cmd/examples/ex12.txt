@@ -1,0 +1,12 @@
+
+type A = &{label1 : 1, label2 : 1, label3 : 1}
+let f2() : A = 
+			case self (label1<a> => close a
+					  |label2<a> => close a
+					  |label3<a> => close a) 
+
+let f3(x : A) : 1 = x.label1<self>
+
+prc[a] = <x, y> <- recv self; f3(x)
+prc[b] = f2()
+prc[c] = send a<b, self>

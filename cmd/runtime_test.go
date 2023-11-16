@@ -119,26 +119,8 @@ func TestSimpleMultipleFWD(t *testing.T) {
 	checkInputRepeatedly(t, input, expected)
 }
 
-// func TestSimpleMultipleProvidersInitially(t *testing.T) {
-// 	// Case 5: Implicit SPLIT
-
-// 	input := ` /* SND rule with process having multiple names */
-// 		prc[pa, pb, pc, pd]: send self<pid0, self>
-// 		prc[pid2]: <a, b> <- recv pa; close self
-// 		prc[pid3]: <a, b> <- recv pb; close self
-// 		prc[pid4]: <a, b> <- recv pc; close self
-// 		prc[pid5]: <a, b> <- recv pd; close self
-// 		`
-// 	expected := []traceOption{
-// 		// not sure about these
-// 		{steps{{"pa", process.SND}, {"pb", process.SND}, {"pc", process.SND}, {"pd", process.DUP}, {"pd", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}, 9},
-// 		{steps{{"pa", process.SND}, {"pb", process.SND}, {"pc", process.SND}, {"pd", process.SND}, {"pd", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}, 4},
-// 	}
-// 	checkInputRepeatedly(t, input, expected)
-// }
-
 func TestSimpleSPLITCUT(t *testing.T) {
-	// Case 6: SPLIT + CUT + SND
+	// Case 5: SPLIT + CUT + SND
 
 	input := ` 	/* SPLIT + CUT + SND rule */
 			prc[pid0] = <x1, x2> <- +split pid1; close self
@@ -159,7 +141,7 @@ func TestSimpleSPLITCUT(t *testing.T) {
 }
 
 func TestSimpleSPLITSNDSND(t *testing.T) {
-	// Case 7: SPLIT + SND rule (x 2)
+	// Case 6: SPLIT + SND rule (x 2)
 
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
 		prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
@@ -187,6 +169,42 @@ func TestSimpleSPLITCALL(t *testing.T) {
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}, 4},
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}}, 2},
 		{steps{{"pid0", process.SPLIT}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.CALL}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}, 4},
+	}
+	checkInputRepeatedly(t, input, expected)
+}
+
+func TestSimpleMultipleProvidersInitially(t *testing.T) {
+	// Case 8: Implicit SPLIT
+
+	input := ` /* SND rule with process having multiple names */
+		prc[pa, pb, pc, pd] = send self<pid0, self>
+		prc[pid2] = <a, b> <- recv pa; close self
+		prc[pid3] = <a, b> <- recv pb; close self
+		prc[pid4] = <a, b> <- recv pc; close self
+		prc[pid5] = <a, b> <- recv pd; close self
+		`
+	expected := []traceOption{
+		{steps{{"pa", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}, 8},
+	}
+	checkInputRepeatedly(t, input, expected)
+}
+
+func TestSimpleDUP(t *testing.T) {
+	// Case 9: DUP at the top level
+
+	input := ` 
+		prc[a, b, c, d] = send self<x, y>
+
+		prc[m] = <f, g> <- recv a; wait f; wait g; close self
+		prc[n] = <f, g> <- recv b; wait f; wait g; close self
+		prc[o] = <f, g> <- recv c; wait f; wait g; close self
+		prc[p] = <f, g> <- recv d; wait f; wait g; close self
+
+		prc[x] = close self
+		prc[y] = close self
+			`
+	expected := []traceOption{
+		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}, 18},
 	}
 	checkInputRepeatedly(t, input, expected)
 }

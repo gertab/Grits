@@ -8,27 +8,22 @@ import (
 
 const program = `
 
+prc[pid1] = print pid3; send pid2<pid3, self>
+prc[pid2] = <a, b> <- recv self; print a;  wait a; print b; close self
+prc[pid3] = close self
 
-type A = &{label1 : 1, label2 : 1, label3 : 1}
 
-let f1() : A = case self (label1<a> => close a
-					     |label2<a> => close a
-					     |label3<a> => close a) 
+// type A = &{label1 : 1, label2 : 1, label3 : 1}
+// let f2() : A = 
+// 			case self (label1<a> => close a
+// 					  |label2<a> => close a
+// 					  |label3<a> => close a) 
 
-let f2(x : A) : 1 = x.label1<self>
+// let f3(x : A) : 1 = x.label1<self>
 
-let f3() : A -* 1 = <x, y> <- recv self; +f2(x)
-
-let f4(aa : A -* 1, bb: A) : 1 = send aa<bb, self>
-
-prc[a] = -f3()
-prc[b] = -f1()
-prc[c] = -f4(a, b)
-
-prc[d] = -f3(self)
-prc[e] = -f1(self)
-prc[f] = -f4(self, d, e)
-
+// prc[a] = <x, y> <- recv self; f3(x)
+// prc[b] = f2()
+// prc[c] = send a<b, self>
 
 
 

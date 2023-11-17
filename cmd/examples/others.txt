@@ -196,3 +196,98 @@ const program = `
 			end
 
 			`
+
+
+
+
+const program = `
+	prc[a] : 1 = f2()
+
+
+	// type A = +{l : 1, r : 1}
+
+	// type A = B
+	// type B = 1 -* 1
+
+	// type B = &{label33 : 1}
+	// let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
+	// 			<x, y> <- recv self; send y<a, x>
+
+	// type A = &{label1 : 1, label2 : 1, label3 : 1}
+	// let f2() : A = 
+	// 			case self (label1<a> => close a
+	// 					  |label2<a> => close a
+	// 					  |label3<a> => close a) 
+
+	// let f3(x : A) : 1 = x.label1<self>
+
+	// prc[a] = <x, y> <- recv self; +f3(self, x)
+	// prc[b] = +f2(self)
+	// prc[c] = send a<b, self>
+
+	// prc[a, b, c, d] = send self<x, y>
+
+	// prc[m] = <f, g> <- recv a; wait f; wait g; close self
+	// prc[n] = <f, g> <- recv b; wait f; wait g; close self
+	// prc[o] = <f, g> <- recv c; wait f; wait g; close self
+	// prc[p] = <f, g> <- recv d; wait f; wait g; close self
+
+	// prc[x] = close self
+	// prc[y] = close self
+
+
+	// let f3(x : 1 -* 1, y : 1) : 1 * 1 = send x<y, self>
+	// let f4(y2 : 1) : 1 = +f3(y2)
+
+	// not ok
+	// let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
+	// let f6(x2 : 1 -* 1, y2 : 1) : &{label : 1} = +f5(x2, y2)
+
+	// let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+	// 			case self (label2<a> => close self
+	// 					  |label3<a> => close self
+	// 					  |label1<a> => close self) 
+
+
+	// should fail
+	// let f2() : &{label1 : 1, label3 : 1} = 
+	// 			case self (label1<a> => close self
+	// 					  |label2<a> => close self
+	// 					  |label3<a> => close self) 
+
+
+	// let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+	// 			case self (label1<a> => close self) 
+
+	// let f1(to_c : &{label1 : 1}) : 1 = to_c.label1<self>
+
+	// let f1(cont : 1) : +{label1 : 1} = a.label1<cont>
+
+	// let f1(cont : 1) : &{label1 : 1} = self.label1<cont>
+	// let f1(cont : 1 -* 1) : +{label0 : 1, label1 : 1 -* 1} = self.otherLabel<cont>
+
+
+
+	// let f1(x : 1 * 1) : 1 * 1 = fwd x self
+
+	"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close self",
+
+
+	// prc[b_orig] = +f1(x)
+
+	// let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close self
+
+	// let f1(u : 1 * 1) : 1 = <x, y> <- recv u; close y
+	// let f2(b : 1) : 1 -* (1 * 1) = <x, y> <- recv self; send x<y, b>
+
+	// not ok
+	// let f2() : 1 * 1 = <x, y> <- recv self; close y
+
+
+	// let f1(a : A, b : 1 * A) : A * B = send self<a, b>
+
+	// let f0(a : 1, b : 1) : 1 * 1 = p_new <- +new (send self<a, b>); <a1, b2> <- recv p_new; wait a1; wait b2; close self
+
+	// prc[x] = +f1(a_orig, b_orig)
+	// prc[a_orig] = close self
+	// prc[b_orig] = close self`

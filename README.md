@@ -1,5 +1,7 @@
 # Phi
 
+[*Phi is currently a placeholder for the name*]
+
 Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 
 ## How to build project

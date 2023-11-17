@@ -1,5 +1,7 @@
 # Phi
 
+Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
+
 ## How to build project
 
 ## How to use
@@ -7,7 +9,6 @@
 <!-- show how the cli version works -->
 
 ## Sample programs
-
 
 ## Grammar
 
@@ -17,7 +18,7 @@
 <statement> ::= type <label> = <type>                               // labelled session type       
               | let <label> ( [<param>] ) : <type> = <term>         // function declaration
               | let <label> '[' <param> ']' = <term>                // function declaration with explicit provider name
-              | prc '[' <name> ']' : <type> = <term> '%' param      // create processes
+              | prc '[' <name> ']' : <type> = <term> [ '%' param ]  // create processes
               | exec <label> ( )                                    // execute function
 
 <param> ::= <name> : <type> [ , <param> ]                           // typed variable names

@@ -37,6 +37,7 @@ import (
 %type <names> optional_names_with_type_ann
 %type <names> comma_optional_names_with_type_ann
 %type <names> names_with_type_ann
+%type <names> process_name_types
 %type <branches> branches
 %type <sessionType> session_type
 %type <sessionTypeAlt> session_type_alts
@@ -173,14 +174,20 @@ name_with_type_ann :
 name : SELF { $$ = process.Name{IsSelf: true} }
 	 | LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
 
+
+process_name_types : 
+			/* empty */ { $$ = nil }
+		| PIPE names_with_type_ann { $$ = $2 }
+
+
 function_def : 
 			/* without type - todo remove option to force types */
-			 LET LABEL LPAREN optional_names_with_type_ann RPAREN EQUALS expression
-					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7, UsesExplicitProvider: false}} }
-			| /* with type annotation */ LET LABEL LPAREN optional_names_with_type_ann RPAREN COLON session_type EQUALS expression
-					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $9, Type: $7, UsesExplicitProvider: false}} }
+			 LET LABEL LPAREN optional_names_with_type_ann RPAREN EQUALS expression process_name_types
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7, UsesExplicitProvider: false}, freeNamesWithType: $8} }
+			| /* with type annotation */ LET LABEL LPAREN optional_names_with_type_ann RPAREN COLON session_type EQUALS expression process_name_types
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $9, Type: $7, UsesExplicitProvider: false}, freeNamesWithType: $10} }
 			| /* explicit provider name : without type - todo remove option to force types */
-			 LET LABEL LSBRACK LABEL comma_optional_names_with_type_ann RSBRACK EQUALS expression
+			 LET LABEL LSBRACK LABEL comma_optional_names_with_type_ann RSBRACK EQUALS expression process_name_types
 					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: 
 							process.FunctionDefinition{
 								FunctionName: $2, 
@@ -189,9 +196,9 @@ function_def :
 								UsesExplicitProvider: true, 
 								ExplicitProvider: process.Name{Ident: $4, IsSelf: true}, 
 								// Type: $6,
-								}} }
+								}, freeNamesWithType: $9} }
 			| /* explicit provider name :  with type annotation */
-			 LET LABEL LSBRACK LABEL COLON session_type comma_optional_names_with_type_ann RSBRACK EQUALS expression
+			 LET LABEL LSBRACK LABEL COLON session_type comma_optional_names_with_type_ann RSBRACK EQUALS expression process_name_types
 					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: 
 							process.FunctionDefinition{
 								FunctionName: $2, 
@@ -199,7 +206,7 @@ function_def :
 								Body: $10, 
 								UsesExplicitProvider: true, 
 								ExplicitProvider: process.Name{Ident: $4, IsSelf: true}, 
-								Type: $6}} };
+								Type: $6}, freeNamesWithType: $11} };
 
 type_def : TYPE LABEL EQUALS session_type
 			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: $2, SessionType: $4}} };

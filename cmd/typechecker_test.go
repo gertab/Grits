@@ -11,13 +11,13 @@ import (
 // Parses the cases and expects each to pass the typechecking phase successfully (or not)
 func runThroughTypechecker(t *testing.T, cases []string, pass bool) {
 	for i, c := range cases {
-		processes, globalEnv, err := parser.ParseString(c)
+		processes, processesFreeNames, globalEnv, err := parser.ParseString(c)
 
 		if err != nil {
 			t.Errorf("compilation error in case #%d: %s\n", i, err.Error())
 		}
 
-		err = process.Typecheck(processes, globalEnv)
+		err = process.Typecheck(processes, processesFreeNames, globalEnv)
 
 		if pass {
 			if err != nil {

@@ -6,7 +6,7 @@ import (
 	"phi/types"
 )
 
-func Typecheck(processes []*Process, globalEnv *GlobalEnvironment) error {
+func Typecheck(processes []*Process, processesFreeNames [][]Name, globalEnv *GlobalEnvironment) error {
 	errorChan := make(chan error)
 	doneChan := make(chan bool)
 
@@ -14,7 +14,7 @@ func Typecheck(processes []*Process, globalEnv *GlobalEnvironment) error {
 
 	// Running in a separate process allows us to break the typechecking part as soon as the first
 	// error is found
-	go typecheckFunctionsAndProcesses(processes, globalEnv, errorChan, doneChan)
+	go typecheckFunctionsAndProcesses(processes, processesFreeNames, globalEnv, errorChan, doneChan)
 
 	select {
 	case err := <-errorChan:
@@ -26,13 +26,14 @@ func Typecheck(processes []*Process, globalEnv *GlobalEnvironment) error {
 	return nil
 }
 
-func typecheckFunctionsAndProcesses(processes []*Process, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
+func typecheckFunctionsAndProcesses(processes []*Process, processesFreeNames [][]Name, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
 	defer func() {
+		// todo replace with WG
 		doneChan <- true
 	}()
 
 	// Start with some preliminary check on the types
-	err := lightweightChecks(processes, globalEnv)
+	err := preliminaryChecks(processes, processesFreeNames, globalEnv)
 	if err != nil {
 		errorChan <- err
 	}
@@ -44,11 +45,14 @@ func typecheckFunctionsAndProcesses(processes []*Process, globalEnv *GlobalEnvir
 		errorChan <- err
 	}
 	// 2) todo Process definitions
+
+	// todo add checks to make sure that all types are there
+
 }
 
-// Perform some preliminary checks about the type type definitions
-// Ensures that types only referred to existing labelled types
-func lightweightChecks(processes []*Process, globalEnv *GlobalEnvironment) error {
+// Perform some preliminary checks about the type definitions
+// Ensures that types only referred to existing labelled types (i.e. recursion is used correctly). Also, ensures that there are no missing types and that types are well formed
+func preliminaryChecks(processes []*Process, processesFreeNames [][]Name, globalEnv *GlobalEnvironment) error {
 
 	// First analyse the labelled types (i.e. type A = ...)
 	err := types.SanityChecksTypeDefinitions(*globalEnv.Types)
@@ -57,28 +61,44 @@ func lightweightChecks(processes []*Process, globalEnv *GlobalEnvironment) error
 		return err
 	}
 
-	// Check the types for the function declarations (i.e. let f() : A = ...)
+	// Analyse the function declarations types (i.e. let f(x : B) : A = ...)
+	// todo make sure that each function has a unique name
 	var all_types []types.SessionType
-	for _, i := range *globalEnv.FunctionDefinitions {
-		if i.Type != nil {
-			all_types = append(all_types, i.Type)
+	for _, f := range *globalEnv.FunctionDefinitions {
+		if f.Type != nil {
+			all_types = append(all_types, f.Type)
+		} else {
+			return fmt.Errorf("function %s has a missing type of provider", f.String())
 		}
 
-		for _, i := range i.Parameters {
-			if i.Type != nil {
-				all_types = append(all_types, i.Type)
+		for _, p := range f.Parameters {
+			if p.Type != nil {
+				all_types = append(all_types, p.Type)
+			} else {
+				return fmt.Errorf("in function definition %s, parameter %s has a missing type", f.String(), p.String())
 			}
 		}
 	}
 
 	// Check the types for the processes (i.e. prc[a] : A = ...)
-	for _, i := range processes {
-		if i.Type != nil {
-			all_types = append(all_types, i.Type)
+	for i := range processes {
+		if processes[i].Type != nil {
+			all_types = append(all_types, processes[i].Type)
+		} else {
+			return fmt.Errorf("process %s has a missing type of provider", processes[i].OutlineString())
 		}
+
+		// Check also that the types annotated for each process are correct
+		// -> prc[a] : A = ... % b : A1, c : A2, ...
+		actualFreeNames := processes[i].Body.FreeNames()
+		if len(actualFreeNames) != len(processesFreeNames[i]) {
+			return fmt.Errorf("Process %s has %d free names (i.e. %s), but there were %d found (%s)", processes[i].String(), len(actualFreeNames), NamesToString(actualFreeNames), len(processesFreeNames[i]), NamesToString(processesFreeNames[i]))
+		}
+
+		// todo check that processesFreeNames[i] are all unique
+		// todo check that all names in processesFreeNames[i] match with the ones in actualFreeNames
+
 	}
-	// todo need to add the annotated types for the free names
-	// (i.e. prc[a] : A = ... % b : A1, c : A2, ...)
 
 	err = types.SanityChecksType(all_types, *globalEnv.Types)
 	if err != nil {

@@ -278,7 +278,7 @@ func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOpt
 }
 
 func checkInput(t *testing.T, input string, expectedOptions []traceOption, done chan bool) {
-	processes, globalEnv, err := parser.ParseString(input)
+	processes, _, globalEnv, err := parser.ParseString(input)
 
 	if err != nil {
 		t.Errorf("Error during parsing")

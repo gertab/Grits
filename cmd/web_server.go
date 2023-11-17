@@ -281,7 +281,7 @@ func (c *Client) handleRequest(message string) {
 		go c.handleMonitorProcessUpdates()
 		go c.handleMonitorRuleUpdates()
 
-		processes, globalEnv, err := parser.ParseString(request.ProgramToCompile)
+		processes, _, globalEnv, err := parser.ParseString(request.ProgramToCompile)
 
 		if err != nil {
 			c.sendError(err.Error())

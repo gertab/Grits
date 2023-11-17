@@ -97,6 +97,17 @@ func (n *Name) String() string {
 	}
 }
 
+// Check whether n is in names
+func (n *Name) ContainedIn(names []Name) bool {
+	for _, j := range names {
+		if n.Equal(j) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func NamesToString(names []Name) string {
 	var buf bytes.Buffer
 
@@ -169,6 +180,15 @@ type FunctionDefinition struct {
 
 func (function *FunctionDefinition) Arity() int {
 	return len(function.Parameters)
+}
+
+func (function *FunctionDefinition) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(function.FunctionName)
+	buffer.WriteString("(")
+	buffer.WriteString(NamesToString(function.Parameters))
+	buffer.WriteString(")")
+	return buffer.String()
 }
 
 func GetFunctionByNameArity(functions []FunctionDefinition, name string, arity int) *FunctionDefinition {

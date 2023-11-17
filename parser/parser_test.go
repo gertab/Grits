@@ -34,7 +34,7 @@ func assertEqual(t *testing.T, i1, i2 process.Form) {
 }
 
 func parseGetBody(input string) process.Form {
-	body, _, err := ParseString(input)
+	body, _, _, err := ParseString(input)
 
 	if err != nil {
 		return nil
@@ -44,7 +44,7 @@ func parseGetBody(input string) process.Form {
 }
 
 func parseGetEnvironment(input string) *process.GlobalEnvironment {
-	_, globalEnv, err := ParseString(input)
+	_, _, globalEnv, err := ParseString(input)
 
 	if err != nil {
 		return nil
@@ -281,13 +281,13 @@ func TestSimpleFunctionDefinitions(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		processes, globalEnv, err := ParseString(c.input)
+		processes, processesFreeNames, globalEnv, err := ParseString(c.input)
 
 		if err != nil {
 			t.Errorf("compilation error in case #%d: %s\n", i, err.Error())
 		}
 
-		err = process.Typecheck(processes, globalEnv)
+		err = process.Typecheck(processes, processesFreeNames, globalEnv)
 
 		if err != nil {
 			t.Errorf("type error in case #%d: %s\n", i, err.Error())

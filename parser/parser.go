@@ -13,10 +13,11 @@ type allEnvironment struct {
 }
 
 type unexpandedProcessOrFunction struct {
-	kind         Kind
-	proc         incompleteProcess
-	function     process.FunctionDefinition
-	session_type types.SessionTypeDefinition
+	kind              Kind
+	proc              incompleteProcess
+	function          process.FunctionDefinition
+	session_type      types.SessionTypeDefinition
+	freeNamesWithType []process.Name
 }
 
 type Kind int
@@ -34,25 +35,25 @@ type incompleteProcess struct {
 	Type      types.SessionType
 }
 
-func ParseString(program string) ([]*process.Process, *process.GlobalEnvironment, error) {
+func ParseString(program string) ([]*process.Process, [][]process.Name, *process.GlobalEnvironment, error) {
 	r := strings.NewReader(program)
 
 	allEnvironment, err := Parse(r)
 
 	if err != nil {
-		fmt.Println(err)
-		// panic("Parsing error!")
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
-	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
+	expandedProcesses, processInnerNames, globalEnv, err := expandProcesses(allEnvironment)
 
-	return expandedProcesses, globalEnv, nil
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return expandedProcesses, processInnerNames, globalEnv, nil
 }
 
-func ParseFile(fileName string) ([]*process.Process, *process.GlobalEnvironment, error) {
+func ParseFile(fileName string) ([]*process.Process, [][]process.Name, *process.GlobalEnvironment, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		panic(err)
@@ -61,16 +62,16 @@ func ParseFile(fileName string) ([]*process.Process, *process.GlobalEnvironment,
 	allEnvironment, err := Parse(file)
 
 	if err != nil {
-		fmt.Println(err)
-		// panic("Parsing error!")
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	expandedProcesses, globalEnv := expandProcesses(allEnvironment)
-	// polarizedProcesses := polarizeProcesses(expandedProcesses)
-	// finalizedProcesses, globalEnv := finalizeProcesses(expandedProcesses, globalEnv)
+	expandedProcesses, processInnerNames, globalEnv, err := expandProcesses(allEnvironment)
 
-	return expandedProcesses, globalEnv, nil
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return expandedProcesses, processInnerNames, globalEnv, nil
 }
 
 // func Check() {
@@ -84,9 +85,10 @@ func ParseFile(fileName string) ([]*process.Process, *process.GlobalEnvironment,
 // 	}
 // }
 
-func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvironment) {
+func expandProcesses(u allEnvironment) ([]*process.Process, [][]process.Name, *process.GlobalEnvironment, error) {
 
 	var processes []*process.Process
+	var processInnerNames [][]process.Name
 	var functions []process.FunctionDefinition
 	var types []types.SessionTypeDefinition
 
@@ -103,79 +105,33 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 		} else if p.kind == TYPE_DEF {
 			types = append(types, p.session_type)
 		} else if p.kind == PROCESS {
-			// Processes may have multiple names:
+			// Processes may have multiple provider names:
 			// 		e.g. prc[a, b, c, d]: send self<...>
-			// This remains one process with multiple providers
 
-			// Package all processes
+			// Define process
 			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, p.proc.Type, process.LINEAR)
+
+			if len(new_p.Providers) == 1 {
+				// Set IsSelf to true for the explicit provider
+				new_p.Body.Substitute(new_p.Providers[0], new_p.Providers[0])
+			} else if len(new_p.Providers) > 1 {
+				fn := new_p.Body.FreeNames()
+				for _, j := range new_p.Providers {
+					if j.ContainedIn(fn) {
+						// Since there are multiple names for 'self', then only 'self' can be used
+						return nil, nil, nil, fmt.Errorf("name %s cannot be referenced directly in %s", j.String(), new_p.Body.String())
+					}
+				}
+			}
+
+			// Package all processes along with the types of the free names
 			processes = append(processes, new_p)
-
-			// todo if len(providers) == 1, then you can reference the provider directly instead of using self
-			// for this we have to traverse the ast and replace any occurrence of the provider[0] with the same one having IsSelf = true
-			// todo if len(providers) > 1, then you cannot reference one of the providers directly (must use self)
-			// for this just use the freenames function
-
+			processInnerNames = append(processInnerNames, p.freeNamesWithType)
 		}
 	}
 
-	// todo add checks to make sure that all types are there (if doing typechecking)
-
-	return processes, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}
+	return processes, processInnerNames, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}, nil
 }
-
-// func polarizeProcesses(processes []*process.Process) []*process.Process {
-
-// 	// Set stop
-// 	tries := 0
-// 	limit := len(processes) * len(processes)
-
-// 	// Queue all processes
-// 	queue := make([]*process.Process, len(processes))
-// 	copy(queue, processes)
-
-// 	// List of known channel polarities
-// 	// globalChannels := make(map[process.Name]process.Polarity)
-
-// 	for len(queue) > 0 && tries < limit {
-// 		tries += 1
-
-// 		// Pick next process and discard top element of queue
-// 		currentProcess := queue[0]
-// 		queue = queue[1:]
-
-// 		// Is empty ?
-// 		if len(queue) == 0 {
-// 			fmt.Println("Queue is empty !")
-// 		}
-
-// 		fmt.Println(currentProcess.String())
-
-// 		// currentProcess.Body.Polarity()
-
-// 		// var processes []process.Process
-// 	}
-
-// 	if len(queue) > 0 {
-// 		fmt.Println("Error. Did not manage to find all polarities:")
-
-// 		for i, p := range queue {
-// 			fmt.Println(i, p.String())
-// 		}
-// 	}
-
-// 	return processes
-// }
-
-// // Convert from a list of pointer of processes to a plain list of processes (ready to be executed)
-// func finalizeProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, *process.GlobalEnvironment) {
-// 	result := make([]process.Process, 0)
-// 	for _, j := range processes {
-// 		result = append(result, *j)
-// 	}
-
-// 	return result, globalEnv
-// }
 
 // // Forms used as shorthand notations
 // // When expanded, these are converted to the other ones

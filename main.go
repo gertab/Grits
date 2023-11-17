@@ -8,40 +8,18 @@ import (
 
 const program = `
 
-let f(x,y) = send x<y, self>
-let g() = <a, b> <- recv self; wait a; close w
 
-prc[pid1] = f(pid2, pid3)
-prc[pid2] = g()
-prc[pid3] = close self
+type A = &{label1 : 1, label2 : 1, label3 : 1}
+let f2() : A = 
+			case self (label1<a> => close a
+					  |label2<a> => close a
+					  |label3<a> => close a) 
 
-prc[pid4] = f(self, pid5, pid6)
-prc[pid5] = g(self)
-prc[pid6] = close self
+let f3(x : A) : 1 = x.label1<self>
 
-let ff[w, x, y] = send x<y, w>
-let gg[w] = <a, b> <- recv w; wait a; close w
-
-prc[pid7] = ff(pid8, pid9)
-prc[pid8] = gg()
-prc[pid9] = close self
-
-prc[pid10] = ff(self, pid11, pid12)
-prc[pid11] = gg(self)
-prc[pid12] = close self
-
-
-// type A = &{label1 : 1, label2 : 1, label3 : 1}
-// let f2() : A = 
-// 			case self (label1<a> => close a
-// 					  |label2<a> => close a
-// 					  |label3<a> => close a) 
-
-// let f3(x : A) : 1 = x.label1<self>
-
-// prc[a] = <x, y> <- recv self; f3(x)
-// prc[b] = f2()
-// prc[c] = send a<b, self>
+prc[a] = <x, y> <- recv self; f3(x)
+prc[b] = f2()
+prc[c] = send a<b, self>
 
 
 
@@ -335,17 +313,21 @@ func main() {
 	// processes, err := parser.ParseFile("cmd/examples/ex1.txt")
 
 	// Execute directly from string
-	processes, globalEnv, err := parser.ParseString(program)
+	processes, processesFreeNames, globalEnv, err := parser.ParseString(program)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	// err = process.Typecheck(processes, globalEnv)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	return
-	// }
+	typecheck := true
+
+	if typecheck {
+		err = process.Typecheck(processes, processesFreeNames, globalEnv)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+	}
 
 	re := &process.RuntimeEnvironment{
 		GlobalEnvironment: globalEnv,

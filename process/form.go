@@ -18,6 +18,7 @@ type Form interface {
 	// Transition functions are used during evaluation
 	Transition(*Process, *RuntimeEnvironment)
 	TransitionNP(*Process, *RuntimeEnvironment)
+	// Main typing judgement
 	typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, a types.LabelledTypesEnv, sigma FunctionTypesEnv) error
 }
 
@@ -92,13 +93,6 @@ func EqualForm(form1, form2 Form) bool {
 		if ok1 && ok2 {
 			return f1.from_c.Equal(f2.from_c)
 		}
-	case *PrintForm:
-		f1, ok1 := form1.(*PrintForm)
-		f2, ok2 := form2.(*PrintForm)
-
-		if ok1 && ok2 {
-			return f1.name_c.Equal(f2.name_c)
-		}
 	case *NewForm:
 		f1, ok1 := form1.(*NewForm)
 		f2, ok2 := form2.(*NewForm)
@@ -168,6 +162,13 @@ func EqualForm(form1, form2 Form) bool {
 
 		if ok1 && ok2 {
 			return f1.client_c.Equal(f2.client_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *PrintForm:
+		f1, ok1 := form1.(*PrintForm)
+		f2, ok2 := form2.(*PrintForm)
+
+		if ok1 && ok2 {
+			return f1.name_c.Equal(f2.name_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	}
 
@@ -271,7 +272,7 @@ func CopyForm(orig Form) Form {
 	case *PrintForm:
 		p, ok := orig.(*PrintForm)
 		if ok {
-			return NewPrint(p.name_c)
+			return NewPrint(p.name_c, p.continuation_e)
 		}
 	}
 
@@ -938,33 +939,155 @@ func (p *DropForm) Polarity() Polarity {
 // Print: print name_c
 // Used to print channel name for debugging purposes
 type PrintForm struct {
-	name_c Name
+	name_c         Name
+	continuation_e Form
 }
 
-func NewPrint(name_c Name) *PrintForm {
-	return &PrintForm{name_c: name_c}
+func NewPrint(name_c Name, continuation_e Form) *PrintForm {
+	return &PrintForm{
+		name_c:         name_c,
+		continuation_e: continuation_e,
+	}
 }
 
 func (p *PrintForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("print ")
 	buf.WriteString(p.name_c.String())
+	buf.WriteString("; ")
+	buf.WriteString(p.continuation_e.String())
 	return buf.String()
 }
 
 func (p *PrintForm) Substitute(old, new Name) {
 	p.name_c.Substitute(old, new)
+	p.continuation_e.Substitute(old, new)
 }
 
 func (p *PrintForm) FreeNames() []Name {
 	var fn []Name
 	fn = appendIfNotSelf(p.name_c, fn)
+	fn = mergeTwoNamesList(fn, p.continuation_e.FreeNames())
 	return fn
 }
 
 func (p *PrintForm) Polarity() Polarity {
 	return UNKNOWN
 }
+
+func maybeSetAsSelf(name Name, provider Name) {
+	if name.Equal(provider) {
+		name.IsSelf = true
+	}
+}
+
+// // Traversal AST and replace occurrences to the explicit provider name to one having IsSelf = true
+// // Only checks the free names. If the provider name get re-bound, then there is no need for further checks
+// func (p *SendForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.to_c, provider)
+// 	maybeSetAsSelf(p.payload_c, provider)
+// 	maybeSetAsSelf(p.continuation_c, provider)
+// }
+
+// func (p *ReceiveForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.from_c, provider)
+
+// 	if p.payload_c.Equal(provider) || p.continuation_c.Equal(provider) {
+// 		// provider name got bound; stop checking
+// 		return
+// 	}
+
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
+
+// func (p *SelectForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.to_c, provider)
+// 	maybeSetAsSelf(p.continuation_c, provider)
+// }
+
+// func (p *CaseForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.from_c, provider)
+
+// 	for _, branch := range p.branches {
+// 		branch.SetProviderNameAsSelf(provider)
+// 	}
+// }
+
+// func (p *BranchForm) SetProviderNameAsSelf(provider Name) {
+// 	if p.payload_c.Equal(provider) {
+// 		return
+// 	}
+
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
+
+// func (p *NewForm) SetProviderNameAsSelf(provider Name) {
+// 	if p.continuation_c.Equal(provider) {
+// 		return
+// 	}
+
+// 	p.body.SetProviderNameAsSelf(provider)
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
+
+// func (p *CloseForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.from_c, provider)
+// }
+
+// func (p *ForwardForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.to_c, provider)
+// 	maybeSetAsSelf(p.from_c, provider)
+// }
+
+// // New: continuation_c <- new (de; continuation_e
+
+// func (p *SplitForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.from_c, provider)
+
+// 	if p.channel_one.Equal(provider) || p.channel_two.Equal(provider) {
+// 		// provider name got bound; stop checking
+// 		return
+// 	}
+
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
+
+// func (p *CallForm) SetProviderNameAsSelf(provider Name) {
+// 	for _, param := range p.parameters {
+// 		maybeSetAsSelf(param, provider)
+// 	}
+// }
+
+// func (p *WaitForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.to_c, provider)
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
+
+// func (p *CastForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.to_c, provider)
+// 	maybeSetAsSelf(p.continuation_c, provider)
+// }
+
+// func (p *ShiftForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.from_c, provider)
+
+// 	if p.continuation_c.Equal(provider) {
+// 		// provider name got bound; stop checking
+// 		return
+// 	}
+
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
+
+// func (p *DropForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.client_c, provider)
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
+
+// func (p *PrintForm) SetProviderNameAsSelf(provider Name) {
+// 	maybeSetAsSelf(p.name_c, provider)
+// 	p.continuation_e.SetProviderNameAsSelf(provider)
+// }
 
 // Utility functions
 

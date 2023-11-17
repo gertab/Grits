@@ -35,6 +35,7 @@ import (
 %type <names> names
 %type <names> optional_names
 %type <names> optional_names_with_type_ann
+%type <names> comma_optional_names_with_type_ann
 %type <names> names_with_type_ann
 %type <branches> branches
 %type <sessionType> session_type
@@ -63,12 +64,12 @@ program :
 /*	 | LET functions IN processes END { }; */
 
 /* A program may consist a combination of processes, function definitions and types */
-statements : process_def { $$ = []unexpandedProcessOrFunction{$1} }
-		   | process_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
-		   | function_def { $$ = []unexpandedProcessOrFunction{$1} }
+statements : process_def             { $$ = []unexpandedProcessOrFunction{$1} }
+		   | process_def statements  { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
+		   | function_def            { $$ = []unexpandedProcessOrFunction{$1} }
 		   | function_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
-		   | type_def { $$ = []unexpandedProcessOrFunction{$1} }
-		   | type_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		   | type_def 				 { $$ = []unexpandedProcessOrFunction{$1} }
+		   | type_def statements 	 { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
 
 /* A process is defined using the prc keyword */
 process_def : 
@@ -153,6 +154,11 @@ optional_names_with_type_ann :
 		| name_with_type_ann { $$ = []process.Name{$1} }
 		| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) }
 
+comma_optional_names_with_type_ann : 
+			/* empty */ { $$ = nil }
+		| COMMA optional_names_with_type_ann { $$ = $2 }
+
+
 names_with_type_ann : 
 	name_with_type_ann { $$ = []process.Name{$1} }
 	| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) }
@@ -160,8 +166,8 @@ names_with_type_ann :
 name_with_type_ann : 
 			/* without type - todo remove option to force types */
 			LABEL
-					{ $$ = process.Name{Ident: $1, IsSelf: false} } | 
-			LABEL COLON session_type 
+					{ $$ = process.Name{Ident: $1, IsSelf: false} }
+			| LABEL COLON session_type 
 			 		{ $$ = process.Name{Ident: $1, Type: $3, IsSelf: false} };
 
 name : SELF { $$ = process.Name{IsSelf: true} }
@@ -170,9 +176,30 @@ name : SELF { $$ = process.Name{IsSelf: true} }
 function_def : 
 			/* without type - todo remove option to force types */
 			 LET LABEL LPAREN optional_names_with_type_ann RPAREN EQUALS expression
-			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7}} } | 
-			/* with type annotation */ LET LABEL LPAREN optional_names_with_type_ann RPAREN COLON session_type EQUALS expression
-			{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $9, Type: $7}} };
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7, UsesExplicitProvider: false}} }
+			| /* with type annotation */ LET LABEL LPAREN optional_names_with_type_ann RPAREN COLON session_type EQUALS expression
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $9, Type: $7, UsesExplicitProvider: false}} }
+			| /* explicit provider name : without type - todo remove option to force types */
+			 LET LABEL LSBRACK LABEL comma_optional_names_with_type_ann RSBRACK EQUALS expression
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: 
+							process.FunctionDefinition{
+								FunctionName: $2, 
+								Parameters: $5, 
+								Body: $8, 
+								UsesExplicitProvider: true, 
+								ExplicitProvider: process.Name{Ident: $4, IsSelf: true}, 
+								// Type: $6,
+								}} }
+			| /* explicit provider name :  with type annotation */
+			 LET LABEL LSBRACK LABEL COLON session_type comma_optional_names_with_type_ann RSBRACK EQUALS expression
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: 
+							process.FunctionDefinition{
+								FunctionName: $2, 
+								Parameters: $7, 
+								Body: $10, 
+								UsesExplicitProvider: true, 
+								ExplicitProvider: process.Name{Ident: $4, IsSelf: true}, 
+								Type: $6}} };
 
 type_def : TYPE LABEL EQUALS session_type
 			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: $2, SessionType: $4}} };

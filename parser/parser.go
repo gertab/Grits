@@ -93,6 +93,12 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 	// Collect all functions and types
 	for _, p := range u.procsAndFuns {
 		if p.kind == FUNCTION_DEF {
+
+			if p.function.UsesExplicitProvider {
+				// Substitute any reference to the explicit provider, with the new version which contains IsSelf = true
+				p.function.Body.Substitute(p.function.ExplicitProvider, p.function.ExplicitProvider)
+			}
+
 			functions = append(functions, p.function)
 		} else if p.kind == TYPE_DEF {
 			types = append(types, p.session_type)
@@ -108,9 +114,12 @@ func expandProcesses(u allEnvironment) ([]*process.Process, *process.GlobalEnvir
 			// todo if len(providers) == 1, then you can reference the provider directly instead of using self
 			// for this we have to traverse the ast and replace any occurrence of the provider[0] with the same one having IsSelf = true
 			// todo if len(providers) > 1, then you cannot reference one of the providers directly (must use self)
+			// for this just use the freenames function
 
 		}
 	}
+
+	// todo add checks to make sure that all types are there (if doing typechecking)
 
 	return processes, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}
 }

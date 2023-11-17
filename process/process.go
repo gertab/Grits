@@ -159,11 +159,12 @@ func (label1 *Label) Equal(label2 Label) bool {
 }
 
 type FunctionDefinition struct {
-	Body         Form
-	FunctionName string
-	Parameters   []Name
-	Type         types.SessionType // Session type for 'self'
-	Provider     *Name             // Optional name to be used instead of 'self'
+	Body                 Form
+	FunctionName         string
+	Parameters           []Name
+	Type                 types.SessionType // Session type for 'self'
+	ExplicitProvider     Name              // Optional name to be used instead of 'self'
+	UsesExplicitProvider bool              // ExplicitProvider set or not
 }
 
 func (function *FunctionDefinition) Arity() int {
@@ -173,6 +174,9 @@ func (function *FunctionDefinition) Arity() int {
 func GetFunctionByNameArity(functions []FunctionDefinition, name string, arity int) *FunctionDefinition {
 	for _, f := range functions {
 		if f.FunctionName == name && f.Arity() == arity {
+			return &f
+		} else if f.FunctionName == name && f.Arity() == arity-1 {
+			// In case self is passed as a parameter, then modify the requested function arity
 			return &f
 		}
 	}

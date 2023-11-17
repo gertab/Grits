@@ -209,6 +209,37 @@ func TestSimpleDUP(t *testing.T) {
 	checkInputRepeatedly(t, input, expected)
 }
 
+func TestSimpleFunctionCalls(t *testing.T) {
+	// Case 9: Function calls, with and without explicit self passed
+
+	input := ` 
+		let f(x,y) = send x<y, self>
+		let g() = <a, b> <- recv self; wait a; close w
+		
+		prc[pid1] = f(pid2, pid3)
+		prc[pid2] = g()
+		prc[pid3] = close self
+		
+		prc[pid4] = f(self, pid5, pid6)
+		prc[pid5] = g(self)
+		prc[pid6] = close self
+		
+		let ff[w, x, y] = send x<y, w>
+		let gg[w] = <a, b> <- recv w; wait a; close w
+		
+		prc[pid7] = ff(pid8, pid9)
+		prc[pid8] = gg()
+		prc[pid9] = close self
+		
+		prc[pid10] = ff(self, pid11, pid12)
+		prc[pid11] = gg(self)
+		prc[pid12] = close self`
+	expected := []traceOption{
+		{steps{{"pid1", process.CLS}, {"pid1", process.CALL}, {"pid10", process.CLS}, {"pid10", process.CALL}, {"pid11", process.RCV}, {"pid11", process.CALL}, {"pid2", process.RCV}, {"pid2", process.CALL}, {"pid4", process.CLS}, {"pid4", process.CALL}, {"pid5", process.RCV}, {"pid5", process.CALL}, {"pid7", process.CLS}, {"pid7", process.CALL}, {"pid8", process.RCV}, {"pid8", process.CALL}}, 10},
+	}
+	checkInputRepeatedly(t, input, expected)
+}
+
 type step struct {
 	processName string
 	rule        process.Rule

@@ -8,9 +8,27 @@ import (
 
 const program = `
 
-prc[pid1] = print pid3; send pid2<pid3, self>
-prc[pid2] = <a, b> <- recv self; print a;  wait a; print b; close self
+let f(x,y) = send x<y, self>
+let g() = <a, b> <- recv self; wait a; close w
+
+prc[pid1] = f(pid2, pid3)
+prc[pid2] = g()
 prc[pid3] = close self
+
+prc[pid4] = f(self, pid5, pid6)
+prc[pid5] = g(self)
+prc[pid6] = close self
+
+let ff[w, x, y] = send x<y, w>
+let gg[w] = <a, b> <- recv w; wait a; close w
+
+prc[pid7] = ff(pid8, pid9)
+prc[pid8] = gg()
+prc[pid9] = close self
+
+prc[pid10] = ff(self, pid11, pid12)
+prc[pid11] = gg(self)
+prc[pid12] = close self
 
 
 // type A = &{label1 : 1, label2 : 1, label3 : 1}
@@ -323,11 +341,11 @@ func main() {
 		return
 	}
 
-	err = process.Typecheck(processes, globalEnv)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
+	// err = process.Typecheck(processes, globalEnv)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// 	return
+	// }
 
 	re := &process.RuntimeEnvironment{
 		GlobalEnvironment: globalEnv,

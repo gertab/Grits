@@ -77,6 +77,8 @@ func lightweightChecks(processes []*Process, globalEnv *GlobalEnvironment) error
 			all_types = append(all_types, i.Type)
 		}
 	}
+	// todo need to add the annotated types for the free names
+	// (i.e. prc[a] : A = ... % b : A1, c : A2, ...)
 
 	err = types.SanityChecksType(all_types, *globalEnv.Types)
 	if err != nil {

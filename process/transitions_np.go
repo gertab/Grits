@@ -408,47 +408,56 @@ func (f *CallForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		arity := len(f.parameters)
 		functionCall := GetFunctionByNameArity(*re.GlobalEnvironment.FunctionDefinitions, f.functionName, arity)
 
-		includingSelf := false
-
 		if functionCall == nil {
-			// Check also in the case the first parameter passed is 'self'
-			if arity > 0 {
-				functionCall = GetFunctionByNameArity(*re.GlobalEnvironment.FunctionDefinitions, f.functionName, arity-1)
-				includingSelf = (functionCall != nil)
-			}
-
-			if functionCall == nil {
-				re.errorf(process, "Function %s does not exist.\n", f.String())
-			}
+			re.errorf(process, "Function %s does not exist.\n", f.String())
 		}
 
 		// Function found. Important to copy the body, to keep the original untouched
 		functionCallBody := CopyForm(functionCall.Body)
 
-		if includingSelf {
-			// In case when a function is called using explicit self,
-			// e.g. f(self, x1, x2) or f(w, x1, x2) where w has IsSelf true,
-			// then if a function is defined as
-			// 		let f[w : A, ...] = ...     <- then w has to be replaced by the new provider
-			// 		let f(...) : A = ...     <- then do nothing since there is no explicit provider
-			if functionCall.Provider != nil {
-				functionCallBody.Substitute(*functionCall.Provider, f.parameters[0])
+		if functionCall.UsesExplicitProvider && arity == functionCall.Arity() {
+			// let f[ExplicitProvider, ...] = body    <- called using f(...)
+			// No need to modify the ExplicitProvider, since it is already set as IsSelf = true (using SetProviderNameAsSelf in the function definition)
+
+			// Substitute parameters as needed
+			for i := range functionCall.Parameters {
+				functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
 			}
+
+		} else if functionCall.UsesExplicitProvider && arity-1 == functionCall.Arity() {
+			// let f[ExplicitProvider, ...] = body    <- called using f(w, ...)
+
+			// Since the function that uses an explicit provider is called using explicit self,
+			// e.g. f(self, x1, x2) or f(w, x1, x2) where w has IsSelf true,
+			// then w has to be replaced by the new provider
+			functionCallBody.Substitute(functionCall.ExplicitProvider, f.parameters[0])
+
+			for i := 1; i < len(f.parameters); i++ {
+				functionCallBody.Substitute(functionCall.Parameters[i-1], f.parameters[i])
+			}
+		} else if !functionCall.UsesExplicitProvider && arity == functionCall.Arity() {
+			// let f(...) = body    <- called using f(...)
+
+			// just substitute the parameters
+			for i := range functionCall.Parameters {
+				functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
+			}
+		} else if !functionCall.UsesExplicitProvider && arity-1 == functionCall.Arity() {
+			// let f(...) = body    <- called using f(w, ...), then w is ignored since there is no explicit provider used
 
 			for i := 1; i < len(f.parameters); i++ {
 				functionCallBody.Substitute(functionCall.Parameters[i-1], f.parameters[i])
 			}
 		} else {
-			for i := range functionCall.Parameters {
-				functionCallBody.Substitute(functionCall.Parameters[i], f.parameters[i])
-			}
+			// problem
+			re.errorf(process, "Function %s could be not initialized.\n", f.String())
 		}
 
 		process.Body = functionCallBody
 
 		process.finishedRule(CALL, "[call]", "", re)
 
-		process.transitionLoop(re)
+		process.transitionLoopNP(re)
 	}
 
 	// Always perform DUP before CALL, so that if self is passed as the first parameter, then we can safely substitute the first provider

@@ -47,6 +47,8 @@ import (
 %right TIMES
 %right LOLLI
 
+%left LABEL LEFT_ARROW NEW
+
 %%
 
 root : program { };
@@ -94,9 +96,10 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewSelect($1, process.Label{L: $3}, $5) }
 		   | /* case */ CASE name LPAREN branches RPAREN 
 		   			{ $$ = process.NewCase($2, $4) }
-		   | /* new (without explicit polarities) */ name LEFT_ARROW NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew($1, $4, $6, process.UNKNOWN) } 
-		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW expression SEQUENCE expression 
+		   | /* new (without explicit polarities) */ LABEL LEFT_ARROW NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew(process.Name{Ident: $1, IsSelf: false}, $4, $6, process.UNKNOWN) } 
+		   | /* new (without explicit polarities) */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8, process.UNKNOWN) } 		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $5, $7, process.POSITIVE) } 
 		   | /* new (-ve) */ name LEFT_ARROW MINUS NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $5, $7, process.NEGATIVE) } 

@@ -48,9 +48,8 @@ import (
 %left SEQUENCE
 %right TIMES
 %right LOLLI
-%left LABEL 
-%left LEFT_ARROW 
-%left NEW
+
+%left LABEL LEFT_ARROW NEW
 
 %%
 
@@ -101,25 +100,25 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewCase($2, $4) }
 		   | /* new */ LABEL LEFT_ARROW NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, IsSelf: false}, $4, $6, process.UNKNOWN) } 
-		   | /* new (w/explicit type) */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
+		   | /* new */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8, process.UNKNOWN) } 		   
-		   | /* new (w/polarity) */ name LEFT_ARROW polarity NEW expression SEQUENCE expression 
+		   | /* new (polarity) */ name LEFT_ARROW polarity NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $5, $7, $3) } 
-		   | /* new (w/polarity) */ LABEL COLON session_type LEFT_ARROW polarity NEW expression SEQUENCE expression 
+		   | /* new (polarity) */ LABEL COLON session_type LEFT_ARROW polarity NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, $5) } 
 		   | /* call */ LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($1, $3, process.UNKNOWN) }
-		   | /* call (w/polarity) */ polarity LABEL LPAREN optional_names RPAREN
+		   | /* call (polarity) */ polarity LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, $1) }
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
 		   | /* forward (without explicit polarities) */ FORWARD name name
 				{ $$ = process.NewForward($2, $3, process.UNKNOWN) } 
-		   | /* forward (w/polarity) */ polarity FORWARD name name
+		   | /* forward (polarity) */ polarity FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, $1) }
 		   | /* split (without explicit polarities) */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $8, $10, process.UNKNOWN) }
-		   | /* split (w/polarity) */ LANGLE name COMMA name RANGLE LEFT_ARROW polarity SPLIT name SEQUENCE expression
+		   | /* split (polarity) */ LANGLE name COMMA name RANGLE LEFT_ARROW polarity SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $9, $11, $7) }
 		   | /* Wait */ WAIT name SEQUENCE expression
 		   			{ $$ = process.NewWait($2, $4) }

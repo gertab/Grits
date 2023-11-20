@@ -94,12 +94,12 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewSelect($1, process.Label{L: $3}, $5) }
 		   | /* case */ CASE name LPAREN branches RPAREN 
 		   			{ $$ = process.NewCase($2, $4) }
-		   | /* new (without explicit polarities) */ name LEFT_ARROW NEW LPAREN expression RPAREN SEQUENCE expression 
-					{ $$ = process.NewNew($1, $5, $8, process.UNKNOWN) } 
-		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW LPAREN expression RPAREN SEQUENCE expression 
-					{ $$ = process.NewNew($1, $6, $9, process.POSITIVE) } 
-		   | /* new (-ve) */ name LEFT_ARROW MINUS NEW LPAREN expression RPAREN SEQUENCE expression 
-					{ $$ = process.NewNew($1, $6, $9, process.NEGATIVE) } 
+		   | /* new (without explicit polarities) */ name LEFT_ARROW NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew($1, $4, $6, process.UNKNOWN) } 
+		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew($1, $5, $7, process.POSITIVE) } 
+		   | /* new (-ve) */ name LEFT_ARROW MINUS NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew($1, $5, $7, process.NEGATIVE) } 
 		   | /* call (without explicit polarities) */ LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($1, $3, process.UNKNOWN) }
 		   | /* call (+ve) */ PLUS LABEL LPAREN optional_names RPAREN
@@ -128,6 +128,8 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewShift($1, $4, $6) }
 		   | /* Drop */ DROP name SEQUENCE expression
 					{ $$ = process.NewDrop($2, $4) }
+		   | /* Brackets */ LPAREN expression RPAREN
+					{ $$ = $2 }
 
 					/* used for shared processes */
 					/* for debugging */

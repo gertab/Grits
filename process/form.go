@@ -11,6 +11,7 @@ import (
 // Form refers to AST types
 type Form interface {
 	String() string
+	StringShort() string
 	Polarity() Polarity
 	FreeNames() []Name
 	Substitute(Name, Name)
@@ -313,6 +314,10 @@ func (p *SendForm) String() string {
 	return buf.String()
 }
 
+func (p *SendForm) StringShort() string {
+	return p.String()
+}
+
 func (p *SendForm) Substitute(old, new Name) {
 	p.to_c.Substitute(old, new)
 	p.payload_c.Substitute(old, new)
@@ -363,6 +368,18 @@ func (p *ReceiveForm) String() string {
 	buf.WriteString(p.from_c.String())
 	buf.WriteString("; ")
 	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *ReceiveForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString("<")
+	buf.WriteString(p.payload_c.String())
+	buf.WriteString(",")
+	buf.WriteString(p.continuation_c.String())
+	buf.WriteString("> <- recv ")
+	buf.WriteString(p.from_c.String())
+	buf.WriteString("; ...")
 	return buf.String()
 }
 
@@ -418,6 +435,10 @@ func (p *SelectForm) String() string {
 	return buf.String()
 }
 
+func (p *SelectForm) StringShort() string {
+	return p.String()
+}
+
 func (p *SelectForm) Substitute(old, new Name) {
 	p.to_c.Substitute(old, new)
 	p.continuation_c.Substitute(old, new)
@@ -454,6 +475,7 @@ func NewBranch(label Label, payload_c Name, continuation_e Form) *BranchForm {
 		payload_c:      payload_c,
 		continuation_e: continuation_e}
 }
+
 func (p *BranchForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString(p.label.String())
@@ -461,6 +483,15 @@ func (p *BranchForm) String() string {
 	buf.WriteString(p.payload_c.String())
 	buf.WriteString("> => ")
 	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *BranchForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString(p.label.String())
+	buf.WriteString("<")
+	buf.WriteString(p.payload_c.String())
+	buf.WriteString("> => ...")
 	return buf.String()
 }
 
@@ -476,6 +507,19 @@ func StringifyBranches(branches []*BranchForm) string {
 
 	for i, j := range branches {
 		buf.WriteString(j.String())
+
+		if i < len(branches)-1 {
+			buf.WriteString(" | ")
+		}
+	}
+	return buf.String()
+}
+
+func StringifyBranchesShort(branches []*BranchForm) string {
+	var buf bytes.Buffer
+
+	for i, j := range branches {
+		buf.WriteString(j.StringShort())
 
 		if i < len(branches)-1 {
 			buf.WriteString(" | ")
@@ -534,6 +578,16 @@ func (p *CaseForm) String() string {
 	return buf.String()
 }
 
+func (p *CaseForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString("case ")
+	buf.WriteString(p.from_c.String())
+	buf.WriteString(" (")
+	buf.WriteString(StringifyBranchesShort(p.branches))
+	buf.WriteString(")")
+	return buf.String()
+}
+
 func (p *CaseForm) Substitute(old, new Name) {
 	p.from_c.Substitute(old, new)
 
@@ -561,18 +615,21 @@ func (p *CaseForm) Polarity() Polarity {
 
 // New: continuation_c <- new (body); continuation_e
 type NewForm struct {
-	continuation_c Name
-	body           Form
-	continuation_e Form
-	polarity       Polarity
+	continuation_c   Name
+	body             Form
+	continuation_e   Form
+	polarity         Polarity
+	derivedFromMacro bool
 }
 
 func NewNew(continuation_c Name, body, continuation_e Form, polarity Polarity) *NewForm {
 	return &NewForm{
-		continuation_c: continuation_c,
-		body:           body,
-		continuation_e: continuation_e,
-		polarity:       polarity}
+		continuation_c:   continuation_c,
+		body:             body,
+		continuation_e:   continuation_e,
+		polarity:         polarity,
+		derivedFromMacro: false,
+	}
 }
 
 func (p *NewForm) String() string {
@@ -582,6 +639,13 @@ func (p *NewForm) String() string {
 	buf.WriteString(p.body.String())
 	buf.WriteString("); ")
 	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *NewForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(" <- new ...; ...")
 	return buf.String()
 }
 
@@ -622,6 +686,10 @@ func (p *CloseForm) String() string {
 	return buf.String()
 }
 
+func (p *CloseForm) StringShort() string {
+	return p.String()
+}
+
 func (p *CloseForm) Substitute(old, new Name) {
 	p.from_c.Substitute(old, new)
 }
@@ -654,6 +722,10 @@ func (p *ForwardForm) String() string {
 	buf.WriteString(" ")
 	buf.WriteString(p.from_c.String())
 	return buf.String()
+}
+
+func (p *ForwardForm) StringShort() string {
+	return p.String()
 }
 
 func (p *ForwardForm) Substitute(old, new Name) {
@@ -703,6 +775,18 @@ func (p *SplitForm) String() string {
 	return buf.String()
 }
 
+func (p *SplitForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString("<")
+	buf.WriteString(p.channel_one.String())
+	buf.WriteString(",")
+	buf.WriteString(p.channel_two.String())
+	buf.WriteString("> <- split ")
+	buf.WriteString(p.from_c.String())
+	buf.WriteString("; ...")
+	return buf.String()
+}
+
 func (p *SplitForm) Substitute(old, new Name) {
 	if old != p.channel_one && old != p.channel_two {
 		// channel_one: channel_one,
@@ -749,6 +833,10 @@ func (p *CallForm) String() string {
 	return buf.String()
 }
 
+func (p *CallForm) StringShort() string {
+	return p.String()
+}
+
 func (p *CallForm) Substitute(old, new Name) {
 	for i := range p.parameters {
 		p.parameters[i].Substitute(old, new)
@@ -789,6 +877,14 @@ func (p *WaitForm) String() string {
 	return buf.String()
 }
 
+func (p *WaitForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString("wait ")
+	buf.WriteString(p.to_c.String())
+	buf.WriteString("; ...")
+	return buf.String()
+}
+
 func (p *WaitForm) Substitute(old, new Name) {
 	p.to_c.Substitute(old, new)
 	p.continuation_e.Substitute(old, new)
@@ -825,6 +921,10 @@ func (p *CastForm) String() string {
 	buf.WriteString(p.continuation_c.String())
 	buf.WriteString(">")
 	return buf.String()
+}
+
+func (p *CastForm) StringShort() string {
+	return p.String()
 }
 
 func (p *CastForm) Substitute(old, new Name) {
@@ -870,6 +970,15 @@ func (p *ShiftForm) String() string {
 	buf.WriteString(p.from_c.String())
 	buf.WriteString("; ")
 	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *ShiftForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(" <- shift ")
+	buf.WriteString(p.from_c.String())
+	buf.WriteString("; ...")
 	return buf.String()
 }
 
@@ -920,6 +1029,14 @@ func (p *DropForm) String() string {
 	return buf.String()
 }
 
+func (p *DropForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString("drop ")
+	buf.WriteString(p.client_c.String())
+	buf.WriteString("; ...")
+	return buf.String()
+}
+
 func (p *DropForm) Substitute(old, new Name) {
 	p.client_c.Substitute(old, new)
 	p.continuation_e.Substitute(old, new)
@@ -959,6 +1076,14 @@ func (p *PrintForm) String() string {
 	return buf.String()
 }
 
+func (p *PrintForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString("print ")
+	buf.WriteString(p.name_c.String())
+	buf.WriteString("; ...")
+	return buf.String()
+}
+
 func (p *PrintForm) Substitute(old, new Name) {
 	p.name_c.Substitute(old, new)
 	p.continuation_e.Substitute(old, new)
@@ -975,119 +1100,35 @@ func (p *PrintForm) Polarity() Polarity {
 	return UNKNOWN
 }
 
-func maybeSetAsSelf(name Name, provider Name) {
-	if name.Equal(provider) {
-		name.IsSelf = true
+// Return true if the given for has continuation expression, or false otherwise (i.e. follows an axiomatic rule)
+func FormHasContinuation(form Form) bool {
+	switch interface{}(form).(type) {
+	case *SendForm:
+		return false
+	case *SelectForm:
+		return false
+	case *CloseForm:
+		return false
+	case *ForwardForm:
+		return false
+	case *CallForm:
+		return false
+	case *CastForm:
+		return false
+	default:
+		// These have a continuation:
+		// -> ReceiveForm:
+		// -> CaseForm:
+		// -> BranchForm:
+		// -> NewForm:
+		// -> SplitForm:
+		// -> WaitForm:
+		// -> ShiftForm:
+		// -> DropForm:
+		// -> PrintForm:
+		return true
 	}
 }
-
-// // Traversal AST and replace occurrences to the explicit provider name to one having IsSelf = true
-// // Only checks the free names. If the provider name get re-bound, then there is no need for further checks
-// func (p *SendForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.to_c, provider)
-// 	maybeSetAsSelf(p.payload_c, provider)
-// 	maybeSetAsSelf(p.continuation_c, provider)
-// }
-
-// func (p *ReceiveForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.from_c, provider)
-
-// 	if p.payload_c.Equal(provider) || p.continuation_c.Equal(provider) {
-// 		// provider name got bound; stop checking
-// 		return
-// 	}
-
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
-
-// func (p *SelectForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.to_c, provider)
-// 	maybeSetAsSelf(p.continuation_c, provider)
-// }
-
-// func (p *CaseForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.from_c, provider)
-
-// 	for _, branch := range p.branches {
-// 		branch.SetProviderNameAsSelf(provider)
-// 	}
-// }
-
-// func (p *BranchForm) SetProviderNameAsSelf(provider Name) {
-// 	if p.payload_c.Equal(provider) {
-// 		return
-// 	}
-
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
-
-// func (p *NewForm) SetProviderNameAsSelf(provider Name) {
-// 	if p.continuation_c.Equal(provider) {
-// 		return
-// 	}
-
-// 	p.body.SetProviderNameAsSelf(provider)
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
-
-// func (p *CloseForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.from_c, provider)
-// }
-
-// func (p *ForwardForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.to_c, provider)
-// 	maybeSetAsSelf(p.from_c, provider)
-// }
-
-// // New: continuation_c <- new (de; continuation_e
-
-// func (p *SplitForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.from_c, provider)
-
-// 	if p.channel_one.Equal(provider) || p.channel_two.Equal(provider) {
-// 		// provider name got bound; stop checking
-// 		return
-// 	}
-
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
-
-// func (p *CallForm) SetProviderNameAsSelf(provider Name) {
-// 	for _, param := range p.parameters {
-// 		maybeSetAsSelf(param, provider)
-// 	}
-// }
-
-// func (p *WaitForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.to_c, provider)
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
-
-// func (p *CastForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.to_c, provider)
-// 	maybeSetAsSelf(p.continuation_c, provider)
-// }
-
-// func (p *ShiftForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.from_c, provider)
-
-// 	if p.continuation_c.Equal(provider) {
-// 		// provider name got bound; stop checking
-// 		return
-// 	}
-
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
-
-// func (p *DropForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.client_c, provider)
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
-
-// func (p *PrintForm) SetProviderNameAsSelf(provider Name) {
-// 	maybeSetAsSelf(p.name_c, provider)
-// 	p.continuation_e.SetProviderNameAsSelf(provider)
-// }
 
 // Utility functions
 

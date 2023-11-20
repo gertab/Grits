@@ -362,7 +362,6 @@ func TestTypecheckIncorrectFunctionCall(t *testing.T) {
 func TestTypecheckCorrectProcessDefinitions(t *testing.T) {
 
 	cases := []string{
-		/* 0 */
 		// send, MulR
 		"prc[x] : 1 * 1 = send self<a, b> % a : 1, b : 1",
 		`type A = +{l1 : 1}
@@ -393,4 +392,36 @@ func TestTypecheckCorrectProcessDefinitions(t *testing.T) {
 	}
 
 	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckCorrectProcessDefinitionsIncorrect(t *testing.T) {
+
+	cases := []string{
+		// send, MulR
+		"prc[x] : 1 = send self<a, b> % a : 1, b : 1",
+		"prc[x] : 1 * 1 = send self<a, b> % a : 1, b : 1 -* 1",
+		"prc[x] : 1 * 1 = send self<a, b> % a : 1",
+		"prc[x] = send self<a, b> % a : 1, b : 1",
+		"prc[x] = send self<a, b> % b : 1",
+		"prc[x] : 1 * 1 = send self<a, b> % a : 1, b : 1, c : 1",
+		"prc[x] : 1 * 1 = send self<a, b> % c : 1",
+		"prc[x] : 1 * 1 = send self<a, b>",
+		"prc[x] = send self<a, b>",
+
+		// With explicit self
+		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		prc[x] : 1 * 1= f3(aa, bb) 			% aa : 1 -* 1, bb : 1
+		prc[y] : 1 = f3(self, aa, bb) 		% aa : 1 -* 1, bb : 1`,
+		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
+		prc[y] : 1 = f3(self, aa, bb) 		% aa : 1 , bb : 1`,
+		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
+		prc[y] : 1 = f3(self, aa, bb) 		% bb : 1`,
+		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
+		prc[y] : 1 * 1 = f3(self, aa, bb) 	% aa : 1 -* 1, bb : 1`,
+	}
+
+	runThroughTypechecker(t, cases, false)
 }

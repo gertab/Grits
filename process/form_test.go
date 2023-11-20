@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -444,23 +445,74 @@ func TestFreeNames(t *testing.T) {
 	assertEqualNames(t, input9.FreeNames(), []Name{from_c})
 }
 
-// func TestSimpleToken(t *testing.T) {
-// 	cases := []struct {
-// 		input    string
-// 		expected []int
-// 	}{
-// 		{"().;:,[]<>", []int{LPAREN, RPAREN, DOT, SEQUENCE, COLON, COMMA, LSBRACK, RSBRACK, LANGLE, RANGLE}},
-// 		{"==><<-<", []int{EQUALS, RIGHT_ARROW, LANGLE, LEFT_ARROW, LANGLE}},
-// 		{"send recv receive case close wait", []int{SEND, RECEIVE, RECEIVE, CASE, CLOSE, WAIT}},
-// 		{"cast shift accept acc acquire acq detach det", []int{CAST, SHIFT, ACCEPT, ACCEPT, ACQUIRE, ACQUIRE, DETACH, DETACH}},
-// 		{"release rel drop split push new", []int{RELEASE, RELEASE, DROP, SPLIT, PUSH, NEW}},
-// 		{"snew forward fwd let in end sprc prc", []int{SNEW, FORWARD, FORWARD, LET, IN, END, SPRC, PRC}},
-// 	}
+func TestFormHasContinuation(t *testing.T) {
+	expectedFalse, expectedTrue := []bool{}, []bool{}
+	to_c := Name{Ident: "to_c"}
+	pay_c := Name{Ident: "pay_c"}
+	cont_c := Name{Ident: "cont_c"}
+	from_c := Name{Ident: "from_c"}
+	end := NewClose(Name{Ident: "self"})
 
-// 	for _, c := range cases {
-// 		reader := strings.NewReader(c.input)
-// 		l := newLexer(reader)
-// 		tokens := getTokens(l)
-// 		compareOutput(t, tokens, c.expected)
-// 	}
-// }
+	// Send
+	input := NewSend(to_c, pay_c, cont_c)
+	expectedFalse = append(expectedFalse, FormHasContinuation(input))
+
+	// Select
+	input2 := NewSelect(to_c, Label{L: "label1"}, cont_c)
+	expectedFalse = append(expectedFalse, FormHasContinuation(input2))
+
+	// Close
+	input3 := NewClose(from_c)
+	expectedFalse = append(expectedFalse, FormHasContinuation(input3))
+
+	// Forward
+	input4 := NewForward(to_c, from_c, POSITIVE)
+	expectedFalse = append(expectedFalse, FormHasContinuation(input4))
+
+	// Call
+	input5 := NewCall("f", []Name{to_c}, UNKNOWN)
+	expectedFalse = append(expectedFalse, FormHasContinuation(input5))
+
+	// Cast
+	input6 := NewCast(to_c, cont_c)
+	expectedFalse = append(expectedFalse, FormHasContinuation(input6))
+
+	// case *DropForm:
+	// case *PrintForm:
+
+	// Receive
+	input7 := NewReceive(pay_c, cont_c, from_c, end)
+	expectedTrue = append(expectedTrue, FormHasContinuation(input7))
+
+	// Case
+	input8 := NewCase(from_c, []*BranchForm{NewBranch(Label{L: "label1"}, pay_c, end)})
+	expectedTrue = append(expectedTrue, FormHasContinuation(input8))
+
+	// New
+	input9 := NewNew(cont_c, end, end, POSITIVE)
+	expectedTrue = append(expectedTrue, FormHasContinuation(input9))
+
+	// Split
+	input10 := NewSplit(pay_c, cont_c, from_c, end, POSITIVE)
+	expectedTrue = append(expectedTrue, FormHasContinuation(input10))
+
+	// Wait
+	input11 := NewWait(to_c, end)
+	expectedTrue = append(expectedTrue, FormHasContinuation(input11))
+
+	// Drop
+	input12 := NewDrop(to_c, end)
+	expectedTrue = append(expectedTrue, FormHasContinuation(input12))
+
+	for i := range expectedFalse {
+		if expectedFalse[i] {
+			fmt.Errorf("expected FormHasContinuation to return false for case %d but found true", i)
+		}
+	}
+
+	for i := range expectedTrue {
+		if !expectedTrue[i] {
+			fmt.Errorf("expected FormHasContinuation to return true for case %d but found false", i)
+		}
+	}
+}

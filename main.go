@@ -8,6 +8,30 @@ import (
 
 const program = `
 
+// prc[pid1] : 1 = x <- new (<a, b> <- recv pid2; wait b; close self); close self	% pid2 : 1
+// prc[pid2] : 1 * 1 = send self<pid5, pid6>										% pid5 : 1, pid6: 1
+
+
+// prc[pid1] : 1 = x <- new ( case pid2 (labelok<b> => drop b; close x) ); close self 	% pid2 : +{labelok : 1}
+// prc[pid2] : +{labelok : 1} = self.labelok<pid5>										% pid5 : 1
+
+// let f(p : +{labelok : 1}) : 1 = case p (labelok<b> => drop b; close self)
+// prc[pid1] : 1 = x <- new ( f(pid2) ); close self 							% pid2 : +{labelok : 1}
+// prc[pid2] : +{labelok : 1} = self.labelok<pid5>								% pid5 : 1
+
+// prc[pid1] : 1 = x <- new ( pid2.labelok<x> ); drop x; close self 			% pid2 : &{labelok : 1}
+// prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
+
+
+// prc[pid1] : 1 = x <- new ( self.labelok<ff> ); 
+// 				case x (labelok<b> => print b; close b)		% ff : 1
+
+let f(p : &{labelok : 1}) : 1 = p.labelok<self>
+prc[pid1] : 1 = x <- new ( f(pid2) ); drop x; close self 			% pid2 : &{labelok : 1}
+prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
+
+
+
 // type A = &{label1 : 1, label2 : 1, label3 : 1}
 // let f2() : A = 
 // 			case self (label1<a> => close a

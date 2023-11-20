@@ -205,7 +205,6 @@ func typecheckProcesses(processes []*Process, processesFreeNames [][]Name, globa
 	return nil
 }
 
-// type LabelledTypesEnv types.LabelledTypesEnv
 type FunctionTypesEnv map[string]FunctionType /* represented as sigma in the type system */
 type NamesTypesCtx map[string]NamesType       /* maps names to their types */
 
@@ -247,11 +246,11 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		foundRightType = types.Unfold(foundRightType, labelledTypesEnv)
 
 		if errorLeft != nil {
-			return errorLeft
+			return fmt.Errorf("error in %s; %s", p.String(), errorLeft)
 		}
 
 		if errorRight != nil {
-			return errorRight
+			return fmt.Errorf("error in %s; %s", p.String(), errorRight)
 		}
 
 		// The expected and found types must match
@@ -274,7 +273,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return errorClient
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -297,11 +296,11 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		foundRightType = types.Unfold(foundRightType, labelledTypesEnv)
 
 		if errorLeft != nil {
-			return errorLeft
+			return fmt.Errorf("error in %s; %s", p.String(), errorLeft)
 		}
 
 		if errorRight != nil {
-			return errorRight
+			return fmt.Errorf("error in %s; %s", p.String(), errorRight)
 		}
 
 		// The expected and found types must match
@@ -386,7 +385,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return errorClient
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -448,7 +447,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			foundContinuationType, errorContinuationType := consumeName(p.continuation_c, gammaNameTypesCtx)
 
 			if errorContinuationType != nil {
-				return errorContinuationType
+				return fmt.Errorf("error in %s; %s", p.String(), errorContinuationType)
 			}
 
 			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
@@ -467,7 +466,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return errorClient
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -486,7 +485,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			foundContinuationType, errorContinuationType := consumeNameMaybeSelf(p.continuation_c, providerShadowName, gammaNameTypesCtx, providerType)
 
 			if errorContinuationType != nil {
-				return errorContinuationType
+				return fmt.Errorf("error in %s; %s", p.String(), errorContinuationType)
 			}
 
 			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
@@ -563,7 +562,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return errorClient
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -616,11 +615,72 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 // Branch: label<payload_c> => continuation_e
 func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	panic("this should never be called directly")
-	// return nil
+	panic("typecheckForm on a branch should never be called directly")
 }
 
+// New: continuation_c <- new (body); continuation_e
 func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+	// Cut
+	logRule("rule Cut")
+
+	if isProvider(p.continuation_c, providerShadowName) || nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
+		// Names are not fresh
+		return fmt.Errorf("the cut rule requires a new variable; %s is already assigned", p.continuation_c.String())
+	}
+
+	// When 'new' is used directly (i.e. not derived from a macro expansion), then we need to ensure
+	// that the body is either a function call, or an axiomatic rule (e.g. send)
+	if !p.derivedFromMacro {
+		// check form of body
+		if FormHasContinuation(p.body) {
+			// Difficult to split gamma, so we show it as ill typed for now
+			return fmt.Errorf("cannot determine variable context splitting in '%s'. Expected the body to be a simple axiomatic rule (e.g. send), but found '%s'", p.StringShort(), p.body.String())
+		}
+
+		// We can infer which variables are used when typechecking p.body
+		switch interface{}(p.body).(type) {
+		case *CallForm:
+			callForm := p.body.(*CallForm)
+
+			fmt.Println("cut -> call")
+			// first split gamma (take parameters from gamma)
+			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, callForm.parameters, labelledTypesEnv)
+
+			if gammaErr != nil {
+				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
+			}
+
+			// typecheck the call function
+			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+			if callBodyError != nil {
+				return fmt.Errorf("problem in '%s': %s", p.StringShort(), callBodyError)
+			}
+
+			// Function signature should exist, if it doesn't the typecheck would have already caught it
+			functionSignature := sigma[callForm.functionName]
+			// if !exists { exists
+			// 	return fmt.Errorf("function '%s' is undefined", p.String())
+			// }
+
+			// Add new channel name to gamma
+			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: functionSignature.Type}
+
+			// typecheck the continuation body
+			continuationError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+			if continuationError != nil {
+				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationError)
+			}
+		default:
+			fmt.Println("cut -> something else")
+		}
+
+	} else {
+		// Since it is derived from a macro, then we assume that the continuation_e is an axiomatic rule (e.g. send) instead of the body
+		panic("todo")
+	}
+
 	return nil
 }
 
@@ -664,7 +724,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	if !isProvider(p.to_c, providerShadowName) {
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return errorClient
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -710,7 +770,7 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 	clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 	if errorClient != nil {
-		return errorClient
+		return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 	}
 
 	if !types.EqualType(providerType, clientType, labelledTypesEnv) {
@@ -736,7 +796,7 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	if !isProvider(p.client_c, providerShadowName) {
 		clientType, errorClient := consumeName(p.client_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return errorClient
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		if types.IsWeakenable(clientType) {
@@ -756,6 +816,7 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	}
 }
 
+// f(...)
 func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 
 	// Check that function exists
@@ -770,7 +831,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		foundProviderType, errorProvider := consumeNameMaybeSelf(p.parameters[0], providerShadowName, gammaNameTypesCtx, providerType)
 		if errorProvider != nil {
-			return errorProvider
+			return fmt.Errorf("error in %s; %s", p.String(), errorProvider)
 		}
 
 		// Check type of self
@@ -784,7 +845,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			foundParamType, paramTypeError := consumeName(p.parameters[i], gammaNameTypesCtx)
 
 			if paramTypeError != nil {
-				return paramTypeError
+				return fmt.Errorf("error in %s; %s", p.String(), paramTypeError)
 			}
 
 			expectedType := functionSignature.Parameters[i-1].Type
@@ -814,7 +875,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			foundParamType, paramTypeError := consumeName(p.parameters[i], gammaNameTypesCtx)
 
 			if paramTypeError != nil {
-				return paramTypeError
+				return fmt.Errorf("error in %s; %s", p.String(), paramTypeError)
 			}
 
 			expectedType := functionSignature.Parameters[i].Type
@@ -843,14 +904,23 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
-func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+
+func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType,
+	labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
+
 func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
 	return nil
 }
+
 func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
-	return nil
+	// Print
+	logRule("rule Print")
+
+	// Continue checking the remaining process
+	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+	return continuationError
 }
 
 // /// Fixed Environments: Set once and only read from
@@ -924,7 +994,7 @@ func consumeName(name Name, gammaNameTypesCtx NamesTypesCtx) (types.SessionType,
 	}
 
 	// Problem since the requested name was not found in the gamma
-	return nil, fmt.Errorf("problem since the requested name (%s) was not found in gamma. todo set cool error message", name.String())
+	return nil, fmt.Errorf("the requested name (%s) is not defined (has no type)", name.String())
 }
 
 // Takes a name from gamma. If the name is 'self', then return the provider type instead of fetching it from gamma
@@ -947,7 +1017,7 @@ func consumeNameMaybeSelf(name Name, providerShadowName *Name, gammaNameTypesCtx
 	}
 
 	// Problem since the requested name was not found in the gamma
-	return nil, fmt.Errorf("problem since the requested name (%s) was not found in gamma. todo set cool error message", name.String())
+	return nil, fmt.Errorf("the requested name (%s) is not defined (has no type)", name.String())
 }
 
 func stringifyContext(gammaNameTypesCtx NamesTypesCtx) string {
@@ -994,6 +1064,30 @@ func extractUnusedLabels(branches []types.BranchOption, labels []string) string 
 	}
 
 	return labelsNotChecked.String()
+}
+
+// From the gamma context, take the requested names and put them in a separate context
+func splitGammaCtx(gammaNameTypesCtx NamesTypesCtx, names []Name, labelledTypesEnv types.LabelledTypesEnv) (NamesTypesCtx, NamesTypesCtx, error) {
+
+	var namesFound []Name
+
+	for _, name := range names {
+
+		foundType, err := consumeName(name, gammaNameTypesCtx)
+		foundType = types.Unfold(foundType, labelledTypesEnv)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		name.Type = foundType
+		namesFound = append(namesFound, name)
+	}
+
+	gammaLeftNameTypesCtx := produceNameTypesCtx(namesFound)
+	gammaRightNameTypesCtx := gammaNameTypesCtx
+
+	return gammaLeftNameTypesCtx, gammaRightNameTypesCtx, nil
 }
 
 func logRule(s string) {

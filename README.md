@@ -37,7 +37,7 @@ After building the project (using `go  build .`), you can use the CLI version...
               | let <label> ( [<param>] ) : <type> = <term>         // function declaration
               | let <label> '[' <param> ']' = <term>                // function declaration with explicit provider name
               | prc '[' <name> ']' : <type> = <term> [ '%' param ]  // create processes
-              | exec <label> ( )                                    // execute function
+              | exec <label> ( )                                    // todo/execute function
 
 <param> ::= <name> : <type> [ , <param> ]                           // typed variable names
 
@@ -63,6 +63,7 @@ After building the project (using `go  build .`), you can use the CLI version...
         | wait <name> ; term                                        // wait for name to close
         | cast <name> '<' <name> '>'                                // send shift
         | <name> <- shift <name> ; <term>                           // receive shift
+        | ( <term> )
 
 <pol> ::= +                                                         // positive polarity
         | -                                                         // negative polarity

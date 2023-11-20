@@ -21,6 +21,7 @@ import (
 	branches 		[]*process.BranchForm
 	sessionType 	types.SessionType
 	sessionTypeAlt 	[]types.BranchOption
+	polarity 		process.Polarity
 }
 
 %token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE
@@ -41,13 +42,15 @@ import (
 %type <branches> branches
 %type <sessionType> session_type
 %type <sessionTypeAlt> session_type_alts
+%type <polarity> polarity
 
 %left SEND
 %left SEQUENCE
 %right TIMES
 %right LOLLI
-
-%left LABEL LEFT_ARROW NEW
+%left LABEL 
+%left LEFT_ARROW 
+%left NEW
 
 %%
 
@@ -96,38 +99,28 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   			{ $$ = process.NewSelect($1, process.Label{L: $3}, $5) }
 		   | /* case */ CASE name LPAREN branches RPAREN 
 		   			{ $$ = process.NewCase($2, $4) }
-		   | /* new (without explicit polarities) */ LABEL LEFT_ARROW NEW expression SEQUENCE expression 
+		   | /* new */ LABEL LEFT_ARROW NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, IsSelf: false}, $4, $6, process.UNKNOWN) } 
-		   | /* new (without explicit polarities) */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
+		   | /* new (w/explicit type) */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8, process.UNKNOWN) } 		   
-		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew($1, $5, $7, process.POSITIVE) } 
-		   | /* new (+ve) */ LABEL COLON session_type LEFT_ARROW PLUS NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, process.POSITIVE) } 
-		   | /* new (-ve) */ name LEFT_ARROW MINUS NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew($1, $5, $7, process.NEGATIVE) } 
-		   | /* new (-ve) */ LABEL COLON session_type LEFT_ARROW MINUS NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, process.NEGATIVE) } 
-		   | /* call (without explicit polarities) */ LABEL LPAREN optional_names RPAREN
+		   | /* new (w/polarity) */ name LEFT_ARROW polarity NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew($1, $5, $7, $3) } 
+		   | /* new (w/polarity) */ LABEL COLON session_type LEFT_ARROW polarity NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, $5) } 
+		   | /* call */ LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($1, $3, process.UNKNOWN) }
-		   | /* call (+ve) */ PLUS LABEL LPAREN optional_names RPAREN
-		   			{ $$ = process.NewCall($2, $4, process.POSITIVE) }
-		   | /* call (-ve) */ MINUS LABEL LPAREN optional_names RPAREN
-		   			{ $$ = process.NewCall($2, $4, process.NEGATIVE) }
+		   | /* call (w/polarity) */ polarity LABEL LPAREN optional_names RPAREN
+		   			{ $$ = process.NewCall($2, $4, $1) }
 		   | /* close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
 		   | /* forward (without explicit polarities) */ FORWARD name name
 				{ $$ = process.NewForward($2, $3, process.UNKNOWN) } 
-		   | /* forward (+ve) */ PLUS FORWARD name name
-		   			{ $$ = process.NewForward($3, $4, process.POSITIVE) }
-		   | /* forward (-ve) */ MINUS FORWARD name name
-		   			{ $$ = process.NewForward($3, $4, process.NEGATIVE) }
+		   | /* forward (w/polarity) */ polarity FORWARD name name
+		   			{ $$ = process.NewForward($3, $4, $1) }
 		   | /* split (without explicit polarities) */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $8, $10, process.UNKNOWN) }
-		   | /* split (+ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW PLUS SPLIT name SEQUENCE expression
-		   			{ $$ = process.NewSplit($2, $4, $9, $11, process.POSITIVE) }
-		   | /* split (-ve) */ LANGLE name COMMA name RANGLE LEFT_ARROW MINUS SPLIT name SEQUENCE expression
-		   			{ $$ = process.NewSplit($2, $4, $9, $11, process.NEGATIVE) }
+		   | /* split (w/polarity) */ LANGLE name COMMA name RANGLE LEFT_ARROW polarity SPLIT name SEQUENCE expression
+		   			{ $$ = process.NewSplit($2, $4, $9, $11, $7) }
 		   | /* Wait */ WAIT name SEQUENCE expression
 		   			{ $$ = process.NewWait($2, $4) }
 		   | /* Cast */ CAST name LANGLE name RANGLE  
@@ -241,6 +234,9 @@ session_type_alts :
 			LABEL COLON session_type { $$ = []types.BranchOption{*types.NewBranchOption($1, $3)}} 
 	 	  | LABEL COLON session_type COMMA session_type_alts { $$ = append([]types.BranchOption{*types.NewBranchOption($1, $3)}, $5...) };
 
+
+polarity : PLUS { $$ = process.POSITIVE }
+	     | MINUS { $$ = process.NEGATIVE };
 %%
 
 // Parse is the entry point to the parser.

@@ -358,3 +358,39 @@ func TestTypecheckIncorrectFunctionCall(t *testing.T) {
 
 	runThroughTypechecker(t, cases, false)
 }
+
+func TestTypecheckCorrectProcessDefinitions(t *testing.T) {
+
+	cases := []string{
+		/* 0 */
+		// send, MulR
+		"prc[x] : 1 * 1 = send self<a, b> % a : 1, b : 1",
+		`type A = +{l1 : 1}
+		type B = 1 -* 1
+		prc[y] : A * B = send self<a, b> % a : A, b : B`,
+		`type A = 1 * 1
+		prc[x] : A = send self<a, b> 		% a : 1, b : 1`,
+		// ImpL
+		`let f2(a : 1 -* 1, b : 1) : 1 = send a<b, self>
+		prc[x] : 1 = f2(aa, bb) 		% aa : 1 -* 1, bb : 1
+		prc[y] : 1 = f2(self, aa, bb) 		% aa : 1 -* 1, bb : 1`,
+		// With explicit self
+		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
+		prc[y] : 1 = f3(self, aa, bb) 	% aa : 1 -* 1, bb : 1`,
+		`type A = +{l1 : 1}
+		type B = 1 * 1
+		prc[x]: B = send a<b, self> 		% b : A, a : A -* B`,
+		`prc[x] : (1 * 1) -* 1 = 
+				<x, y> <- recv self; 
+				<x2, y2> <- recv x; 
+				wait x2; 
+				wait y2; 
+				close y`,
+		`prc[x] : 1 -* (1 * 1) = 
+		<x, y> <- recv self; 
+		send y<x, b>  			%  b : 1`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}

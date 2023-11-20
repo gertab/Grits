@@ -8,19 +8,19 @@ import (
 
 const program = `
 
-type A = &{label1 : 1, label2 : 1, label3 : 1}
-let f2() : A = 
-			case self (label1<a> => close a
-					  |label2<a> => close a
-					  |label3<a> => close a) 
+// type A = &{label1 : 1, label2 : 1, label3 : 1}
+// let f2() : A = 
+// 			case self (label1<a> => close a
+// 					  |label2<a> => close a
+// 					  |label3<a> => close a) 
 
-let f3(x : &{label1 : 1}) : 1 = x.label1<self>
+// let f3(x : &{label1 : 1}) : 1 = x.label1<self>
 
-prc[b] : A = f2()
-prc[dd , aa] : 1 = send a<b, self>   % a : 1 -* 1, b : 1
-prc[c] : 1 = send a<b, self>   		 % a : 1 -* 1, b : 1  
-
+// prc[b] : A = f2()
+// prc[dd , aa] : 1 = send a<b, self>   % a : 1 -* 1, b : 1
+// prc[c] : 1 = send a<b, self>   		 % a : 1 -* 1, b : 1  
 `
+
 const program_no_errors = `
 let f1(a : 1, b : 1) : 1 * 1 = send self<a, b>
 

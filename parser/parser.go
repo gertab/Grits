@@ -119,7 +119,7 @@ func expandProcesses(u allEnvironment) ([]*process.Process, [][]process.Name, *p
 				for _, j := range new_p.Providers {
 					if j.ContainedIn(fn) {
 						// Since there are multiple names for 'self', then only 'self' can be used
-						return nil, nil, nil, fmt.Errorf("name %s cannot be referenced directly in %s", j.String(), new_p.Body.String())
+						return nil, nil, nil, fmt.Errorf("name '%s' cannot be referenced directly in %s. Use 'self' instead", j.String(), new_p.Body.String())
 					}
 				}
 			}

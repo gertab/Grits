@@ -136,6 +136,8 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 		return TIMES, string(ch), startPos, endPos
 	case '&':
 		return AMPERSAND, string(ch), startPos, endPos
+	case '%':
+		return PERCENTAGE, string(ch), startPos, endPos
 	}
 
 	if s.consumeIfComment(ch) {

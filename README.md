@@ -6,7 +6,23 @@ Type system and interpreter for intuitionistic session types written in Go, base
 
 ## How to build project
 
+You need to [install the Go language](https://go.dev/doc/install).
+
+Then you can build the project using the following command:
+
+`
+go  build .
+`
+
+To run the project directly, use the following command:
+
+`
+go  run .
+`
+
 ## How to use
+
+After building the project (using `go  build .`), you can use the CLI version...
 
 <!-- show how the cli version works -->
 

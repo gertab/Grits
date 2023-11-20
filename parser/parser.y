@@ -23,7 +23,7 @@ import (
 	sessionTypeAlt 	[]types.BranchOption
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI
+%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE
 %type <strval> LABEL
 %type <statements> statements 
 %type <common_type> process_def
@@ -75,12 +75,12 @@ statements : process_def             { $$ = []unexpandedProcessOrFunction{$1} }
 /* A process is defined using the prc keyword */
 process_def : 
 			/* without type - todo remove option to force types */
-		    PRC LSBRACK names RSBRACK EQUALS expression  
-				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} }
-		  | PRC LSBRACK names RSBRACK COLON session_type EQUALS expression  
-				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$8, Type: $6, Providers: $3}} };
-		/*| SPRC LSBRACK names RSBRACK COLON expression 
-				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}} };*/
+		    PRC LSBRACK names RSBRACK EQUALS expression process_name_types 
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}, freeNamesWithType: $7} }
+		  | PRC LSBRACK names RSBRACK COLON session_type EQUALS expression process_name_types 
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$8, Type: $6, Providers: $3}, freeNamesWithType: $9} };
+		/*| SPRC LSBRACK names RSBRACK COLON expression process_name_types
+				{ $$ = unexpandedProcessOrFunction{kind: PROCESS, proc: incompleteProcess{Body:$6, Providers: $3}, freeNamesWithType: $7} };*/
 
 /* Expressions form the core part of a program  */
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
@@ -177,17 +177,17 @@ name : SELF { $$ = process.Name{IsSelf: true} }
 
 process_name_types : 
 			/* empty */ { $$ = nil }
-		| PIPE names_with_type_ann { $$ = $2 }
+		| PERCENTAGE names_with_type_ann { $$ = $2 }
 
 
 function_def : 
 			/* without type - todo remove option to force types */
-			 LET LABEL LPAREN optional_names_with_type_ann RPAREN EQUALS expression process_name_types
-					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7, UsesExplicitProvider: false}, freeNamesWithType: $8} }
+			 LET LABEL LPAREN optional_names_with_type_ann RPAREN EQUALS expression
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $7, UsesExplicitProvider: false}} }
 			| /* with type annotation */ LET LABEL LPAREN optional_names_with_type_ann RPAREN COLON session_type EQUALS expression process_name_types
-					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $9, Type: $7, UsesExplicitProvider: false}, freeNamesWithType: $10} }
+					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: $2, Parameters: $4, Body: $9, Type: $7, UsesExplicitProvider: false}} }
 			| /* explicit provider name : without type - todo remove option to force types */
-			 LET LABEL LSBRACK LABEL comma_optional_names_with_type_ann RSBRACK EQUALS expression process_name_types
+			 LET LABEL LSBRACK LABEL comma_optional_names_with_type_ann RSBRACK EQUALS expression
 					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: 
 							process.FunctionDefinition{
 								FunctionName: $2, 
@@ -196,9 +196,9 @@ function_def :
 								UsesExplicitProvider: true, 
 								ExplicitProvider: process.Name{Ident: $4, IsSelf: true}, 
 								// Type: $6,
-								}, freeNamesWithType: $9} }
+								}} }
 			| /* explicit provider name :  with type annotation */
-			 LET LABEL LSBRACK LABEL COLON session_type comma_optional_names_with_type_ann RSBRACK EQUALS expression process_name_types
+			 LET LABEL LSBRACK LABEL COLON session_type comma_optional_names_with_type_ann RSBRACK EQUALS expression 
 					{ $$ = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: 
 							process.FunctionDefinition{
 								FunctionName: $2, 
@@ -206,7 +206,7 @@ function_def :
 								Body: $10, 
 								UsesExplicitProvider: true, 
 								ExplicitProvider: process.Name{Ident: $4, IsSelf: true}, 
-								Type: $6}, freeNamesWithType: $11} };
+								Type: $6}} };
 
 type_def : TYPE LABEL EQUALS session_type
 			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: $2, SessionType: $4}} };

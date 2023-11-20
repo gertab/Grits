@@ -122,6 +122,83 @@ func NamesToString(names []Name) string {
 	return buf.String()
 }
 
+// Compare two list of names and check for membership inclusion in both lists
+func AreNamesEqual(first, second []Name) bool {
+	if len(first) != len(second) {
+		return false
+	}
+	exists := make(map[string]bool)
+	for _, name := range first {
+		exists[name.Ident] = true
+	}
+	for _, name := range second {
+		if !exists[name.Ident] {
+			return false
+		}
+	}
+	return true
+}
+
+// Compare two list of names and check returns the lists of unique names found in each list
+func NamesNotCommon(first, second []Name) ([]Name, []Name) {
+	existsInFirst := make(map[string]bool)
+	for _, name := range first {
+		existsInFirst[name.Ident] = true
+	}
+
+	existsInSecond := make(map[string]bool)
+	for _, name := range second {
+		existsInSecond[name.Ident] = true
+	}
+
+	var uniqueFirst []Name
+	var uniqueSecond []Name
+
+	for _, name := range first {
+		_, common := existsInSecond[name.Ident]
+		if !common {
+			uniqueFirst = append(uniqueFirst, name)
+		}
+	}
+
+	for _, name := range second {
+		_, common := existsInFirst[name.Ident]
+		if !common {
+			uniqueSecond = append(uniqueSecond, name)
+		}
+	}
+
+	return uniqueFirst, uniqueSecond
+}
+
+// Checks if a list of names contains unique names only
+func AllNamesUnique(list []Name) bool {
+	exists := make(map[string]bool)
+	for _, name := range list {
+		if exists[name.Ident] {
+			return false
+		}
+		exists[name.Ident] = true
+	}
+
+	return true
+}
+
+// Returns the duplicates in a list of namess
+func DuplicateNames(names []Name) []Name {
+	var duplicates []Name
+
+	exists := make(map[string]bool)
+	for _, name := range names {
+		if exists[name.Ident] {
+			duplicates = append(duplicates, name)
+		}
+		exists[name.Ident] = true
+	}
+
+	return duplicates
+}
+
 func (name1 *Name) Equal(name2 Name) bool {
 	if name1.Initialized() && name2.Initialized() {
 		// If the channel is initialized, then only compare the actual channel reference

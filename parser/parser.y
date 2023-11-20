@@ -99,10 +99,15 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   | /* new (without explicit polarities) */ LABEL LEFT_ARROW NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, IsSelf: false}, $4, $6, process.UNKNOWN) } 
 		   | /* new (without explicit polarities) */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8, process.UNKNOWN) } 		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8, process.UNKNOWN) } 		   
+		   | /* new (+ve) */ name LEFT_ARROW PLUS NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $5, $7, process.POSITIVE) } 
+		   | /* new (+ve) */ LABEL COLON session_type LEFT_ARROW PLUS NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, process.POSITIVE) } 
 		   | /* new (-ve) */ name LEFT_ARROW MINUS NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $5, $7, process.NEGATIVE) } 
+		   | /* new (-ve) */ LABEL COLON session_type LEFT_ARROW MINUS NEW expression SEQUENCE expression 
+					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, process.NEGATIVE) } 
 		   | /* call (without explicit polarities) */ LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($1, $3, process.UNKNOWN) }
 		   | /* call (+ve) */ PLUS LABEL LPAREN optional_names RPAREN

@@ -644,7 +644,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 			// fmt.Println("cut -> call")
 			// first split gamma (take parameters from gamma)
-			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, callForm.parameters, labelledTypesEnv)
+			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, callForm.parameters, &p.continuation_c, labelledTypesEnv)
 
 			if gammaErr != nil {
 				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
@@ -653,7 +653,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			// Get function signature (incl. its type)
 			functionSignature, exists := sigma[callForm.functionName]
 			if !exists {
-				return fmt.Errorf("function '%s' is undefined", p.String())
+				return fmt.Errorf("function '%s' is undefined", p.body.String())
 			}
 
 			// Typecheck the call function
@@ -672,12 +672,15 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			if continuationError != nil {
 				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationError)
 			}
+
+			// Set type
+			p.continuation_c.Type = functionSignature.Type
 		default:
 			// The type of p.continuation_c has to be provided by the user
 			fmt.Println("cut -> something else")
 
 			// Split gamma
-			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, p.body.FreeNames(), labelledTypesEnv)
+			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, p.body.FreeNames(), &p.continuation_c, labelledTypesEnv)
 
 			if gammaErr != nil {
 				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
@@ -771,7 +774,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			return continuationError
 		} else {
-			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientUnitType.String())
+			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientType.String())
 		}
 	} else {
 		// Waiting on the wrong name
@@ -860,14 +863,18 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	if len(functionSignature.Parameters)+1 == len(p.parameters) {
 		// Parameters being passed include a reference to 'self' as the first element
 
-		foundProviderType, errorProvider := consumeNameMaybeSelf(p.parameters[0], providerShadowName, gammaNameTypesCtx, providerType)
-		if errorProvider != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorProvider)
+		if !p.parameters[0].IsSelf && !(providerShadowName != nil && providerShadowName.Ident == p.parameters[0].Ident) {
+			return fmt.Errorf("error in %s; expected first parameter of function call to be 'self', but found '%s'", p.String(), p.parameters[0].String())
 		}
 
+		// foundProviderType, errorProvider := consumeNameMaybeSelf(p.parameters[0], providerShadowName, gammaNameTypesCtx, providerType)
+		// if errorProvider != nil {
+		// 	return fmt.Errorf("error in %s; %s", p.String(), errorProvider)
+		// }
+
 		// Check type of self
-		if !types.EqualType(foundProviderType, functionSignature.Type, labelledTypesEnv) {
-			return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[0].String(), foundProviderType.String(), functionSignature.Type.String())
+		if !types.EqualType(providerType, functionSignature.Type, labelledTypesEnv) {
+			return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[0].String(), providerType.String(), functionSignature.Type.String())
 		}
 
 		// Check types of each parameter
@@ -1081,6 +1088,7 @@ func linearGammaContext(gammaNameTypesCtx NamesTypesCtx) error {
 	return nil
 }
 
+// Compares the given labels with the ones offered by the branches. Returns the unused ones
 func extractUnusedLabels(branches []types.BranchOption, labels []string) string {
 	// One or more branches are not exhausted
 	uncheckedBranches := types.GetUncheckedBranches(branches, labels)
@@ -1098,11 +1106,16 @@ func extractUnusedLabels(branches []types.BranchOption, labels []string) string 
 }
 
 // From the gamma context, take the requested names and put them in a separate context
-func splitGammaCtx(gammaNameTypesCtx NamesTypesCtx, names []Name, labelledTypesEnv types.LabelledTypesEnv) (NamesTypesCtx, NamesTypesCtx, error) {
+// The providerShadowName acts as a bound name (i.e. it should be ignored)
+func splitGammaCtx(gammaNameTypesCtx NamesTypesCtx, names []Name, providerShadowName *Name, labelledTypesEnv types.LabelledTypesEnv) (NamesTypesCtx, NamesTypesCtx, error) {
 
 	var namesFound []Name
 
 	for _, name := range names {
+
+		if name.IsSelf || (providerShadowName != nil && providerShadowName.Ident == name.Ident) {
+			continue
+		}
 
 		foundType, err := consumeName(name, gammaNameTypesCtx)
 		foundType = types.Unfold(foundType, labelledTypesEnv)

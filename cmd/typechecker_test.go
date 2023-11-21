@@ -425,3 +425,57 @@ func TestTypecheckCorrectProcessDefinitionsIncorrect(t *testing.T) {
 
 	runThroughTypechecker(t, cases, false)
 }
+
+func TestTypecheckCorrectCut(t *testing.T) {
+
+	cases := []string{
+		// Cut
+		`prc[pid1] : 1 = x : 1 <- new ( close x ); wait x; close self
+		prc[pid2] : 1 = x : 1 <- new ( close self ); wait x; close self`,
+		// Cut [call]
+		`let f() : 1 = close self
+		prc[pid1] : 1 = x : 1 <- new f(); wait x; close self`,
+		`let f2[w : 1] = close w
+		prc[pid2] : 1 = x : 1 <- new f2(); wait x; close self`,
+		`let f(p : &{labelok : 1}) : 1 = p.labelok<self>
+		prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : &{labelok : 1}
+		prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
+		`prc[pid1] : 1 = xy : +{labelok : 1} <- new ( self.labelok<ff> ); 
+					case xy (labelok<b> => print b; wait b; close self)		% ff : 1
+		prc[ff] : 1 = close self`,
+		`let f() : 1 = close self
+		prc[pid1] : 1 = x : 1 <- new f(x); wait x; close self`,
+		`type A = &{label : 1}
+		type B = 1 -* 1
+		let f(a : A, b : B) : A * B = send self<a, b>
+		prc[pid1] : 1 = x <- new f(a, b); <u, v> <- recv x;  drop u; drop v; close self % a : A, b : B`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectCut(t *testing.T) {
+
+	cases := []string{
+		// Cut [Call]
+		`let f(p : &{labelok : 1}) : 1 = p.labelok<self>
+		prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : +{labelok : 1}
+		prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
+
+		// Cut [axiomatic version]
+		`prc[pid1] : 1 = x <- new ( pid2.labelok<x> ); drop x; close self 			% pid2 : &{labelok : 1}
+		prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
+		`,
+		`prc[pid1] : 1 = x : 1 <- new ( self.labelok<ff> ); wait x; close self % ff : 1`,
+		`prc[pid2] : 1 = x : 1 <- new ( x.labelok<ff> ); wait x; close self % ff : 1
+		`,
+		`let f() : 1 = close self
+		prc[pid1] : 1 = x : 1 <- new f(y); wait x; close self % y : 1
+		`,
+		`let f() : 1 = close self
+		prc[pid1] : 1 = x : 1 <- new f_other(); wait x; close self
+		`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}

@@ -7,9 +7,6 @@ import (
 )
 
 const program = `
-prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-prc[pid2] = send self<pid3, self>
-
 
 // prc[pid1] : 1 = x <- new (<a, b> <- recv pid2; wait b; close self); close self	% pid2 : 1
 // prc[pid2] : 1 * 1 = send self<pid5, pid6>										% pid5 : 1, pid6: 1
@@ -34,7 +31,19 @@ prc[pid2] = send self<pid3, self>
 // let f(p : &{labelok : 1}) : 1 = p.labelok<self>
 // prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : &{labelok : 1}
 // prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
+///////////
 
+type A = &{label : 1}
+type B = 1 -* 1
+let f(a : A, b : B) : A * B = send self<a, b>
+prc[pid1] : 1 = x <- new f(a, b); <u, v> <- recv x;  drop u; drop v; close self % a : A, b : B
+
+
+// let f() : 1 = close self
+// prc[pid1] : 1 = x : 1 <- new f(); wait x; close self
+
+// let f2[w : 1] = close w
+// prc[pid2] : 1 = x : 1 <- new f2(); wait x; close self
 
 //////
 // type A = 1
@@ -268,7 +277,7 @@ func main() {
 		return
 	}
 
-	typecheck := false
+	typecheck := true
 
 	if typecheck {
 		err = process.Typecheck(processes, processesFreeNames, globalEnv)

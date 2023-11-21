@@ -20,7 +20,7 @@ func Typecheck(processes []*Process, processesFreeNames [][]Name, globalEnv *Glo
 	case err := <-errorChan:
 		return err
 	case <-doneChan:
-		fmt.Println("Typecheck successful")
+		fmt.Printf("Typecheck successful\n\n")
 	}
 
 	return nil

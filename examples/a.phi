@@ -1,2 +1,6 @@
 
-prc[pid0] : 1 = x : 1 <- new close x; wait x; close self
+type A = 1
+
+prc[pid0] : A = x : A <- new close x; 
+                wait x; 
+                close self

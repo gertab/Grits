@@ -7,6 +7,9 @@ import (
 )
 
 const program = `
+prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+prc[pid2] = send self<pid3, self>
+
 
 // prc[pid1] : 1 = x <- new (<a, b> <- recv pid2; wait b; close self); close self	% pid2 : 1
 // prc[pid2] : 1 * 1 = send self<pid5, pid6>										% pid5 : 1, pid6: 1
@@ -23,14 +26,24 @@ const program = `
 // prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
 
 
-prc[pid1] : 1 = xxxx : +{labelok : 1} <- new ( self.labelok<ff> ); 
-				case xxxx (labelok<b> => print b; wait b; close self)		% ff : 1
-prc[ff] : 1 = close self
+// prc[pid1] : 1 = xxxx : +{labelok : 1} <- new ( self.labelok<ff> ); 
+// 				case xxxx (labelok<b> => print b; wait b; close self)		% ff : 1
+// prc[ff] : 1 = close self
 
 
-let f(p : &{labelok : 1}) : 1 = p.labelok<self>
-prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : &{labelok : 1}
-prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
+// let f(p : &{labelok : 1}) : 1 = p.labelok<self>
+// prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : &{labelok : 1}
+// prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
+
+
+//////
+// type A = 1
+// type B = 1
+// prc[pid1] : 1 = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self	
+// 												% pid2 : A * B
+// prc[pid2] : A * B = send self<pid3, pid4>		% pid3 : A, pid4 : B
+// prc[pid3] : A = close self
+// prc[pid4] : B = close self
 
 
 
@@ -255,7 +268,7 @@ func main() {
 		return
 	}
 
-	typecheck := true
+	typecheck := false
 
 	if typecheck {
 		err = process.Typecheck(processes, processesFreeNames, globalEnv)

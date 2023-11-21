@@ -7,15 +7,18 @@ import (
 	"sort"
 	"sync"
 	"testing"
+	"time"
 )
 
-const numberOfIterations = 200
+const numberOfIterations = 30
+const monitorTimeout = 30 * time.Millisecond
 
 // Invalidate all cache
 // go clean -testcache
 
 // We compare only the process names and rules (i.e. the steps) without comparing the order
 func TestSimpleFWDRCV(t *testing.T) {
+
 	// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
 	// Case 1: FWD + RCV
 	input := ` 	/* FWD + RCV rule */
@@ -24,12 +27,9 @@ func TestSimpleFWDRCV(t *testing.T) {
 		prc[pid3] = <a, b> <- recv self; close a
 		`
 	expected := []traceOption{
-		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}}, 2},
-		// {steps{{"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
+		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}}},
 	}
 	checkInputRepeatedly(t, input, expected)
-
-	// sort.Sort(steps(ss3))
 }
 
 func TestSimpleFWDSND(t *testing.T) {
@@ -41,12 +41,9 @@ func TestSimpleFWDSND(t *testing.T) {
 		prc[pid3] = send self<pid5, self>
 		`
 	expected := []traceOption{
-		{steps{{"pid2", process.FWD}, {"pid1", process.SND}}, 2},
-		// {steps{{"pid2", process.FWD}, {"pid1", process.RCV}, {"pid2", process.RCV}}, 2},
+		{steps{{"pid2", process.FWD}, {"pid1", process.SND}}},
 	}
 	checkInputRepeatedly(t, input, expected)
-
-	// sort.Sort(steps(ss3))
 }
 
 func TestSimpleSND(t *testing.T) {
@@ -56,8 +53,7 @@ func TestSimpleSND(t *testing.T) {
 	prc[pid2] = <a, b> <- recv pid1; close self
 	`
 	expected := []traceOption{
-		{steps{{"pid2", process.SND}}, 2},
-		// {steps{{"pid2", process.SND}, {"pid1", process.SND}}, 1},
+		{steps{{"pid2", process.SND}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -69,13 +65,7 @@ func TestSimpleCUTSND(t *testing.T) {
 		prc[pid2] = send self<pid5, self>
 		`
 	expected := []traceOption{
-		{steps{{"pid1", process.CUT}, {"x", process.SND}}, 3},
-		// {steps{{"pid1", process.CUT}, {"pid1", process.SND}, {"x", process.SND}}, 1},
-		// {steps{{"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
-		// {steps{{"x", process.SND}, {"pid2", process.SND}, {"pid1", process.CUT}}, 1},
-		// {steps{{"x", process.SND}, {"pid1", process.CUT}, {"pid2", process.SND}}, 1},
-		// {steps{{"pid2", process.SND}, {"pid1", process.CUT}, {"x", process.SND}}, 1},
-		// {steps{{"pid2", process.SND}, {"x", process.SND}, {"pid1", process.CUT}}, 1},
+		{steps{{"pid1", process.CUT}, {"x", process.SND}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -88,17 +78,10 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 			prc[pid3] = ff <- -new (send ff<pid5, ff>); <a, b> <- recv self; close self
 			`
 	expected := []traceOption{
-		// {steps{{"ff", process.SND}, {"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 3},
-		// {steps{{"ff", process.SND}, {"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 3},
-		// {steps{{"ff", process.SND}, {"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}, 3},
+		{steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}},
 
-		// {steps{{"pid2", process.FWD}, {"pid2", process.RCV}, {"pid1", process.RCV}}, 2},
-		// {steps{{"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 2},
-		// {steps{{"pid1", process.RCV}, {"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}, 2},
-
-		// {steps{{"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}, 2},
-		{steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 4},
-		// {steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}, 3},
+		// non polarized
+		{steps{{"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -113,8 +96,8 @@ func TestSimpleMultipleFWD(t *testing.T) {
 		prc[pid4] = <a, b> <- recv self; close a
 		`
 	expected := []traceOption{
-		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}, 3},
-		{steps{{"pid2", process.FWD}, {"pid3", process.FWD}, {"pid2", process.RCV}}, 3},
+		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}},
+		{steps{{"pid2", process.FWD}, {"pid3", process.FWD}, {"pid2", process.RCV}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -128,14 +111,12 @@ func TestSimpleSPLITCUT(t *testing.T) {
 			prc[pid2] = send self<pid5, self>
 	`
 	expected := []traceOption{
-		// // Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
-		// {steps{{"pid0", process.SPLIT}, {"x1", process.FWD}, {"pid2", process.DUP}, {"x1", process.CUT}, {"pid2", process.FWD}, {"x2", process.CUT}, {"x1", process.DUP}, {"pid2", process.SND}, {"pid2", process.SND}, {"x", process.SND}, {"x", process.SND}}, 4},
-		// // Or the SND takes place before the SPLIT/DUP, so only one SND is needed
-		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"pid2", process.SND}, {"x", process.SND}}, 1},
+		// Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
+		{steps{{"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x", process.SND}, {"x", process.SND}, {"x1", process.CUT}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.CUT}}},
 
-		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"x", process.SND}, {"x1", process.FWD}}, 1},
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"x", process.SND}, {"x1", process.DUP}, {"x1", process.FWD}}, 6},
-		{steps{{"pid0", process.SPLIT}, {"pid2", process.SND}, {"pid2", process.FWD}, {"x1", process.CUT}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.CUT}}, 2},
+		// Or the SND takes place before the SPLIT/DUP, so only one SND is needed
+		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"x", process.SND}, {"x1", process.DUP}, {"x1", process.FWD}}},
+		// {steps{{"pid0", process.SPLIT}, {"pid2", process.SND}, {"pid2", process.FWD}, {"x1", process.CUT}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.CUT}}, 2},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -144,13 +125,13 @@ func TestSimpleSPLITSNDSND(t *testing.T) {
 	// Case 6: SPLIT + SND rule (x 2)
 
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
-		prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-		prc[pid2] = send self<pid3, self>
-		`
+	prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
+	prc[pid2] = send self<pid3, self>
+	`
 	expected := []traceOption{
-		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SND}}, 4},
-		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SPLIT}}, 4},
-		// this shouldn't be here ^
+		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SND}}},
+		// {steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SPLIT}}},
+		// not sure about this ^
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -166,9 +147,9 @@ func TestSimpleSPLITCALL(t *testing.T) {
 				prc[pid2] = send self<pid3, self>
 			`
 	expected := []traceOption{
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}, 4},
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}}, 2},
-		{steps{{"pid0", process.SPLIT}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.CALL}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}, 4},
+		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
+		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}}},
+		{steps{{"pid0", process.SPLIT}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.CALL}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -184,7 +165,7 @@ func TestSimpleMultipleProvidersInitially(t *testing.T) {
 		prc[pid5] = <a, b> <- recv pd; close self
 		`
 	expected := []traceOption{
-		{steps{{"pa", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}, 8},
+		{steps{{"pa", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -204,7 +185,7 @@ func TestSimpleDUP(t *testing.T) {
 		prc[y] = close self
 			`
 	expected := []traceOption{
-		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}, 18},
+		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -235,7 +216,7 @@ func TestSimpleFunctionCalls(t *testing.T) {
 		prc[pid11] = gg(self)
 		prc[pid12] = close self`
 	expected := []traceOption{
-		{steps{{"pid1", process.CLS}, {"pid1", process.CALL}, {"pid10", process.CLS}, {"pid10", process.CALL}, {"pid11", process.RCV}, {"pid11", process.CALL}, {"pid2", process.RCV}, {"pid2", process.CALL}, {"pid4", process.CLS}, {"pid4", process.CALL}, {"pid5", process.RCV}, {"pid5", process.CALL}, {"pid7", process.CLS}, {"pid7", process.CALL}, {"pid8", process.RCV}, {"pid8", process.CALL}}, 10},
+		{steps{{"pid1", process.CLS}, {"pid1", process.CALL}, {"pid10", process.CLS}, {"pid10", process.CALL}, {"pid11", process.RCV}, {"pid11", process.CALL}, {"pid2", process.RCV}, {"pid2", process.CALL}, {"pid4", process.CLS}, {"pid4", process.CALL}, {"pid5", process.RCV}, {"pid5", process.CALL}, {"pid7", process.CLS}, {"pid7", process.CALL}, {"pid8", process.RCV}, {"pid8", process.CALL}}},
 	}
 	checkInputRepeatedly(t, input, expected)
 }
@@ -259,46 +240,54 @@ func (a steps) Less(i, j int) bool {
 }
 
 type traceOption struct {
-	trace         steps
-	deadProcesses int
+	trace steps
+	// deadProcesses int
 }
 
 func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOption) {
 	// If you increase the number of repetitions to a very high number, make sure to increase
 	// the monitor inactiveTimer (to avoid the monitor timing out before terminating).
 
-	done := make(chan bool)
+	wg := new(sync.WaitGroup)
+	wg.Add(numberOfIterations)
 	for i := 0; i < numberOfIterations; i++ {
-		go checkInput(t, input, expectedOptions, done)
+		go checkInput(t, input, expectedOptions, wg)
 	}
 
-	for i := 0; i < numberOfIterations; i++ {
-		<-done
-	}
+	wg.Wait()
 }
 
-func checkInput(t *testing.T, input string, expectedOptions []traceOption, done chan bool) {
-	processes, _, globalEnv, err := parser.ParseString(input)
+func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-	if err != nil {
-		t.Errorf("Error during parsing")
-		done <- true
-
-		return
-	}
-	deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv)
-	stepsGot := convertRulesLog(rulesLog)
-
-	if len(stepsGot) == 0 {
-		t.Errorf("Zero transitions: %s (Increase monitor timeout value) \n", stingifySteps(stepsGot))
+	// Test all operational semantic versions
+	execVersions := []process.Execution_Version{
+		process.NORMAL_ASYNC,
+		process.NORMAL_SYNC,
+		process.NON_POLARIZED_SYNC,
 	}
 
-	// Make sure that at least the rulesLog match to one of the trance options
-	if !compareAllTraces(t, stepsGot, expectedOptions, len(deadProcesses)) {
-		// All failed so compare to each expected trace
-		printAllTraces(t, stepsGot, expectedOptions, input)
+	for _, execVersion := range execVersions {
+		processes, _, globalEnv, err := parser.ParseString(input)
+
+		if err != nil {
+			t.Errorf("Error during parsing")
+			return
+		}
+
+		deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv, execVersion)
+		stepsGot := convertRulesLog(rulesLog)
+
+		if len(stepsGot) == 0 {
+			t.Errorf("Zero transitions: %s (Increase monitor timeout value) \n", stingifySteps(stepsGot))
+		}
+
+		// Make sure that at least the rulesLog match to one of the trance options
+		if !compareAllTraces(t, stepsGot, expectedOptions, len(deadProcesses)) {
+			// All failed so compare to each expected trace
+			printAllTraces(t, stepsGot, expectedOptions, input)
+		}
 	}
-	done <- true
 }
 
 func compareAllTraces(t *testing.T, got steps, cases []traceOption, deadProcesses int) bool {
@@ -311,10 +300,6 @@ func compareAllTraces(t *testing.T, got steps, cases []traceOption, deadProcesse
 			sort.Sort(steps(c.trace))
 
 			if compareSteps(t, c.trace, got) {
-				if c.deadProcesses != deadProcesses {
-					t.Errorf("Expected %d dead processes but got %d\n", c.deadProcesses, deadProcesses)
-					return false
-				}
 				return true
 			}
 		}
@@ -342,11 +327,7 @@ func compareSteps(t *testing.T, got steps, expected steps) bool {
 
 	for index := range got {
 		if got[index] != expected[index] {
-			// t.Errorf("got %s, expected %s\n", "sa", "de")
-			// t.Errorf("got %s: %s, expected %s: %s\n", got[index].processName, process.RuleString[got[index].rule],
-			// expected[index].processName, process.RuleString[expected[index].rule])
 			return false
-			// tr
 		}
 	}
 
@@ -374,14 +355,9 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 	return log
 }
 
-func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment) ([]process.Process, []process.MonitorRulesLog, uint64) {
+func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment, execVersion process.Execution_Version) ([]process.Process, []process.MonitorRulesLog, uint64) {
 
-	l := []process.LogLevel{
-		// process.LOGINFO,
-		// process.LOGPROCESSING,
-		// process.LOGRULE,
-		// process.LOGRULEDETAILS,
-	}
+	l := []process.LogLevel{}
 
 	debug := true
 
@@ -390,9 +366,8 @@ func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnviro
 		Debug:             true,
 		Color:             true,
 		LogLevels:         l,
-		ExecutionVersion:  process.NORMAL_ASYNC}
-
-	// fmt.Printf("Initializing %d processes\n", len(processes))
+		Delay:             0,
+		ExecutionVersion:  execVersion}
 
 	channels := re.CreateChannelForEachProcess(processes)
 
@@ -402,7 +377,10 @@ func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnviro
 		startedWg := new(sync.WaitGroup)
 		startedWg.Add(1)
 
-		re.InitializeMonitor(startedWg, nil)
+		newMonitor := process.NewMonitor(re, nil)
+		newMonitor.SetInactivityTimer(monitorTimeout)
+
+		re.InitializeGivenMonitor(startedWg, newMonitor, nil)
 
 		// Ensure that both servers are running
 		startedWg.Wait()

@@ -1,7 +1,6 @@
 package process
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -506,13 +505,13 @@ func TestFormHasContinuation(t *testing.T) {
 
 	for i := range expectedFalse {
 		if expectedFalse[i] {
-			fmt.Errorf("expected FormHasContinuation to return false for case %d but found true", i)
+			t.Errorf("expected FormHasContinuation to return false for case %d but found true", i)
 		}
 	}
 
 	for i := range expectedTrue {
 		if !expectedTrue[i] {
-			fmt.Errorf("expected FormHasContinuation to return true for case %d but found false", i)
+			t.Errorf("expected FormHasContinuation to return true for case %d but found false", i)
 		}
 	}
 }

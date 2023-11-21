@@ -73,6 +73,10 @@ func NewMonitor(re *RuntimeEnvironment, subscriberInfo *SubscriberInfo) *Monitor
 		processID:            0}
 }
 
+func (m *Monitor) SetInactivityTimer(t time.Duration) {
+	m.inactiveTimer = t
+}
+
 func (m *Monitor) startMonitor(startedWg *sync.WaitGroup) {
 	m.re.log(LOGINFO, "Monitor alive, waiting to receive...")
 

@@ -618,7 +618,7 @@ type NewForm struct {
 	continuation_c   Name
 	body             Form
 	continuation_e   Form
-	polarity         Polarity
+	polarity         Polarity // user inputted polarity [used as an alternative when types are omitted]
 	derivedFromMacro bool
 }
 

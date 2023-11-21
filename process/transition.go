@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-// todo:
-// -> only send a rule finished when the receiving end finished (instead of sending both times)
-// -> DUP or copy
-// -> check whether using self is ok
-
 // send a <...>    <...> <- recv a; ...
 //  |              /|\
 //  |               |
@@ -279,7 +274,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		newProcess.SpawnThenTransition(re)
 
 		process.finishedRule(CUT, "[new]", "", re)
-		// re.logProcess(LOGRULE, process, "[new] finished CUT rule")
+
 		// Continue executing current process
 		process.transitionLoop(re)
 	}
@@ -668,12 +663,11 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		process.Body = currentProcessBody
 
 		process.finishedRule(SPLIT, "[split, client]", "(c)", re)
-		// re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule (c)")
 
 		// Create structure of new forward process
-		// todo instead of process.Body.Polarity() maybe we can set a fixed polarity
-		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, process.Body.Polarity())
-		fwdSessionType := types.NewWIPType() /* todo fix -- I think this should be the type of f.from_c*/
+		// todo not sure which polarity the forward process should take: the split's or the continuation_e's polarity
+		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, f.Polarity())
+		fwdSessionType := f.from_c.Type /* todo fix -- I think this should be the type of f.from_c*/
 		newProcess := NewProcess(newProcessBody, newSplitNames, fwdSessionType, LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 		// Spawn and initiate new forward process

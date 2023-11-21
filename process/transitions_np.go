@@ -226,8 +226,6 @@ func (f *ReceiveForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 			new_body.Substitute(f.payload_c, message.Channel1)
 			new_body.Substitute(f.continuation_c, message.Channel2)
 
-			// re.logProcess(LOGRULE, process, "[receive, client] finished SND rule (c)")
-
 			process.Body = new_body
 
 			process.finishedRule(SND, "[receive, client]", "(c)", re)
@@ -268,7 +266,6 @@ func (f *NewForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		newProcess.SpawnThenTransitionNP(re)
 
 		process.finishedRule(CUT, "[new]", "", re)
-		// re.logProcess(LOGRULE, process, "[new] finished CUT rule")
 		// Continue executing current process
 		process.transitionLoopNP(re)
 	}
@@ -582,11 +579,10 @@ func (f *SplitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		process.Body = currentProcessBody
 
 		process.finishedRule(SPLIT, "[split, client]", "(c)", re)
-		// re.logProcess(LOGRULE, process, "[split, client] finished SPLIT rule (c)")
 
 		// Create structure of new forward process
-		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, process.Body.Polarity())
-		fwdSessionType := types.NewWIPType() /* todo fix -- I think this should be the type of f.from_c*/
+		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, f.Polarity())
+		fwdSessionType := f.from_c.Type /* todo fix -- I think this should be the type of f.from_c*/
 		newProcess := NewProcess(newProcessBody, newSplitNames, fwdSessionType, LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 		// Spawn and initiate new forward process
@@ -757,8 +753,6 @@ func (f *ShiftForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 			new_body := f.continuation_e
 			new_body.Substitute(f.continuation_c, message.Channel1)
-
-			// re.logProcess(LOGRULE, process, "[receive, client] finished CST rule (c)")
 
 			process.Body = new_body
 

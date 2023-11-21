@@ -199,6 +199,14 @@ func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subsc
 	go re.monitor.startMonitor(startedWg)
 }
 
+func (re *RuntimeEnvironment) InitializeGivenMonitor(startedWg *sync.WaitGroup, monitor *Monitor, subscriber *SubscriberInfo) {
+	// Declare new monitor
+	re.monitor = monitor
+
+	// Start monitor on new thread
+	go re.monitor.startMonitor(startedWg)
+}
+
 // Used after initialization to substitute known names to the actual channel
 func (re *RuntimeEnvironment) SubstituteNameInitialization(processes []*Process, channels []NameInitialization) {
 	for i := 0; i < len(processes); i++ {

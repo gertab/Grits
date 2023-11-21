@@ -1,4 +1,4 @@
-package main
+package webserver
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ var addr = flag.String("addr", ":8081", "http service address")
 // }
 
 // setupAPI will start all Routes and their Handlers
-func setupAPI() {
+func SetupAPI() {
 	hub := newHub()
 	go hub.run()
 	// http.HandleFunc("/", serveHome)

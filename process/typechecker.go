@@ -122,6 +122,8 @@ func preliminaryChecks(processes []*Process, processesFreeNames [][]Name, global
 		// Check also that the types annotated for each process are correct
 		// -> prc[a] : A = ... % b : A1, c : A2, ...
 		actualFreeNames := processes[i].Body.FreeNames()
+		// Remove provider names, since those are bound
+		actualFreeNames = NamesInFirstListOnly(actualFreeNames, processes[i].Providers)
 
 		if !AllNamesUnique(processesFreeNames[i]) {
 			return fmt.Errorf("in process declaration %s, the types for the free names %s are defined more than once", processes[i].OutlineString(), NamesToString(DuplicateNames(processesFreeNames[i])))
@@ -195,7 +197,7 @@ func typecheckProcesses(processes []*Process, processesFreeNames [][]Name, globa
 	for i := range processes {
 		gammaNameTypesCtx := produceNameTypesCtx(processesFreeNames[i])
 		providerType := processes[i].Type
-
+		// might be a good idea to set the shadowProvider name to processes[i].Providers[0] (when there is only one provider)
 		err := processes[i].Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv)
 		if err != nil {
 			return fmt.Errorf("typechecking error in process '%s'; %s", processes[i].OutlineString(), err)
@@ -741,7 +743,7 @@ func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 		_, unitTypeOk := providerType.(*types.UnitType)
 
 		if unitTypeOk {
-			return fmt.Errorf("expected '%s' to have a send on 'self' instead", p.String())
+			return fmt.Errorf("expected '%s' to close on 'self' instead", p.String())
 		} else {
 			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
 		}
@@ -759,28 +761,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	logRule("rule EndL")
 
 	// Can only wait for a client (not self)
-	if !isProvider(p.to_c, providerShadowName) {
-		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
-		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
-		}
-
-		clientType = types.Unfold(clientType, labelledTypesEnv)
-		// The type of the client must be UnitType
-		clientUnitType, clientTypeOk := clientType.(*types.UnitType)
-
-		if clientTypeOk {
-			// Set type
-			p.to_c.Type = clientUnitType
-
-			// Continue checking the remaining process
-			continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
-
-			return continuationError
-		} else {
-			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientType.String())
-		}
-	} else {
+	if isProvider(p.to_c, providerShadowName) {
 		// Waiting on the wrong name
 		providerType = types.Unfold(providerType, labelledTypesEnv)
 		_, unitTypeOk := providerType.(*types.UnitType)
@@ -790,6 +771,27 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		} else {
 			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
 		}
+	}
+
+	clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
+	if errorClient != nil {
+		return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+	}
+
+	clientType = types.Unfold(clientType, labelledTypesEnv)
+	// The type of the client must be UnitType
+	clientUnitType, clientTypeOk := clientType.(*types.UnitType)
+
+	if clientTypeOk {
+		// Set type
+		p.to_c.Type = clientUnitType
+
+		// Continue checking the remaining process
+		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+		return continuationError
+	} else {
+		return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientType.String())
 	}
 }
 
@@ -943,7 +945,14 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	return err
 }
 
+// Split: <channel_one, channel_two> <- recv from_c; P
 func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv) error {
+
+	// Can only wait for a client (not self)
+	if isProvider(p.from_c, providerShadowName) {
+		return fmt.Errorf("expected '%s' to have a split a client, not itself ('%s' is acting as self)", p.StringShort(), p.from_c.String())
+	}
+
 	return nil
 }
 

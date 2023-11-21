@@ -6,26 +6,36 @@ import (
 	"log"
 	"phi/parser"
 	"phi/process"
+	"phi/webserver"
 )
 
 /* ignore sample programs -- used for development*/
 
 const program = `
 
+// prc[pid0] : 1 = x : 1 <- new close x; wait x; close self
 
-prc[pid0] : 1 = x : 1 <- new close x; wait x; close self
+
+// type A = &{label : 1}
+// type B = 1 -* 1
+// let f(a : A, b : B) : A * B = send self<a, b>
+// prc[pid1] : 1 = x <- new f(a, b); 
+// 				<u, v> <- recv x;  
+// 				drop u; 
+// 				drop v; 
+// 				close self 			% a : A, b : B
 
 
-type A = &{label : 1}
-type B = 1 -* 1
 
-let f(a : A, b : B) : A * B = send self<a, b>
 
-prc[pid1] : 1 = x <- new f(a, b); 
-				<u, v> <- recv x;  
-				drop u; 
-				drop v; 
-				close self 			% a : A, b : B
+
+
+
+// prc[pid0] : 1 = <u, v> <- +split x; wait u; wait v; close self % x : 1
+prc[x] : 1 = close x
+
+
+
 
 
 
@@ -262,7 +272,7 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-const development = false
+const development = true
 
 func main() {
 	// Flags
@@ -270,12 +280,10 @@ func main() {
 	noTypecheck := flag.Bool("notypecheck", false, "skip typechecker")
 	execute := flag.Bool("execute", true, "execute processes")
 	noExecute := flag.Bool("noexecute", false, "do not execute processes")
-
 	logLevel := flag.Int("verbosity", 3, "verbosity level (1 = least, 3 = most)")
+	startWebserver := flag.Bool("webserver", false, "start webserver")
 
 	// todo: execute synchronous vs asynchronous and with polarities
-
-	// webserver := flag.Bool("webserver", true, "start webserver")
 
 	flag.Parse()
 
@@ -288,23 +296,29 @@ func main() {
 		*logLevel = 3
 	}
 
-	fmt.Printf("typecheck: %t, execute: %t, verbosity: %d\n", typecheckRes, executeRes, *logLevel)
+	fmt.Printf("typecheck: %t, execute: %t, verbosity: %d, webserver: %t\n", typecheckRes, executeRes, *logLevel, *startWebserver)
 
 	args := flag.Args()
-
-	if len(args) < 1 {
-		fmt.Println("expected filename to be executed")
-		return
-	}
 
 	var processes []*process.Process
 	var processesFreeNames [][]process.Name
 	var globalEnv *process.GlobalEnvironment
 	var err error
 
+	if *startWebserver {
+		// Run via API
+		webserver.SetupAPI()
+		return
+	}
+
 	if development {
 		processes, processesFreeNames, globalEnv, err = parser.ParseString(program)
 	} else {
+		if len(args) < 1 {
+			fmt.Println("expected filename to be executed")
+			return
+		}
+
 		processes, processesFreeNames, globalEnv, err = parser.ParseFile(args[0])
 	}
 
@@ -333,19 +347,15 @@ func main() {
 		process.InitializeProcesses(processes, nil, nil, re)
 	}
 
-	// // Run via API
-	// if webserver {
-	// 	setupAPI()
-	// }
 }
 
 func generateLogLevel(logLevel int) []process.LogLevel {
 	switch logLevel {
 	case 1:
 		return []process.LogLevel{
-			// process.LOGINFO,
+			process.LOGINFO,
 			// process.LOGPROCESSING,
-			process.LOGRULE,
+			// process.LOGRULE,
 			// process.LOGRULEDETAILS,
 			// process.LOGMONITOR,
 		}
@@ -355,7 +365,7 @@ func generateLogLevel(logLevel int) []process.LogLevel {
 			// process.LOGPROCESSING,
 			process.LOGRULE,
 			// process.LOGRULEDETAILS,
-			process.LOGMONITOR,
+			// process.LOGMONITOR,
 		}
 	case 3:
 		return []process.LogLevel{

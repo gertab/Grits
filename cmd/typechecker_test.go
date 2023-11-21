@@ -117,8 +117,11 @@ func TestTypecheckCorrectUnit(t *testing.T) {
 		// Close
 		// EndR
 		"let f1() : 1 = close self",
+		"let f1[w : 1] = close w",
 		` type A = 1
 		let f1() : A = close self`,
+		// "prc[x] : 1 = close x",
+		"prc[x] : 1 = close self",
 		// EndL
 		"let f1(x : 1) : 1 = wait x; close self",
 		"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close y",

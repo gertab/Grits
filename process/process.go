@@ -140,6 +140,7 @@ func AreNamesEqual(first, second []Name) bool {
 }
 
 // Compare two list of names and check returns the lists of unique names found in each list
+// E.g. [a, b, c] & [c, d] => ([a, b], [d])
 func NamesNotCommon(first, second []Name) ([]Name, []Name) {
 	existsInFirst := make(map[string]bool)
 	for _, name := range first {
@@ -169,6 +170,26 @@ func NamesNotCommon(first, second []Name) ([]Name, []Name) {
 	}
 
 	return uniqueFirst, uniqueSecond
+}
+
+// This subtracts the names from the second list from the first list.
+// E.g. [a, b, c] - [c, d] = [a, b]
+func NamesInFirstListOnly(first, second []Name) []Name {
+	existsInSecond := make(map[string]bool)
+	for _, name := range second {
+		existsInSecond[name.Ident] = true
+	}
+
+	var uniqueFirst []Name
+
+	for _, name := range first {
+		_, common := existsInSecond[name.Ident]
+		if !common {
+			uniqueFirst = append(uniqueFirst, name)
+		}
+	}
+
+	return uniqueFirst
 }
 
 // Checks if a list of names contains unique names only

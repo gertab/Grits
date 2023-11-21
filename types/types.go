@@ -432,12 +432,12 @@ func IsWeakenable(sessionType SessionType) bool {
 	return true
 }
 
-// func IsContractable(sessionType SessionType) bool {
-// 	// todo implement
-// 	fmt.Println("todo: IsContractable")
+func IsContractable(sessionType SessionType) bool {
+	// todo implement
+	fmt.Println("todo: IsContractable")
 
-// 	return true
-// }
+	return true
+}
 
 // Used to unroll a type only if needed (i.e. reached label)
 func Unfold(orig SessionType, labelledTypesEnv LabelledTypesEnv) SessionType {

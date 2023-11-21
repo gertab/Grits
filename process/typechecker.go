@@ -356,6 +356,10 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names in %s", p.payload_c.String(), p.continuation_c.String(), p.String())
 		}
 
+		if p.payload_c.Equal(p.continuation_c) {
+			return fmt.Errorf("variable names <%s, %s> are the same. Use unique names", p.payload_c.String(), p.continuation_c.String())
+		}
+
 		// todo maybe remove check
 		if isProvider(p.payload_c, providerShadowName) ||
 			isProvider(p.continuation_c, providerShadowName) {
@@ -953,7 +957,39 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 		return fmt.Errorf("expected '%s' to have a split a client, not itself ('%s' is acting as self)", p.StringShort(), p.from_c.String())
 	}
 
-	return nil
+	foundType, err := consumeName(p.from_c, gammaNameTypesCtx)
+	foundType = types.Unfold(foundType, labelledTypesEnv)
+
+	if err != nil {
+		return err
+	}
+
+	// Ensure new names
+	if nameTypeExists(gammaNameTypesCtx, p.channel_one.Ident) ||
+		nameTypeExists(gammaNameTypesCtx, p.channel_two.Ident) {
+		// Names are not fresh [todo check if needed]
+		return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.channel_one.String(), p.channel_two.String())
+	}
+
+	if p.channel_one.Equal(p.channel_two) {
+		return fmt.Errorf("variable names <%s, %s> are the same. Use unique names", p.channel_one.String(), p.channel_two.String())
+	}
+
+	gammaNameTypesCtx[p.channel_one.Ident] = NamesType{Type: foundType}
+	gammaNameTypesCtx[p.channel_two.Ident] = NamesType{Type: foundType} //todo not sure if i need to use CopyType
+
+	if !types.IsContractable(foundType) {
+		return fmt.Errorf("expected '%s' to have a contractable type, but found the non-contractable type '%s' instead", p.from_c.String(), foundType.String())
+	}
+	// Set type
+	p.from_c.Type = foundType
+	p.channel_one.Type = foundType
+	p.channel_two.Type = foundType
+
+	// Continue checking the remaining process
+	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+	return continuationError
 }
 
 func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType,

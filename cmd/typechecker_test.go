@@ -106,6 +106,7 @@ func TestTypecheckIncorrectSendReceive(t *testing.T) {
 		`type B = &{label33 : 1}
 		let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
 					<x, y> <- recv self; send y<a, x>`,
+		"prc[c] : 1 -* 1 = <x, x> <- recv self; close x",
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -478,6 +479,33 @@ func TestTypecheckIncorrectCut(t *testing.T) {
 		`let f() : 1 = close self
 		prc[pid1] : 1 = x : 1 <- new f_other(); wait x; close self
 		`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+func TestTypecheckCorrectSplit(t *testing.T) {
+
+	cases := []string{
+		// Split
+		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self % x : 1
+		prc[x] : 1 = close self`,
+		`type A = 1 * 1
+		prc[pid1] : 1 = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; wait a2; wait b2; wait a3; wait b3; close self   % pid2 : A
+		prc[pid2] : A = send self<pid3, pid4>	% pid3 : 1, pid4 : 1`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectSplit(t *testing.T) {
+
+	cases := []string{
+		// Split
+		`prc[pid0] : 1 = <u, u> <- split x; wait u; close self % x : 1
+		prc[x] : 1 = close self`,
+		`let f(x: 1, y : 1) : 1 = <u, x> <- split y; wait x; close self`,
+		`let f(x: 1, y : 1) : 1 = <u1, u2> <- split y; wait x; close self`,
 	}
 
 	runThroughTypechecker(t, cases, false)

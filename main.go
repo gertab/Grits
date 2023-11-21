@@ -31,10 +31,19 @@ const program = `
 
 
 
-// prc[pid0] : 1 = <u, v> <- +split x; wait u; wait v; close self % x : 1
-prc[x] : 1 = close x
+type A = 1 * 1
 
-
+prc[pid1] : 1 = 
+		<a, b> <- +split pid2; 
+		<a2, b2> <- recv a; 
+		<a3, b3> <- recv b; 
+		wait a2; 
+		wait b2; 
+		wait a3; 
+		wait b3; 
+		close self   % pid2 : A
+prc[pid2] : A = send self<pid3, pid4>	% pid3 : 1, pid4 : 1
+prc[pid3, pid4] : 1 = close self
 
 
 
@@ -272,7 +281,7 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-const development = true
+const development = false
 
 func main() {
 	// Flags
@@ -283,7 +292,7 @@ func main() {
 	logLevel := flag.Int("verbosity", 3, "verbosity level (1 = least, 3 = most)")
 	startWebserver := flag.Bool("webserver", false, "start webserver")
 
-	// todo: execute synchronous vs asynchronous and with polarities
+	// todo: add execute synchronous vs asynchronous and with polarities
 
 	flag.Parse()
 
@@ -315,7 +324,7 @@ func main() {
 		processes, processesFreeNames, globalEnv, err = parser.ParseString(program)
 	} else {
 		if len(args) < 1 {
-			fmt.Println("expected filename to be executed")
+			fmt.Println("expected name of file to be executed")
 			return
 		}
 

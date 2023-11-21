@@ -1,4 +1,5 @@
 *.output
 todo.md
+.DS_STORE
 
 sketch/*

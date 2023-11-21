@@ -23,11 +23,13 @@ const program = `
 // prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
 
 
-// prc[pid1] : 1 = x <- new ( self.labelok<ff> ); 
-// 				case x (labelok<b> => print b; close b)		% ff : 1
+prc[pid1] : 1 = xxxx : +{labelok : 1} <- new ( self.labelok<ff> ); 
+				case xxxx (labelok<b> => print b; wait b; close self)		% ff : 1
+prc[ff] : 1 = close self
+
 
 let f(p : &{labelok : 1}) : 1 = p.labelok<self>
-prc[pid1] : 1 = x <- new ( f(pid2) ); drop x; close self 			% pid2 : &{labelok : 1}
+prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : &{labelok : 1}
 prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
 
 

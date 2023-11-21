@@ -17,7 +17,7 @@ type SessionType interface {
 	String() string
 
 	// used for inner checks
-	checkTypeLabels(LabelledTypesEnv) error
+	CheckTypeLabels(LabelledTypesEnv) error
 	isContractive(LabelledTypesEnv, map[string]bool) bool
 }
 

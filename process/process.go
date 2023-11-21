@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-const printTypes = true
+const printTypes = false
 
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
@@ -204,7 +204,7 @@ func (name1 *Name) Equal(name2 Name) bool {
 		// If the channel is initialized, then only compare the actual channel reference
 		return name1.Channel == name2.Channel
 	}
-	return name1.String() == name2.String() && name1.Initialized() == name2.Initialized()
+	return name1.Ident == name2.Ident && name1.Initialized() == name2.Initialized()
 }
 
 func (n *Name) Substitute(old, new Name) {

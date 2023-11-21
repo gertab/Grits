@@ -19,7 +19,7 @@ func SanityChecksTypeDefinitions(typesDefs []SessionTypeDefinition) error {
 
 	// Check that all labelled reference point to a defined type
 	for _, j := range typesDefs {
-		err := j.SessionType.checkTypeLabels(labelledTypesEnv)
+		err := j.SessionType.CheckTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -38,7 +38,7 @@ func SanityChecksTypeDefinitions(typesDefs []SessionTypeDefinition) error {
 			return fmt.Errorf("session type definition for %s (= %s) is not contractive", j.Name, j.SessionType.String())
 		}
 
-		err := j.SessionType.checkTypeLabels(labelledTypesEnv)
+		err := j.SessionType.CheckTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -58,7 +58,7 @@ func SanityChecksType(types []SessionType, typesDefs []SessionTypeDefinition) er
 	labelledTypesEnv := ProduceLabelledSessionTypeEnvironment(typesDefs)
 
 	for _, j := range types {
-		err := j.checkTypeLabels(labelledTypesEnv)
+		err := j.CheckTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -77,42 +77,27 @@ func SanityChecksType(types []SessionType, typesDefs []SessionTypeDefinition) er
 //	type C = A -* D		[incorrect, because D is undefined]
 //
 // Ensures also the branches are made up of unique labels
-func (q *LabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+func (q *LabelType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	if !LabelledTypedExists(labelledTypesEnv, q.Label) {
 		return fmt.Errorf("error calling undefined label type '%s'", q.String())
 	}
 
 	return nil
 }
-func (q *WIPType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+func (q *WIPType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	return nil
 }
-func (q *UnitType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+func (q *UnitType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	return nil
 }
-func (q *SendType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
-	err := q.Left.checkTypeLabels(labelledTypesEnv)
+func (q *SendType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+	err := q.Left.CheckTypeLabels(labelledTypesEnv)
 
 	if err != nil {
 		return err
 	}
 
-	err = q.Right.checkTypeLabels(labelledTypesEnv)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-func (q *ReceiveType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
-	err := q.Left.checkTypeLabels(labelledTypesEnv)
-
-	if err != nil {
-		return err
-	}
-
-	err = q.Right.checkTypeLabels(labelledTypesEnv)
+	err = q.Right.CheckTypeLabels(labelledTypesEnv)
 
 	if err != nil {
 		return err
@@ -120,7 +105,22 @@ func (q *ReceiveType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 
 	return nil
 }
-func (q *SelectLabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+func (q *ReceiveType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+	err := q.Left.CheckTypeLabels(labelledTypesEnv)
+
+	if err != nil {
+		return err
+	}
+
+	err = q.Right.CheckTypeLabels(labelledTypesEnv)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (q *SelectLabelType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 
 	existingLabels := make(map[string]bool)
 
@@ -133,7 +133,7 @@ func (q *SelectLabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) err
 		}
 
 		// Checking inside the branch
-		err := j.Session_type.checkTypeLabels(labelledTypesEnv)
+		err := j.Session_type.CheckTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -142,7 +142,7 @@ func (q *SelectLabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) err
 
 	return nil
 }
-func (q *BranchCaseType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+func (q *BranchCaseType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	existingLabels := make(map[string]bool)
 
 	for _, j := range q.Branches {
@@ -154,7 +154,7 @@ func (q *BranchCaseType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) erro
 		}
 
 		// Checking inside the branch
-		err := j.Session_type.checkTypeLabels(labelledTypesEnv)
+		err := j.Session_type.CheckTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err

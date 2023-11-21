@@ -642,7 +642,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 		case *CallForm:
 			callForm := p.body.(*CallForm)
 
-			fmt.Println("cut -> call")
+			// fmt.Println("cut -> call")
 			// first split gamma (take parameters from gamma)
 			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, callForm.parameters, labelledTypesEnv)
 
@@ -650,18 +650,18 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
 			}
 
-			// typecheck the call function
-			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+			// Get function signature (incl. its type)
+			functionSignature, exists := sigma[callForm.functionName]
+			if !exists {
+				return fmt.Errorf("function '%s' is undefined", p.String())
+			}
+
+			// Typecheck the call function
+			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, functionSignature.Type, labelledTypesEnv, sigma)
 
 			if callBodyError != nil {
 				return fmt.Errorf("problem in '%s': %s", p.StringShort(), callBodyError)
 			}
-
-			// Function signature should exist, if it doesn't the typecheck would have already caught it
-			functionSignature := sigma[callForm.functionName]
-			// if !exists { exists
-			// 	return fmt.Errorf("function '%s' is undefined", p.String())
-			// }
 
 			// Add new channel name to gamma
 			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: functionSignature.Type}
@@ -673,7 +673,38 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationError)
 			}
 		default:
+			// The type of p.continuation_c has to be provided by the user
 			fmt.Println("cut -> something else")
+
+			// Split gamma
+			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, p.body.FreeNames(), labelledTypesEnv)
+
+			if gammaErr != nil {
+				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
+			}
+
+			// Get type of inner provider
+			err := checkNameType(p.continuation_c, labelledTypesEnv)
+			if err != nil {
+				return fmt.Errorf("invalid type for %s in %s: %s", p.continuation_c.String(), p.StringShort(), err)
+			}
+
+			// typecheck the body of the process being spawned
+			bodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, p.continuation_c.Type, labelledTypesEnv, sigma)
+
+			if bodyError != nil {
+				return fmt.Errorf("problem in '%s': %s", p.StringShort(), bodyError)
+			}
+
+			// Add new channel name to gamma
+			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: p.continuation_c.Type}
+
+			// typecheck the continuation of the cut rule
+			continuationBodyError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
+
+			if continuationBodyError != nil {
+				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationBodyError)
+			}
 		}
 
 	} else {
@@ -1088,6 +1119,18 @@ func splitGammaCtx(gammaNameTypesCtx NamesTypesCtx, names []Name, labelledTypesE
 	gammaRightNameTypesCtx := gammaNameTypesCtx
 
 	return gammaLeftNameTypesCtx, gammaRightNameTypesCtx, nil
+}
+
+// Ensure that a name has a type linked to it. Check for well formedness of the type.
+func checkNameType(name Name, labelledTypesEnv types.LabelledTypesEnv) error {
+	if name.Type == nil {
+		return fmt.Errorf("type for name '%s' was not found", name.String())
+	}
+
+	// run type related checks
+	err := name.Type.CheckTypeLabels(labelledTypesEnv)
+
+	return err
 }
 
 func logRule(s string) {

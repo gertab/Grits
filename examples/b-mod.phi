@@ -1,0 +1,17 @@
+// Example 2
+
+type A = &{label : 1}
+type B = 1 -* 1
+
+let f(y : A, z : B) : A * B = send self<y, z>
+
+assuming b:B
+
+prc[pid1] : 1 using a,b 
+       = x <- new f(a, b); 
+				<u, v> <- recv x;  
+				drop u; 
+				drop v; 
+				close self 			% a : A, b : B
+
+prc[a] : A = ....

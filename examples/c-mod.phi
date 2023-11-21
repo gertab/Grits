@@ -1,0 +1,45 @@
+/* Split */
+
+type A = 1 * 1
+
+prc[pid1] : 1 using pid2 = 
+		<a, b> <- +split pid2; 
+		<a2, b2> <- recv a; 
+		<a3, b3> <- recv b; 
+		wait a2; 
+		wait b2; 
+		wait a3; 
+		wait b3; 
+		close self   
+    % pid2 : A
+
+prc[pid2] : A = send self<pid3, pid4>	% pid3 : 1, pid4 : 1
+prc[pid3, pid4] : 1 = close self
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+let f(pid2 : A) : 1 =  <a, b> <- +split pid2; 
+                   <a2, b2> <- recv a; 
+                   <a3, b3> <- recv b; 
+                   wait a2; 
+                   wait b2; 
+                   close self   
+
+*/
+

@@ -4,6 +4,11 @@
 
 Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 
+## type system todo
+
+- [ ] split rule
+- [ ] add modalities (then check up/down shifting)
+
 ## How to build project
 
 You need to [install the Go language](https://go.dev/doc/install).

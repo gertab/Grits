@@ -1,42 +1,38 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"phi/parser"
 	"phi/process"
 )
 
+/* ignore sample programs -- used for development*/
+
 const program = `
 
-// prc[pid1] : 1 = x <- new (<a, b> <- recv pid2; wait b; close self); close self	% pid2 : 1
-// prc[pid2] : 1 * 1 = send self<pid5, pid6>										% pid5 : 1, pid6: 1
 
+prc[pid0] : 1 = x : 1 <- new close x; wait x; close self
 
-// prc[pid1] : 1 = x <- new ( case pid2 (labelok<b> => drop b; close x) ); close self 	% pid2 : +{labelok : 1}
-// prc[pid2] : +{labelok : 1} = self.labelok<pid5>										% pid5 : 1
-
-// let f(p : +{labelok : 1}) : 1 = case p (labelok<b> => drop b; close self)
-// prc[pid1] : 1 = x <- new ( f(pid2) ); close self 							% pid2 : +{labelok : 1}
-// prc[pid2] : +{labelok : 1} = self.labelok<pid5>								% pid5 : 1
-
-// prc[pid1] : 1 = x <- new ( pid2.labelok<x> ); drop x; close self 			% pid2 : &{labelok : 1}
-// prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
-
-
-// prc[pid1] : 1 = xxxx : +{labelok : 1} <- new ( self.labelok<ff> ); 
-// 				case xxxx (labelok<b> => print b; wait b; close self)		% ff : 1
-// prc[ff] : 1 = close self
-
-
-// let f(p : &{labelok : 1}) : 1 = p.labelok<self>
-// prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : &{labelok : 1}
-// prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
-///////////
 
 type A = &{label : 1}
 type B = 1 -* 1
+
 let f(a : A, b : B) : A * B = send self<a, b>
-prc[pid1] : 1 = x <- new f(a, b); <u, v> <- recv x;  drop u; drop v; close self % a : A, b : B
+
+prc[pid1] : 1 = x <- new f(a, b); 
+				<u, v> <- recv x;  
+				drop u; 
+				drop v; 
+				close self 			% a : A, b : B
+
+
+
+
+
+
+
 
 
 // let f() : 1 = close self
@@ -266,20 +262,58 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-func main() {
-	// Execute from file
-	// processes, err := parser.ParseFile("cmd/examples/ex1.txt")
+const development = false
 
-	// Execute directly from string
-	processes, processesFreeNames, globalEnv, err := parser.ParseString(program)
+func main() {
+	// Flags
+	typecheck := flag.Bool("typecheck", true, "run typechecker")
+	noTypecheck := flag.Bool("notypecheck", false, "skip typechecker")
+	execute := flag.Bool("execute", true, "execute processes")
+	noExecute := flag.Bool("noexecute", false, "do not execute processes")
+
+	logLevel := flag.Int("verbosity", 3, "verbosity level (1 = least, 3 = most)")
+
+	// todo: execute synchronous vs asynchronous and with polarities
+
+	// webserver := flag.Bool("webserver", true, "start webserver")
+
+	flag.Parse()
+
+	typecheckRes := !*noTypecheck && *typecheck
+	executeRes := !*noExecute && *execute
+
+	if *logLevel < 1 {
+		*logLevel = 1
+	} else if *logLevel > 3 {
+		*logLevel = 3
+	}
+
+	fmt.Printf("typecheck: %t, execute: %t, verbosity: %d\n", typecheckRes, executeRes, *logLevel)
+
+	args := flag.Args()
+
+	if len(args) < 1 {
+		fmt.Println("expected filename to be executed")
+		return
+	}
+
+	var processes []*process.Process
+	var processesFreeNames [][]process.Name
+	var globalEnv *process.GlobalEnvironment
+	var err error
+
+	if development {
+		processes, processesFreeNames, globalEnv, err = parser.ParseString(program)
+	} else {
+		processes, processesFreeNames, globalEnv, err = parser.ParseFile(args[0])
+	}
+
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	typecheck := true
-
-	if typecheck {
+	if typecheckRes {
 		err = process.Typecheck(processes, processesFreeNames, globalEnv)
 		if err != nil {
 			log.Fatal(err)
@@ -287,22 +321,61 @@ func main() {
 		}
 	}
 
-	re := &process.RuntimeEnvironment{
-		GlobalEnvironment: globalEnv,
-		Debug:             true,
-		Color:             true,
-		LogLevels: []process.LogLevel{
+	if executeRes {
+		re := &process.RuntimeEnvironment{
+			GlobalEnvironment: globalEnv,
+			Debug:             true,
+			Color:             true,
+			LogLevels:         generateLogLevel(*logLevel),
+			ExecutionVersion:  process.NORMAL_ASYNC,
+		}
+
+		process.InitializeProcesses(processes, nil, nil, re)
+	}
+
+	// // Run via API
+	// if webserver {
+	// 	setupAPI()
+	// }
+}
+
+func generateLogLevel(logLevel int) []process.LogLevel {
+	switch logLevel {
+	case 1:
+		return []process.LogLevel{
+			// process.LOGINFO,
+			// process.LOGPROCESSING,
+			process.LOGRULE,
+			// process.LOGRULEDETAILS,
+			// process.LOGMONITOR,
+		}
+	case 2:
+		return []process.LogLevel{
+			process.LOGINFO,
+			// process.LOGPROCESSING,
+			process.LOGRULE,
+			// process.LOGRULEDETAILS,
+			process.LOGMONITOR,
+		}
+	case 3:
+		return []process.LogLevel{
 			process.LOGINFO,
 			process.LOGPROCESSING,
 			process.LOGRULE,
 			process.LOGRULEDETAILS,
 			process.LOGMONITOR,
-		},
-		ExecutionVersion: process.NORMAL_ASYNC,
+		}
+	default:
+		return []process.LogLevel{
+			process.LOGINFO,
+			process.LOGPROCESSING,
+			process.LOGRULE,
+			process.LOGRULEDETAILS,
+			process.LOGMONITOR,
+		}
 	}
-
-	process.InitializeProcesses(processes, nil, nil, re)
-
-	// Run via API
-	// setupAPI()
 }
+
+// func executionVersion() process.Execution_Version {
+
+// }

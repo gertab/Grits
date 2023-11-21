@@ -686,6 +686,10 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
 			}
 
+			if p.continuation_c.Type == nil {
+				return fmt.Errorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
+			}
+
 			// Get type of inner provider
 			err := checkNameType(p.continuation_c, labelledTypesEnv)
 			if err != nil {

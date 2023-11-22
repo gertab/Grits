@@ -23,267 +23,6 @@ type Form interface {
 	typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, a types.LabelledTypesEnv, sigma FunctionTypesEnv) error
 }
 
-type Polarity int
-
-const (
-	POSITIVE Polarity = iota
-	NEGATIVE
-	UNKNOWN
-)
-
-var PolarityMap = map[Polarity]string{
-	POSITIVE: "+ve",
-	NEGATIVE: "-ve",
-	UNKNOWN:  "Unknown",
-}
-
-// Check equality between different forms
-func EqualForm(form1, form2 Form) bool {
-	a := reflect.TypeOf(form1)
-	b := reflect.TypeOf(form2)
-	if a != b {
-		return false
-	}
-
-	switch interface{}(form1).(type) {
-	case *SendForm:
-		f1, ok1 := form1.(*SendForm)
-		f2, ok2 := form2.(*SendForm)
-
-		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && f1.payload_c.Equal(f2.payload_c) && f1.to_c.Equal(f2.to_c)
-		}
-	case *ReceiveForm:
-		f1, ok1 := form1.(*ReceiveForm)
-		f2, ok2 := form2.(*ReceiveForm)
-
-		if ok1 && ok2 {
-			return f1.payload_c.Equal(f2.payload_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *SelectForm:
-		f1, ok1 := form1.(*SelectForm)
-		f2, ok2 := form2.(*SelectForm)
-
-		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.label.Equal(f2.label)
-		}
-	case *CaseForm:
-		f1, ok1 := form1.(*CaseForm)
-		f2, ok2 := form2.(*CaseForm)
-
-		if ok1 && ok2 {
-			for index := range f1.branches {
-				if !EqualForm(f1.branches[index], f2.branches[index]) {
-					return false
-				}
-			}
-
-			return f1.from_c.Equal(f2.from_c)
-		}
-	case *BranchForm:
-		f1, ok1 := form1.(*BranchForm)
-		f2, ok2 := form2.(*BranchForm)
-
-		if ok1 && ok2 {
-			return f1.label.Equal(f2.label) && f1.payload_c.Equal(f2.payload_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *CloseForm:
-		f1, ok1 := form1.(*CloseForm)
-		f2, ok2 := form2.(*CloseForm)
-
-		if ok1 && ok2 {
-			return f1.from_c.Equal(f2.from_c)
-		}
-	case *NewForm:
-		f1, ok1 := form1.(*NewForm)
-		f2, ok2 := form2.(*NewForm)
-
-		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *ForwardForm:
-		f1, ok1 := form1.(*ForwardForm)
-		f2, ok2 := form2.(*ForwardForm)
-
-		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c)
-		}
-	case *SplitForm:
-		f1, ok1 := form1.(*SplitForm)
-		f2, ok2 := form2.(*SplitForm)
-
-		if ok1 && ok2 {
-			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *CallForm:
-		f1, ok1 := form1.(*CallForm)
-		f2, ok2 := form2.(*CallForm)
-
-		if ok1 && ok2 {
-			if f1.functionName != f2.functionName {
-				return false
-			}
-
-			if len(f1.parameters) != len(f2.parameters) {
-				return false
-			}
-
-			for i := range f1.parameters {
-				if !f1.parameters[i].Equal(f2.parameters[i]) {
-					return false
-				}
-			}
-			// true
-			return true
-		}
-	case *WaitForm:
-		f1, ok1 := form1.(*WaitForm)
-		f2, ok2 := form2.(*WaitForm)
-
-		if ok1 && ok2 {
-			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *CastForm:
-		f1, ok1 := form1.(*CastForm)
-		f2, ok2 := form2.(*CastForm)
-
-		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && f1.to_c.Equal(f2.to_c)
-		}
-	case *ShiftForm:
-		f1, ok1 := form1.(*ShiftForm)
-		f2, ok2 := form2.(*ShiftForm)
-
-		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *DropForm:
-		f1, ok1 := form1.(*DropForm)
-		f2, ok2 := form2.(*DropForm)
-
-		if ok1 && ok2 {
-			return f1.client_c.Equal(f2.client_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *PrintForm:
-		f1, ok1 := form1.(*PrintForm)
-		f2, ok2 := form2.(*PrintForm)
-
-		if ok1 && ok2 {
-			return f1.name_c.Equal(f2.name_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	}
-
-	fmt.Printf("todo implement EqualForm for type %s\n", a)
-	return false
-}
-
-func CopyForm(orig Form) Form {
-	// origWithType := reflect.TypeOf(orig)
-
-	switch interface{}(orig).(type) {
-	case *SendForm:
-		p, ok := orig.(*SendForm)
-		if ok {
-			return NewSend(p.to_c, p.payload_c, p.continuation_c)
-		}
-	case *ReceiveForm:
-		p, ok := orig.(*ReceiveForm)
-		if ok {
-			cont := CopyForm(p.continuation_e)
-			return NewReceive(p.payload_c, p.continuation_c, p.from_c, cont)
-		}
-	case *SelectForm:
-		p, ok := orig.(*SelectForm)
-		if ok {
-			return NewSelect(p.to_c, p.label, p.continuation_c)
-		}
-	case *CaseForm:
-		p, ok := orig.(*CaseForm)
-		if ok {
-			branches := make([]*BranchForm, len(p.branches))
-
-			for i := 0; i < len(p.branches); i++ {
-				b := CopyForm(p.branches[i]).(*BranchForm)
-				branches[i] = b
-			}
-
-			return NewCase(p.from_c, branches)
-		}
-
-	case *BranchForm:
-		p, ok := orig.(*BranchForm)
-		if ok {
-			cont := CopyForm(p.continuation_e)
-			return NewBranch(p.label, p.payload_c, cont)
-		}
-	case *CloseForm:
-		p, ok := orig.(*CloseForm)
-		if ok {
-			return NewClose(p.from_c)
-		}
-	case *NewForm:
-		p, ok := orig.(*NewForm)
-		if ok {
-			body := CopyForm(p.body)
-			cont := CopyForm(p.continuation_e)
-			return NewNew(p.continuation_c, body, cont, p.polarity)
-		}
-	case *ForwardForm:
-		p, ok := orig.(*ForwardForm)
-		if ok {
-			return NewForward(p.to_c, p.from_c, p.polarity)
-		}
-	case *SplitForm:
-		p, ok := orig.(*SplitForm)
-		if ok {
-			cont := CopyForm(p.continuation_e)
-			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont, p.polarity)
-		}
-	case *CallForm:
-		p, ok := orig.(*CallForm)
-		if ok {
-			copiedParameters := make([]Name, len(p.parameters))
-			copy(copiedParameters, p.parameters)
-			return NewCall(p.functionName, copiedParameters, p.polarity)
-		}
-	case *WaitForm:
-		p, ok := orig.(*WaitForm)
-		if ok {
-			body := CopyForm(p.continuation_e)
-			return NewWait(p.to_c, body)
-		}
-	case *CastForm:
-		p, ok := orig.(*CastForm)
-		if ok {
-			return NewCast(p.to_c, p.continuation_c)
-		}
-	case *ShiftForm:
-		p, ok := orig.(*ShiftForm)
-		if ok {
-			cont := CopyForm(p.continuation_e)
-			return NewShift(p.continuation_c, p.from_c, cont)
-		}
-	case *DropForm:
-		p, ok := orig.(*DropForm)
-		if ok {
-			body := CopyForm(p.continuation_e)
-			return NewDrop(p.client_c, body)
-		}
-	// Debug
-	case *PrintForm:
-		p, ok := orig.(*PrintForm)
-		if ok {
-			return NewPrint(p.name_c, p.continuation_e)
-		}
-	}
-
-	// todo panic
-	fmt.Print("todo: Should not happen")
-	panic("Should not happen")
-
-	// return nil
-}
-
 ///////////////////////////////
 ////// Different Forms ////////
 ///////////////////////////////
@@ -1104,6 +843,253 @@ func (p *PrintForm) Polarity() Polarity {
 	return UNKNOWN
 }
 
+// Check equality between different forms
+func EqualForm(form1, form2 Form) bool {
+	a := reflect.TypeOf(form1)
+	b := reflect.TypeOf(form2)
+	if a != b {
+		return false
+	}
+
+	switch interface{}(form1).(type) {
+	case *SendForm:
+		f1, ok1 := form1.(*SendForm)
+		f2, ok2 := form2.(*SendForm)
+
+		if ok1 && ok2 {
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.payload_c.Equal(f2.payload_c) && f1.to_c.Equal(f2.to_c)
+		}
+	case *ReceiveForm:
+		f1, ok1 := form1.(*ReceiveForm)
+		f2, ok2 := form2.(*ReceiveForm)
+
+		if ok1 && ok2 {
+			return f1.payload_c.Equal(f2.payload_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *SelectForm:
+		f1, ok1 := form1.(*SelectForm)
+		f2, ok2 := form2.(*SelectForm)
+
+		if ok1 && ok2 {
+			return f1.to_c.Equal(f2.to_c) && f1.continuation_c.Equal(f2.continuation_c) && f1.label.Equal(f2.label)
+		}
+	case *CaseForm:
+		f1, ok1 := form1.(*CaseForm)
+		f2, ok2 := form2.(*CaseForm)
+
+		if ok1 && ok2 {
+			for index := range f1.branches {
+				if !EqualForm(f1.branches[index], f2.branches[index]) {
+					return false
+				}
+			}
+
+			return f1.from_c.Equal(f2.from_c)
+		}
+	case *BranchForm:
+		f1, ok1 := form1.(*BranchForm)
+		f2, ok2 := form2.(*BranchForm)
+
+		if ok1 && ok2 {
+			return f1.label.Equal(f2.label) && f1.payload_c.Equal(f2.payload_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *CloseForm:
+		f1, ok1 := form1.(*CloseForm)
+		f2, ok2 := form2.(*CloseForm)
+
+		if ok1 && ok2 {
+			return f1.from_c.Equal(f2.from_c)
+		}
+	case *NewForm:
+		f1, ok1 := form1.(*NewForm)
+		f2, ok2 := form2.(*NewForm)
+
+		if ok1 && ok2 {
+			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *ForwardForm:
+		f1, ok1 := form1.(*ForwardForm)
+		f2, ok2 := form2.(*ForwardForm)
+
+		if ok1 && ok2 {
+			return f1.to_c.Equal(f2.to_c) && f1.from_c.Equal(f2.from_c)
+		}
+	case *SplitForm:
+		f1, ok1 := form1.(*SplitForm)
+		f2, ok2 := form2.(*SplitForm)
+
+		if ok1 && ok2 {
+			return f1.channel_one.Equal(f2.channel_one) && f1.channel_two.Equal(f2.channel_two) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *CallForm:
+		f1, ok1 := form1.(*CallForm)
+		f2, ok2 := form2.(*CallForm)
+
+		if ok1 && ok2 {
+			if f1.functionName != f2.functionName {
+				return false
+			}
+
+			if len(f1.parameters) != len(f2.parameters) {
+				return false
+			}
+
+			for i := range f1.parameters {
+				if !f1.parameters[i].Equal(f2.parameters[i]) {
+					return false
+				}
+			}
+			// true
+			return true
+		}
+	case *WaitForm:
+		f1, ok1 := form1.(*WaitForm)
+		f2, ok2 := form2.(*WaitForm)
+
+		if ok1 && ok2 {
+			return f1.to_c.Equal(f2.to_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *CastForm:
+		f1, ok1 := form1.(*CastForm)
+		f2, ok2 := form2.(*CastForm)
+
+		if ok1 && ok2 {
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.to_c.Equal(f2.to_c)
+		}
+	case *ShiftForm:
+		f1, ok1 := form1.(*ShiftForm)
+		f2, ok2 := form2.(*ShiftForm)
+
+		if ok1 && ok2 {
+			return f1.continuation_c.Equal(f2.continuation_c) && f1.from_c.Equal(f2.from_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *DropForm:
+		f1, ok1 := form1.(*DropForm)
+		f2, ok2 := form2.(*DropForm)
+
+		if ok1 && ok2 {
+			return f1.client_c.Equal(f2.client_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	case *PrintForm:
+		f1, ok1 := form1.(*PrintForm)
+		f2, ok2 := form2.(*PrintForm)
+
+		if ok1 && ok2 {
+			return f1.name_c.Equal(f2.name_c) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
+	}
+
+	fmt.Printf("todo implement EqualForm for type %s\n", a)
+	return false
+}
+
+func CopyForm(orig Form) Form {
+	// origWithType := reflect.TypeOf(orig)
+
+	switch interface{}(orig).(type) {
+	case *SendForm:
+		p, ok := orig.(*SendForm)
+		if ok {
+			return NewSend(p.to_c, p.payload_c, p.continuation_c)
+		}
+	case *ReceiveForm:
+		p, ok := orig.(*ReceiveForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewReceive(p.payload_c, p.continuation_c, p.from_c, cont)
+		}
+	case *SelectForm:
+		p, ok := orig.(*SelectForm)
+		if ok {
+			return NewSelect(p.to_c, p.label, p.continuation_c)
+		}
+	case *CaseForm:
+		p, ok := orig.(*CaseForm)
+		if ok {
+			branches := make([]*BranchForm, len(p.branches))
+
+			for i := 0; i < len(p.branches); i++ {
+				b := CopyForm(p.branches[i]).(*BranchForm)
+				branches[i] = b
+			}
+
+			return NewCase(p.from_c, branches)
+		}
+
+	case *BranchForm:
+		p, ok := orig.(*BranchForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewBranch(p.label, p.payload_c, cont)
+		}
+	case *CloseForm:
+		p, ok := orig.(*CloseForm)
+		if ok {
+			return NewClose(p.from_c)
+		}
+	case *NewForm:
+		p, ok := orig.(*NewForm)
+		if ok {
+			body := CopyForm(p.body)
+			cont := CopyForm(p.continuation_e)
+			return NewNew(p.continuation_c, body, cont, p.polarity)
+		}
+	case *ForwardForm:
+		p, ok := orig.(*ForwardForm)
+		if ok {
+			return NewForward(p.to_c, p.from_c, p.polarity)
+		}
+	case *SplitForm:
+		p, ok := orig.(*SplitForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont, p.polarity)
+		}
+	case *CallForm:
+		p, ok := orig.(*CallForm)
+		if ok {
+			copiedParameters := make([]Name, len(p.parameters))
+			copy(copiedParameters, p.parameters)
+			return NewCall(p.functionName, copiedParameters, p.polarity)
+		}
+	case *WaitForm:
+		p, ok := orig.(*WaitForm)
+		if ok {
+			body := CopyForm(p.continuation_e)
+			return NewWait(p.to_c, body)
+		}
+	case *CastForm:
+		p, ok := orig.(*CastForm)
+		if ok {
+			return NewCast(p.to_c, p.continuation_c)
+		}
+	case *ShiftForm:
+		p, ok := orig.(*ShiftForm)
+		if ok {
+			cont := CopyForm(p.continuation_e)
+			return NewShift(p.continuation_c, p.from_c, cont)
+		}
+	case *DropForm:
+		p, ok := orig.(*DropForm)
+		if ok {
+			body := CopyForm(p.continuation_e)
+			return NewDrop(p.client_c, body)
+		}
+	// Debug
+	case *PrintForm:
+		p, ok := orig.(*PrintForm)
+		if ok {
+			return NewPrint(p.name_c, p.continuation_e)
+		}
+	}
+
+	// todo panic
+	fmt.Print("todo: Should not happen")
+	panic("Should not happen")
+
+	// return nil
+}
+
 // Return true if the given for has continuation expression, or false otherwise (i.e. follows an axiomatic rule)
 func FormHasContinuation(form Form) bool {
 	switch interface{}(form).(type) {
@@ -1132,6 +1118,32 @@ func FormHasContinuation(form Form) bool {
 		// -> PrintForm:
 		return true
 	}
+}
+
+type Label struct {
+	L string
+}
+
+func (p *Label) String() string {
+	return p.L
+}
+
+func (label1 *Label) Equal(label2 Label) bool {
+	return label1.String() == label2.String()
+}
+
+type Polarity int
+
+const (
+	POSITIVE Polarity = iota
+	NEGATIVE
+	UNKNOWN
+)
+
+var PolarityMap = map[Polarity]string{
+	POSITIVE: "+ve",
+	NEGATIVE: "-ve",
+	UNKNOWN:  "Unknown",
 }
 
 // Utility functions

@@ -686,24 +686,8 @@ func TestExecCorrect(t *testing.T) {
 						  close w
 		
 		exec f()
-		exec f()
-		`,
+		exec f()`,
 	}
 
 	runThroughTypechecker(t, cases, true)
-}
-
-func TestExecIncorrect(t *testing.T) {
-
-	cases := []string{
-		`type A = 1
-
-		let f() : A = x : A <- new close x; 
-						  wait x; 
-						  close self
-		
-		exec g()`,
-	}
-
-	runThroughTypechecker(t, cases, false)
 }

@@ -35,7 +35,7 @@ func runThroughTypechecker(t *testing.T, cases []string, pass bool) {
 func TestTypecheckCorrectSendReceive(t *testing.T) {
 
 	cases := []string{
-		/* 0 */ "type A = 1",
+		"type A = 1",
 		"let f() : 1 = close self",
 		// send
 		// MulR
@@ -47,22 +47,22 @@ func TestTypecheckCorrectSendReceive(t *testing.T) {
 		let f(a : 1, b : 1) : A = send self<a, b>`,
 		// ImpL
 		"let f2(a : 1 -* 1, b : 1) : 1 = send a<b, self>",
-		/* 5 */ `type A = +{l1 : 1}
+		`type A = +{l1 : 1}
 			type B = 1 * 1
 			let f(a : A -* B, b : A) : B = send a<b, self>`,
 		`type A = 1 -* 1
-		let f2(a : A, b : 1) : 1 = send a<b, self>`,
+		 let f2(a : A, b : 1) : 1 = send a<b, self>`,
 		// receive
 		// ImpR
 		"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close y",
 		"let f2(b : 1) : 1 -* (1 * 1) = <x, y> <- recv self; send y<x, b>",
 		"let f1() : (1 * 1) -* 1 = <x, y> <- recv self; <x2, y2> <- recv x; wait x2; wait y2; close y",
 		`type A = 1 -* 1
-		let f1() : A = <x, y> <- recv self; wait x; close y`,
+		 let f1() : A = <x, y> <- recv self; wait x; close y`,
 		// MulL
 		"let f1(u : 1 * 1) : 1 = <x, y> <- recv u; wait x; wait y; close self",
 		`type A = 1 * 1
-		let f1(u : A) : 1 = <x, y> <- recv u; wait x; wait y; close self`,
+		 let f1(u : A) : 1 = <x, y> <- recv u; wait x; wait y; close self`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -71,7 +71,7 @@ func TestTypecheckCorrectSendReceive(t *testing.T) {
 // Typechecker -> these programs should fail
 func TestTypecheckIncorrectSendReceive(t *testing.T) {
 	cases := []string{
-		/* 0 */ "type A = B",
+		"type A = B",
 		"prc[a] : A = close self",
 		"let f() : 1 -* A = close self",
 		// MulL (extra non used names)
@@ -79,32 +79,31 @@ func TestTypecheckIncorrectSendReceive(t *testing.T) {
 		// MulL (missing names)
 		"let f(b : 1) : 1 * 1 = send self<a, b>",
 		// MulL (incorrect self type)
-		/* 5 */ "let f(a : 1, b : 1) : &{a : 1} = send self<a, b>",
+		"let f(a : 1, b : 1) : &{a : 1} = send self<a, b>",
 		"let f(a : 1, b : 1) : 1 * &{a : 1} = send self<a, b>",
 		// MulL (incorrect self type)
 		"let f(a : &{a : 1}, b : &{b : 1}) : &{a : 1} * 1 = send self<a, b>",
 		// MulL (wrong types)
 		"let f(a : 1 -* 1, b : 1) : 1 * 1 = send self<a, b>",
 		"let f(a : 1, b : &{a: 1}) : 1 * 1 = send self<a, b>",
-		/* 10 */ "let f(a : 1, b : 1) : 1 * (1 * 1) = send self<a, b>",
+		"let f(a : 1, b : 1) : 1 * (1 * 1) = send self<a, b>",
 		// ImpL
 		"let f2(a : 1 -* 1, b : 1) : +{x : 1} = send a<b, self>",
 		"let f2(a : 1 -* 1, b : +{x : 1}) : 1 = send a<b, self>",
 		"let f2(a : 1 * 1, b : 1) : 1 = send a<b, self>",
 		// MulR/ImpL
 		"let f2(a : 1 -* 1, b : 1) : 1 = send a<b, c>",
-		/* 15 */ "let f2(a : 1 -* 1, c : 1) : 1 = send a<self, c>",
+		"let f2(a : 1 -* 1, c : 1) : 1 = send a<self, c>",
 		// ImpR
 		"let f2() : 1 * 1 = <x, y> <- recv self; close y",
 		"let f2(b : 1) : 1 -* (1 * 1) = <x, y> <- recv self; send x<y, b>",
 		"let f1() : 1 -* 1 = <x, self> <- recv self; close y",
 		// MulL
 		"let f1(u : 1 -* 1) : 1 = <x, y> <- recv u; close y",
-		/* 20 */
 		"let f1(u : 1 * 1) : 1 = <self, y> <- recv u; close y",
 		"let f1() : (1 -* 1) -* 1 = <x, y> <- recv self; <x2, y2> <- recv x; close y",
 		`type B = &{label33 : 1}
-		let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
+		 let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) =
 					<x, y> <- recv self; send y<a, x>`,
 		"prc[c] : 1 -* 1 = <x, x> <- recv self; close x",
 	}
@@ -120,14 +119,14 @@ func TestTypecheckCorrectUnit(t *testing.T) {
 		"let f1() : 1 = close self",
 		"let f1[w : 1] = close w",
 		` type A = 1
-		let f1() : A = close self`,
+		 let f1() : A = close self`,
 		// "prc[x] : 1 = close x",
 		"prc[x] : 1 = close self",
 		// EndL
 		"let f1(x : 1) : 1 = wait x; close self",
 		"let f1() : 1 -* 1 = <x, y> <- recv self; wait x; close y",
 		`type A = 1
-		let f1(x : A) : A = wait x; close self`,
+		 let f1(x : A) : A = wait x; close self`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -156,8 +155,8 @@ func TestTypecheckCorrectForward(t *testing.T) {
 		"let f1() : 1 -* 1 = <x, y> <- recv self; fwd y x",
 		"let f1(g : (&{a : 1})) : 1 -* (&{a : 1}) = <x, y> <- recv self; wait x; fwd y g",
 		`type A = 1 * 1
-		type B = 1 * 1
-		let f1(x : A) : B = fwd self x`,
+		 type B = 1 * 1
+		 let f1(x : A) : B = fwd self x`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -184,9 +183,9 @@ func TestTypecheckCorrectDrop(t *testing.T) {
 		// Drop
 		"let f1(x : 1 * 1, g : &{a : 1}) : 1 * 1 = drop g; fwd self x",
 		`type A = 1 * 1
-		type B = 1 * 1
-		type G = &{a : 1}
-		let f1(x : A, g : G) : B = drop g; fwd self x`,
+		 type B = 1 * 1
+		 type G = &{a : 1}
+		 let f1(x : A, g : G) : B = drop g; fwd self x`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -243,44 +242,44 @@ func TestTypecheckCorrectBranch(t *testing.T) {
 		// Branch
 		// EChoiceR
 		"let f1() : &{label1 : 1} = case self (label1<a> => close self)",
-		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} =
 					case self (label1<a> => close self
 							  |label2<a> => close self
 							  |label3<a> => close self)`,
-		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} =
 					case self (label2<a> => close self
 							  |label3<a> => close self
 							  |label1<a> => close self)`,
 		`type A = 1 -* (1 * 1)
-		let f1(b : 1) : &{label1 : A} = 
+		 let f1(b : 1) : &{label1 : A} =
 				case self (
 					label1<a> => <x, y> <- recv a; send y<x, b>
 				)`,
-		`let f1() : &{label1 : (1 * 1) -* 1 } = 
-		case self (
-			label1<a> => <x, y> <- recv a; 
-						 <xx, yy> <- recv x; 
-						 wait xx; 
-						 wait yy; 
+		`let f1() : &{label1 : (1 * 1) -* 1 } =
+		 case self (
+			label1<a> => <x, y> <- recv a;
+						 <xx, yy> <- recv x;
+						 wait xx;
+						 wait yy;
 						 close y
 						//  close self
 		) `,
 		// IChoiceL
 		"let f1(x : +{label1 : 1}) : 1 = case x (label1<a> => wait a; close self)",
-		`let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : 1 = 
-		case x (label1<a> => wait a; close self
+		`let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : 1 =
+		 case x (label1<a> => wait a; close self
 			   |label2<a> => drop a; close self
 			   |label3<a> => wait a; close self)`,
 
-		`let f1(x : +{label1 : (1 * 1) * 1 }) : 1 = 
-		case x (label1<a> => <x, y> <- recv a; 
-						     <xx, yy> <- recv x; 
-						     wait xx; 
-						     wait y; 
-						     wait yy; 
+		`let f1(x : +{label1 : (1 * 1) * 1 }) : 1 =
+		 case x (label1<a> => <x, y> <- recv a;
+						     <xx, yy> <- recv x;
+						     wait xx;
+						     wait y;
+						     wait yy;
 						     close self)`,
 		`type B = &{label33 : 1}
-		let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) = 
+		 let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : B -* (1 * B) =
 							case x ( label2<a> => <x, y> <- recv self; send y<a, x>
 								| label3<a> => <x, y> <- recv self; send y<a, x>
 								| label1<a> => <x, y> <- recv self; send y<a, x>)`,
@@ -296,27 +295,27 @@ func TestTypecheckIncorrectBranch(t *testing.T) {
 		// Wrong type
 		"let f1() : +{label1 : 1} = case self (label1<a> => close self)",
 		// Missing labels in type
-		`let f2() : &{label1 : 1, label3 : 1} = 
+		`let f2() : &{label1 : 1, label3 : 1} =
 			case self (label1<a> => close self
 					  |label2<a> => close self
 					  |label3<a> => close self)`,
 		// Missing labels in branch
-		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} = 
+		`let f2() : &{label1 : 1, label2 : 1, label3 : 1} =
 					case self (label1<a> => close self
 							|label3<a> => close self)`,
 		// Incorrect inner type
 		`type A = 1 -* (1 -* 1)
-		let f1(b : 1) : &{label1 : A} = 
+		 let f1(b : 1) : &{label1 : A} =
 				case self (
 					label1<a> => <x, y> <- recv a; send y<x, b>
 				)`,
-		`let f1(x : +{label1 : (1 -* 1) * 1 }) : 1 = 
+		`let f1(x : +{label1 : (1 -* 1) * 1 }) : 1 =
 			case x (
-				label1<a> => <x, y> <- recv a; 
-							<xx, yy> <- recv x; 
-							wait xx; 
-							wait y; 
-							wait yy; 
+				label1<a> => <x, y> <- recv a;
+							<xx, yy> <- recv x;
+							wait xx;
+							wait y;
+							wait yy;
 							close self
 			)`,
 	}
@@ -329,18 +328,18 @@ func TestTypecheckCorrectFunctionCall(t *testing.T) {
 	cases := []string{
 		// FunctionCall
 		`let f1() : 1 = close self
-		let f2() : 1 = +f1()`,
+		 let f2() : 1 = +f1()`,
 		`let f3(x : 1 -* 1, y : 1) : 1 = send x<y, self>
-		let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(x2, y2)`,
+		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(x2, y2)`,
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
+		 let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
 		// Explicit self
 		`let f1() : 1 = close self
-		let f2() : 1 -* 1 = <x, y> <- recv self; drop x; +f1(y)`,
+		 let f2() : 1 -* 1 = <x, y> <- recv self; drop x; +f1(y)`,
 		`let f3(x : 1 -* 1, y : 1) : 1 = send x<y, self>
-		let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(self, x2, y2)`,
+		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(self, x2, y2)`,
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = +f5(self, x2, y2)`,
+		 let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = +f5(self, x2, y2)`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -350,14 +349,14 @@ func TestTypecheckIncorrectFunctionCall(t *testing.T) {
 	cases := []string{
 		// FunctionCall
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		let f6(x2 : 1 -* 1, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
+		 let f6(x2 : 1 -* 1, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
 		// Explicit self
 		`let f1() : 1 = close self
-		let f2() : 1 -* (1 * 1) = <x, y> <- recv self; +f1(y)`,
+		 let f2() : 1 -* (1 * 1) = <x, y> <- recv self; +f1(y)`,
 		`let f3(x : 1 -* 1, y : 1) : 1 * 1 = send x<y, self>
-		let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(y2)`,
+		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(y2)`,
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		let f6(x2 : 1 -* &{label2 : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
+		 let f6(x2 : 1 -* &{label2 : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -367,32 +366,40 @@ func TestTypecheckCorrectProcessDefinitions(t *testing.T) {
 
 	cases := []string{
 		// send, MulR
-		"prc[x] : 1 * 1 = send self<a, b> % a : 1, b : 1",
+		`assuming a : 1, b : 1
+		 prc[x] : 1 * 1 = send self<a, b>`,
 		`type A = +{l1 : 1}
-		type B = 1 -* 1
-		prc[y] : A * B = send self<a, b> % a : A, b : B`,
+		 type B = 1 -* 1
+		 assuming a : A, b : B
+		 prc[y] : A * B = send self<a, b>`,
 		`type A = 1 * 1
-		prc[x] : A = send self<a, b> 		% a : 1, b : 1`,
+		 assuming a : 1, b : 1
+		 prc[x] : A = send self<a, b>`,
 		// ImpL
 		`let f2(a : 1 -* 1, b : 1) : 1 = send a<b, self>
-		prc[x] : 1 = f2(aa, bb) 		% aa : 1 -* 1, bb : 1
-		prc[y] : 1 = f2(self, aa, bb) 		% aa : 1 -* 1, bb : 1`,
+		 assuming a1 : 1 -* 1, a2 : 1 -* 1, b1 : 1, b2 : 1
+		 prc[x] : 1 = f2(a1, b1)
+		 prc[y] : 1 = f2(self, a2, b2)`,
 		// With explicit self
 		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
-		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
-		prc[y] : 1 = f3(self, aa, bb) 	% aa : 1 -* 1, bb : 1`,
+		 prc[x] : 1 = f3(aa, bb)
+		 assuming aa : 1 -* 1, aaa : 1 -* 1, bb : 1
+		 assuming b2 : 1
+		 prc[y] : 1 = f3(self, aaa, b2)`,
 		`type A = +{l1 : 1}
-		type B = 1 * 1
-		prc[x]: B = send a<b, self> 		% b : A, a : A -* B`,
-		`prc[x] : (1 * 1) -* 1 = 
-				<x, y> <- recv self; 
-				<x2, y2> <- recv x; 
-				wait x2; 
-				wait y2; 
+		 type B = 1 * 1
+		 assuming b : A, a : A -* B
+		 prc[x]: B = send a<b, self>`,
+		`prc[x] : (1 * 1) -* 1 =
+				<x, y> <- recv self;
+				<x2, y2> <- recv x;
+				wait x2;
+				wait y2;
 				close y`,
-		`prc[x] : 1 -* (1 * 1) = 
-		<x, y> <- recv self; 
-		send y<x, b>  			%  b : 1`,
+		`assuming b : 1
+		 prc[x] : 1 -* (1 * 1) =
+		 <x, y> <- recv self;
+		 send y<x, b> `,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -402,29 +409,40 @@ func TestTypecheckCorrectProcessDefinitionsIncorrect(t *testing.T) {
 
 	cases := []string{
 		// send, MulR
-		"prc[x] : 1 = send self<a, b> % a : 1, b : 1",
-		"prc[x] : 1 * 1 = send self<a, b> % a : 1, b : 1 -* 1",
-		"prc[x] : 1 * 1 = send self<a, b> % a : 1",
-		"prc[x] = send self<a, b> % a : 1, b : 1",
-		"prc[x] = send self<a, b> % b : 1",
-		"prc[x] : 1 * 1 = send self<a, b> % a : 1, b : 1, c : 1",
-		"prc[x] : 1 * 1 = send self<a, b> % c : 1",
+		`assuming a : 1, b : 1
+		 prc[x] : 1 = send self<a, b>`,
+		`assuming a : 1, b : 1 -* 1
+		 prc[x] : 1 * 1 = send self<a, b>`,
+		`assuming a : 1
+		 prc[x] : 1 * 1 = send self<a, b>`,
+		`assuming a : 1, b : 1
+		 prc[x] = send self<a, b>`,
+		`assuming b : 1
+		 prc[x] = send self<a, b>`,
+		`assuming a : 1, b : 1, c : 1
+		 prc[x] : 1 * 1 = send self<a, b>`,
+		`assuming c : 1
+		 prc[x] : 1 * 1 = send self<a, b>`,
 		"prc[x] : 1 * 1 = send self<a, b>",
 		"prc[x] = send self<a, b>",
 
 		// With explicit self
-		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
-		prc[x] : 1 * 1= f3(aa, bb) 			% aa : 1 -* 1, bb : 1
-		prc[y] : 1 = f3(self, aa, bb) 		% aa : 1 -* 1, bb : 1`,
-		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
-		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
-		prc[y] : 1 = f3(self, aa, bb) 		% aa : 1 , bb : 1`,
-		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
-		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
-		prc[y] : 1 = f3(self, aa, bb) 		% bb : 1`,
-		`let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
-		prc[x] : 1 = f3(aa, bb) 			% aa : 1 -* 1, bb : 1
-		prc[y] : 1 * 1 = f3(self, aa, bb) 	% aa : 1 -* 1, bb : 1`,
+		`assuming aa : 1 -* 1, bb : 1, x : 1 -* 1, y : 1
+		 let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		 prc[x] : 1 * 1= f3(aa, bb)
+		 prc[y] : 1 = f3(self, x, y)`,
+		`assuming aa : 1 -* 1, bb : 1, x : 1 , y : 1
+		 let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		 prc[x] : 1 = f3(aa, bb)
+		 prc[y] : 1 = f3(self, x, y)`,
+		`assuming aa : 1 -* 1, bb : 1, x : 1
+		 let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		 prc[x] : 1 = f3(aa, bb)
+		 prc[y] : 1 = f3(self, aa, x)`,
+		`assuming aa : 1 -* 1, bb : 1, x : 1 -* 1, y : 1
+		 let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+		 prc[x] : 1 = f3(aa, bb)
+		 prc[y] : 1 * 1 = f3(self, aa, bb)`,
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -435,24 +453,27 @@ func TestTypecheckCorrectCut(t *testing.T) {
 	cases := []string{
 		// Cut
 		`prc[pid1] : 1 = x : 1 <- new ( close x ); wait x; close self
-		prc[pid2] : 1 = x : 1 <- new ( close self ); wait x; close self`,
+		 prc[pid2] : 1 = x : 1 <- new ( close self ); wait x; close self`,
 		// Cut [call]
 		`let f() : 1 = close self
-		prc[pid1] : 1 = x : 1 <- new f(); wait x; close self`,
+		 prc[pid1] : 1 = x : 1 <- new f(); wait x; close self`,
 		`let f2[w : 1] = close w
-		prc[pid2] : 1 = x : 1 <- new f2(); wait x; close self`,
-		`let f(p : &{labelok : 1}) : 1 = p.labelok<self>
-		prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : &{labelok : 1}
-		prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
-		`prc[pid1] : 1 = xy : +{labelok : 1} <- new ( self.labelok<ff> ); 
-					case xy (labelok<b> => print b; wait b; close self)		% ff : 1
-		prc[ff] : 1 = close self`,
+		 prc[pid2] : 1 = x : 1 <- new f2(); wait x; close self`,
+		`assuming pid2 : &{labelok : 1}
+		 let f(p : &{labelok : 1}) : 1 = p.labelok<self>
+		 prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self
+		 prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
+		`assuming  ff : 1
+		 prc[pid1] : 1 = xy : +{labelok : 1} <- new ( self.labelok<ff> );
+					case xy (labelok<b> => print b; wait b; close self)
+		 prc[ff] : 1 = close self`,
 		`let f() : 1 = close self
-		prc[pid1] : 1 = x : 1 <- new f(x); wait x; close self`,
+		 prc[pid1] : 1 = x : 1 <- new f(x); wait x; close self`,
 		`type A = &{label : 1}
-		type B = 1 -* 1
-		let f(a : A, b : B) : A * B = send self<a, b>
-		prc[pid1] : 1 = x <- new f(a, b); <u, v> <- recv x;  drop u; drop v; close self % a : A, b : B`,
+		 type B = 1 -* 1
+		 let f(a : A, b : B) : A * B = send self<a, b>
+		 assuming a : A, b : B
+		 prc[pid1] : 1 = x <- new f(a, b); <u, v> <- recv x;  drop u; drop v; close self`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -463,22 +484,23 @@ func TestTypecheckIncorrectCut(t *testing.T) {
 	cases := []string{
 		// Cut [Call]
 		`let f(p : &{labelok : 1}) : 1 = p.labelok<self>
-		prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self 			% pid2 : +{labelok : 1}
-		prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
+		 assuming pid2 : +{labelok : 1}
+		 prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self
+		 prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
 
 		// Cut [axiomatic version]
-		`prc[pid1] : 1 = x <- new ( pid2.labelok<x> ); drop x; close self 			% pid2 : &{labelok : 1}
-		prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) 
-		`,
-		`prc[pid1] : 1 = x : 1 <- new ( self.labelok<ff> ); wait x; close self % ff : 1`,
-		`prc[pid2] : 1 = x : 1 <- new ( x.labelok<ff> ); wait x; close self % ff : 1
-		`,
+		`assuming pid2 : &{labelok : 1}
+		 prc[pid1] : 1 = x <- new ( pid2.labelok<x> ); drop x; close self
+		 prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b) `,
+		`assuming ff : 1
+		 prc[pid1] : 1 = x : 1 <- new ( self.labelok<ff> ); wait x; close self`,
+		`assuming ff : 1
+		 prc[pid2] : 1 = x : 1 <- new ( x.labelok<ff> ); wait x; close self`,
+		`assuming y : 1
+		 let f() : 1 = close self
+		 prc[pid1] : 1 = x : 1 <- new f(y); wait x; close self`,
 		`let f() : 1 = close self
-		prc[pid1] : 1 = x : 1 <- new f(y); wait x; close self % y : 1
-		`,
-		`let f() : 1 = close self
-		prc[pid1] : 1 = x : 1 <- new f_other(); wait x; close self
-		`,
+		 prc[pid1] : 1 = x : 1 <- new f_other(); wait x; close self`,
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -488,11 +510,21 @@ func TestTypecheckCorrectSplit(t *testing.T) {
 
 	cases := []string{
 		// Split
-		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self % x : 1
-		prc[x] : 1 = close self`,
+		`assuming x : 1
+		 prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
+		 prc[x] : 1 = close self`,
 		`type A = 1 * 1
-		prc[pid1] : 1 = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; wait a2; wait b2; wait a3; wait b3; close self   % pid2 : A
-		prc[pid2] : A = send self<pid3, pid4>	% pid3 : 1, pid4 : 1`,
+		 assuming pid2 : A
+		 prc[pid1] : 1 = <a, b> <- +split pid2;
+		 				 <a2, b2> <- recv a;
+						 <a3, b3> <- recv b;
+						 wait a2;
+						 wait b2;
+						 wait a3;
+						 wait b3;
+						 close self
+	     assuming pid3 : 1, pid4 : 1
+		 prc[pid2] : A = send self<pid3, pid4>`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -502,8 +534,9 @@ func TestTypecheckIncorrectSplit(t *testing.T) {
 
 	cases := []string{
 		// Split
-		`prc[pid0] : 1 = <u, u> <- split x; wait u; close self % x : 1
-		prc[x] : 1 = close self`,
+		`assuming x : 1
+		 prc[pid0] : 1 = <u, u> <- split x; wait u; close self
+		 prc[x] : 1 = close self`,
 		`let f(x: 1, y : 1) : 1 = <u, x> <- split y; wait x; close self`,
 		`let f(x: 1, y : 1) : 1 = <u1, u2> <- split y; wait x; close self`,
 	}
@@ -516,7 +549,7 @@ func TestPreliminaryFunctionDefChecksCorrect(t *testing.T) {
 
 	cases := []string{
 		`type A = 1`,
-		`type A = 1		
+		`type A = 1
 		 type B = A -* 1`,
 		`type C = D
 		 type D = E
@@ -539,7 +572,7 @@ func TestPreliminaryFunctionDefChecksIncorrect(t *testing.T) {
 		`type A = 1
 		 type A = 1`,
 		// D undefined
-		`type A = 1		
+		`type A = 1
 		 type B = A -* 1
 		 type C = A -* D`,
 		// Non-contractive type
@@ -570,7 +603,8 @@ func TestPreliminaryProcessesChecksCorrect(t *testing.T) {
 
 	cases := []string{
 		`type A = 1`,
-		`assuming a : 1, b : 1`,
+		`assuming a : 1, b : 1
+		 prc[x] : 1 = drop a; wait b; close self`,
 		`prc[a, b] : 1 = close self`,
 		`assuming x : 1, y : 1
 		 prc[a, b] : 1 = close self
@@ -596,7 +630,7 @@ func TestPreliminaryProcessesChecksIncorrect(t *testing.T) {
 		// Duplicate name assumptions
 		`assuming a : 1, b : 1, a : 1`,
 		`assuming a : 1, b : 1
-		assuming a : 1`,
+		 assuming a : 1`,
 		// Assumptions without types
 		`assuming a : 1, b`,
 		// Undefined type B
@@ -615,21 +649,21 @@ func TestPreliminaryProcessesChecksIncorrect(t *testing.T) {
 		 prc[c] : 1 = wait a; wait x; close self`,
 		// assumed name used elsewhere
 		`assuming x : 1
-		prc[a, b] : 1 = close self
-		prc[c] : 1 = wait a; wait x; close self
-		prc[d] : 1 = wait b; close self
-		prc[e] : 1 = wait x; close self`,
+		 prc[a, b] : 1 = close self
+		 prc[c] : 1 = wait a; wait x; close self
+		 prc[d] : 1 = wait b; close self
+		 prc[e] : 1 = wait x; close self`,
 		// process name used elsewhere
 		`assuming x : 1
-		prc[a, b] : 1 = close self
-		prc[c] : 1 = wait a; wait x; close self
-		prc[d] : 1 = wait b; close self
-		prc[e] : 1 = wait b; close self`,
+		 prc[a, b] : 1 = close self
+		 prc[c] : 1 = wait a; wait x; close self
+		 prc[d] : 1 = wait b; close self
+		 prc[e] : 1 = wait b; close self`,
 		// remaining unused assumed names
 		`assuming x : 1, y : 1
-		prc[a, b] : 1 = close self
-		prc[c] : 1 = wait a; wait x; close self
-		prc[d] : 1 = wait b; close self`,
+		 prc[a, b] : 1 = close self
+		 prc[c] : 1 = wait a; wait x; close self
+		 prc[d] : 1 = wait b; close self`,
 	}
 
 	runThroughTypechecker(t, cases, false)

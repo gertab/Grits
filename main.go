@@ -13,10 +13,11 @@ import (
 
 const program = `
 
-assuming x : 1, y : 1
-prc[a, b] : 1 = close self
-prc[c] : 1 = wait a; wait x; close self
-prc[d] : 1 = wait b; drop y; close self
+assuming aa : 1 -* 1, bb : 1, x : 1 -* 1, y : 1
+let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
+prc[x] : 1 * 1= f3(aa, bb)
+prc[y] : 1 = f3(self, x, y)
+
 
 // type A = &{label : 1}
 // type B = 1 -* 1

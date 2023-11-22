@@ -40,12 +40,13 @@ func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Nam
 		errorChan <- err
 	}
 
-	// Start with some preliminary check on the function definitions
+	// Check that function definitions are well formed
 	err = preliminaryFunctionDefinitionsChecks(globalEnv)
 	if err != nil {
 		errorChan <- err
 	}
 
+	// Check that processes are well formed
 	err = preliminaryProcessesChecks(processes, assumedFreeNames, globalEnv)
 	if err != nil {
 		errorChan <- err
@@ -53,8 +54,12 @@ func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Nam
 
 	fmt.Println("Preliminary checks ok")
 
-	// We can initiate the more heavyweight typechecking
-	// 1) Typecheck function definitions
+	// At this point, we can assume that all names and functions have a type,
+	// and such type is well formed
+
+	// So, we can initiate the more heavyweight typechecking on the function's and processes' bodies
+
+	// Typecheck function definitions
 	err = typecheckFunctionDefinitions(globalEnv)
 	if err != nil {
 		errorChan <- err
@@ -62,7 +67,7 @@ func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Nam
 
 	fmt.Println("Function declarations typecheck ok")
 
-	// 2) Typecheck process definitions
+	// Typecheck process definitions
 	err = typecheckProcesses(processes, assumedFreeNames, globalEnv)
 	if err != nil {
 		errorChan <- err
@@ -231,27 +236,6 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 		}
 	}
 
-	// // Compare the free names with their types
-	// // Left contains the free names with a defined type,
-	// // while right contains the extra type definitions
-	// left, right := NamesNotCommon(actualFreeNames, assumedFreeNames[i])
-
-	// // if len(left) > len(right) {
-	// // 	return fmt.Errorf("in process %s, the free names %s do not have a defined type. Use '%%' followed by their type, e.g. '%% %s : 1'", processes[i].OutlineString(), NamesToString(left), left[0].String())
-	// // } else if len(right) > 0 {
-	// // 	return fmt.Errorf("in process %s, the types for %s are not used", processes[i].OutlineString(), NamesToString(right))
-	// // }
-
-	// //todo fix
-	// // Check that the free names are declared with a type
-	// for _, fn := range assumedFreeNames[i] {
-	// 	if fn.Type != nil {
-	// 		typesToCheck = append(typesToCheck, fn.Type)
-	// 	} else {
-	// 		return fmt.Errorf("in process %s, name '%s' is declared with a missing type", processes[i].OutlineString(), fn.String())
-	// 	}
-	// }
-
 	return nil
 }
 
@@ -281,9 +265,12 @@ func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv
 	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions)
 
 	for i := range processes {
-		// todo from the assumedFreeNames and defined process providers, take the free names from processes[i].Body
-		gammaNameTypesCtx := produceNameTypesCtx(assumedFreeNames)
+		// Obtain the free name types (to be set as Gamma)
+		freeNames := getFreeNameTypes(processes[i], processes, assumedFreeNames)
+		gammaNameTypesCtx := produceNameTypesCtx(freeNames)
 		providerType := processes[i].Type
+
+		// Run the typechecker
 		// might be a good idea to set the shadowProvider name to processes[i].Providers[0] (when there is only one provider)
 		err := processes[i].Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv)
 		if err != nil {
@@ -1280,6 +1267,39 @@ func checkNameType(name Name, labelledTypesEnv types.LabelledTypesEnv) error {
 	err := name.Type.CheckTypeLabels(labelledTypesEnv)
 
 	return err
+}
+
+// Given a process, it takes the free names and fetches their types from the assumed names or the process types
+func getFreeNameTypes(process *Process, processes []*Process, assumedFreeNames []Name) []Name {
+	// First prepare a map of all available names (both assumed and defined from a process)
+	allAvailableNames := make(map[string]NamesType)
+	for i := range processes {
+		for _, provider := range processes[i].Providers {
+			provider.Type = processes[i].Type
+			allAvailableNames[provider.Ident] = NamesType{Name: provider, Type: processes[i].Type}
+		}
+	}
+	for _, assumedFn := range assumedFreeNames {
+		allAvailableNames[assumedFn.Ident] = NamesType{Name: assumedFn, Type: assumedFn.Type}
+	}
+
+	// Get a list of all the free names from the current process that should have a type
+	processFreeNames := process.Body.FreeNames()
+	// Remove provider names, since those are bound
+	processFreeNames = NamesInFirstListOnly(processFreeNames, process.Providers)
+
+	// Fetch the names/types from the collection the we created earlier
+	var result []Name
+	for _, processFn := range processFreeNames {
+		fetchedName, found := allAvailableNames[processFn.Ident]
+
+		// From the preliminary checks, this should always succeed
+		if found {
+			result = append(result, fetchedName.Name)
+		}
+	}
+
+	return result
 }
 
 func logRule(s string) {

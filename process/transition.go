@@ -34,7 +34,7 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 // Entry point for each process transition
 // todo maybe rename to process.Transition
 func (process *Process) transitionLoop(re *RuntimeEnvironment) {
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", PolarityMap[process.Body.Polarity()], process.Body.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity()], process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
@@ -576,7 +576,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		re.error(process, "should forward on self")
 	}
 
-	if f.Polarity() == NEGATIVE {
+	if f.Polarity() == types.NEGATIVE {
 		// -ve
 		// least problematic
 		// ACTIVE
@@ -588,7 +588,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// todo check if this is needed: process.finishedRule(FWD, "[forward, client]", "", re)
 		process.terminateForward(re)
 
-	} else if f.Polarity() == POSITIVE {
+	} else if f.Polarity() == types.POSITIVE {
 		// +ve
 		// problematic
 		// PASSIVE: wait before acting
@@ -635,7 +635,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		process.finishedRule(FWD, "[fwd]", "(+ve)", re)
 		process.transitionLoop(re)
-	} else if f.Polarity() == UNKNOWN {
+	} else if f.Polarity() == types.UNKNOWN {
 		re.error(process, "forward has an unknown polarity")
 	}
 }

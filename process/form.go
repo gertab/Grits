@@ -12,7 +12,7 @@ import (
 type Form interface {
 	String() string
 	StringShort() string
-	Polarity() Polarity
+	Polarity() types.Polarity
 	FreeNames() []Name
 	Substitute(Name, Name)
 
@@ -73,11 +73,11 @@ func (p *SendForm) FreeNames() []Name {
 }
 
 // Polarity of a send process can be inferred directly from itself
-func (p *SendForm) Polarity() Polarity {
+func (p *SendForm) Polarity() types.Polarity {
 	if p.to_c.IsSelf {
-		return POSITIVE
+		return types.POSITIVE
 	} else {
-		return NEGATIVE
+		return types.NEGATIVE
 	}
 }
 
@@ -141,11 +141,11 @@ func (p *ReceiveForm) FreeNames() []Name {
 }
 
 // Polarity of a receive process can be inferred directly from itself
-func (p *ReceiveForm) Polarity() Polarity {
+func (p *ReceiveForm) Polarity() types.Polarity {
 	if p.from_c.IsSelf {
-		return NEGATIVE
+		return types.NEGATIVE
 	} else {
-		return POSITIVE
+		return types.POSITIVE
 	}
 }
 
@@ -191,11 +191,11 @@ func (p *SelectForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *SelectForm) Polarity() Polarity {
+func (p *SelectForm) Polarity() types.Polarity {
 	if p.to_c.IsSelf {
-		return POSITIVE
+		return types.POSITIVE
 	} else {
-		return NEGATIVE
+		return types.NEGATIVE
 	}
 }
 
@@ -205,7 +205,7 @@ type BranchForm struct {
 	label          Label
 	payload_c      Name
 	continuation_e Form
-	polarity       Polarity
+	polarity       types.Polarity
 }
 
 func NewBranch(label Label, payload_c Name, continuation_e Form) *BranchForm {
@@ -274,11 +274,11 @@ func (p *BranchForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *BranchForm) Polarity() Polarity {
+func (p *BranchForm) Polarity() types.Polarity {
 	return p.polarity
 }
 
-func (p *BranchForm) SetPolarity(polarity Polarity) {
+func (p *BranchForm) SetPolarity(polarity types.Polarity) {
 	p.polarity = polarity
 }
 
@@ -290,12 +290,12 @@ type CaseForm struct {
 
 func NewCase(from_c Name, branches []*BranchForm) *CaseForm {
 	// Set polarity of the branches to match the case construct
-	polarity := UNKNOWN
+	polarity := types.UNKNOWN
 
 	if from_c.IsSelf {
-		polarity = NEGATIVE
+		polarity = types.NEGATIVE
 	} else {
-		polarity = POSITIVE
+		polarity = types.POSITIVE
 	}
 
 	for i := range branches {
@@ -344,11 +344,11 @@ func (p *CaseForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *CaseForm) Polarity() Polarity {
+func (p *CaseForm) Polarity() types.Polarity {
 	if p.from_c.IsSelf {
-		return NEGATIVE
+		return types.NEGATIVE
 	} else {
-		return POSITIVE
+		return types.POSITIVE
 	}
 }
 
@@ -357,11 +357,11 @@ type NewForm struct {
 	continuation_c   Name
 	body             Form
 	continuation_e   Form
-	polarity         Polarity // user inputted polarity [used as an alternative when types are omitted]
+	polarity         types.Polarity // user inputted polarity [used as an alternative when types are omitted]
 	derivedFromMacro bool
 }
 
-func NewNew(continuation_c Name, body, continuation_e Form, polarity Polarity) *NewForm {
+func NewNew(continuation_c Name, body, continuation_e Form, polarity types.Polarity) *NewForm {
 	return &NewForm{
 		continuation_c:   continuation_c,
 		body:             body,
@@ -405,7 +405,7 @@ func (p *NewForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *NewForm) Polarity() Polarity {
+func (p *NewForm) Polarity() types.Polarity {
 	return p.polarity
 }
 
@@ -439,18 +439,18 @@ func (p *CloseForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *CloseForm) Polarity() Polarity {
-	return POSITIVE
+func (p *CloseForm) Polarity() types.Polarity {
+	return types.POSITIVE
 }
 
 // Forward: fwd to_c from_c
 type ForwardForm struct {
 	to_c     Name
 	from_c   Name
-	polarity Polarity
+	polarity types.Polarity
 }
 
-func NewForward(to_c, from_c Name, polarity Polarity) *ForwardForm {
+func NewForward(to_c, from_c Name, polarity types.Polarity) *ForwardForm {
 	return &ForwardForm{to_c: to_c, from_c: from_c, polarity: polarity}
 }
 
@@ -479,7 +479,7 @@ func (p *ForwardForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *ForwardForm) Polarity() Polarity {
+func (p *ForwardForm) Polarity() types.Polarity {
 	// todo get polarity from the type
 	return p.polarity
 }
@@ -490,10 +490,10 @@ type SplitForm struct {
 	channel_two    Name
 	from_c         Name
 	continuation_e Form
-	polarity       Polarity
+	polarity       types.Polarity
 }
 
-func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form, polarity Polarity) *SplitForm {
+func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form, polarity types.Polarity) *SplitForm {
 	return &SplitForm{
 		channel_one:    channel_one,
 		channel_two:    channel_two,
@@ -544,7 +544,7 @@ func (p *SplitForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *SplitForm) Polarity() Polarity {
+func (p *SplitForm) Polarity() types.Polarity {
 	return p.polarity
 }
 
@@ -553,10 +553,10 @@ type CallForm struct {
 	functionName string
 	parameters   []Name
 	ProviderType types.SessionType
-	polarity     Polarity
+	polarity     types.Polarity
 }
 
-func NewCall(functionName string, parameters []Name, polarity Polarity) *CallForm {
+func NewCall(functionName string, parameters []Name, polarity types.Polarity) *CallForm {
 	return &CallForm{
 		functionName: functionName,
 		parameters:   parameters,
@@ -590,7 +590,7 @@ func (p *CallForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *CallForm) Polarity() Polarity {
+func (p *CallForm) Polarity() types.Polarity {
 	// todo ProviderType
 	return p.polarity
 }
@@ -640,8 +640,8 @@ func (p *WaitForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *WaitForm) Polarity() Polarity {
-	return POSITIVE
+func (p *WaitForm) Polarity() types.Polarity {
+	return types.POSITIVE
 }
 
 // Cast: cast to_c<continuation_c>
@@ -684,11 +684,11 @@ func (p *CastForm) FreeNames() []Name {
 }
 
 // Polarity of a send process can be inferred directly from itself
-func (p *CastForm) Polarity() Polarity {
+func (p *CastForm) Polarity() types.Polarity {
 	if p.to_c.IsSelf {
-		return POSITIVE
+		return types.POSITIVE
 	} else {
-		return NEGATIVE
+		return types.NEGATIVE
 	}
 }
 
@@ -743,11 +743,11 @@ func (p *ShiftForm) FreeNames() []Name {
 }
 
 // Polarity of a receive process can be inferred directly from itself
-func (p *ShiftForm) Polarity() Polarity {
+func (p *ShiftForm) Polarity() types.Polarity {
 	if p.from_c.IsSelf {
-		return NEGATIVE
+		return types.NEGATIVE
 	} else {
-		return POSITIVE
+		return types.POSITIVE
 	}
 }
 
@@ -792,8 +792,8 @@ func (p *DropForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *DropForm) Polarity() Polarity {
-	return POSITIVE
+func (p *DropForm) Polarity() types.Polarity {
+	return types.POSITIVE
 }
 
 // Print: print name_c
@@ -839,8 +839,8 @@ func (p *PrintForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *PrintForm) Polarity() Polarity {
-	return UNKNOWN
+func (p *PrintForm) Polarity() types.Polarity {
+	return types.UNKNOWN
 }
 
 // Check equality between different forms
@@ -1130,20 +1130,6 @@ func (p *Label) String() string {
 
 func (label1 *Label) Equal(label2 Label) bool {
 	return label1.String() == label2.String()
-}
-
-type Polarity int
-
-const (
-	POSITIVE Polarity = iota
-	NEGATIVE
-	UNKNOWN
-)
-
-var PolarityMap = map[Polarity]string{
-	POSITIVE: "+ve",
-	NEGATIVE: "-ve",
-	UNKNOWN:  "Unknown",
 }
 
 // Utility functions

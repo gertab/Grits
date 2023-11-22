@@ -28,7 +28,7 @@ type phiSymType struct {
 	branches       []*process.BranchForm
 	sessionType    types.SessionType
 	sessionTypeAlt []types.BranchOption
-	polarity       process.Polarity
+	polarity       types.Polarity
 }
 
 const LABEL = 57346
@@ -781,13 +781,13 @@ phidefault:
 		phiDollar = phiS[phipt-6 : phipt+1]
 //line parser/parser.y:102
 		{
-			phiVAL.form = process.NewNew(phiDollar[1].name, phiDollar[4].form, phiDollar[6].form, process.UNKNOWN)
+			phiVAL.form = process.NewNew(phiDollar[1].name, phiDollar[4].form, phiDollar[6].form, types.UNKNOWN)
 		}
 	case 21:
 		phiDollar = phiS[phipt-8 : phipt+1]
 //line parser/parser.y:104
 		{
-			phiVAL.form = process.NewNew(process.Name{Ident: phiDollar[1].strval, Type: phiDollar[3].sessionType, IsSelf: false}, phiDollar[6].form, phiDollar[8].form, process.UNKNOWN)
+			phiVAL.form = process.NewNew(process.Name{Ident: phiDollar[1].strval, Type: phiDollar[3].sessionType, IsSelf: false}, phiDollar[6].form, phiDollar[8].form, types.UNKNOWN)
 		}
 	case 22:
 		phiDollar = phiS[phipt-7 : phipt+1]
@@ -805,7 +805,7 @@ phidefault:
 		phiDollar = phiS[phipt-4 : phipt+1]
 //line parser/parser.y:110
 		{
-			phiVAL.form = process.NewCall(phiDollar[1].strval, phiDollar[3].names, process.UNKNOWN)
+			phiVAL.form = process.NewCall(phiDollar[1].strval, phiDollar[3].names, types.UNKNOWN)
 		}
 	case 25:
 		phiDollar = phiS[phipt-5 : phipt+1]
@@ -823,7 +823,7 @@ phidefault:
 		phiDollar = phiS[phipt-3 : phipt+1]
 //line parser/parser.y:116
 		{
-			phiVAL.form = process.NewForward(phiDollar[2].name, phiDollar[3].name, process.UNKNOWN)
+			phiVAL.form = process.NewForward(phiDollar[2].name, phiDollar[3].name, types.UNKNOWN)
 		}
 	case 28:
 		phiDollar = phiS[phipt-4 : phipt+1]
@@ -835,7 +835,7 @@ phidefault:
 		phiDollar = phiS[phipt-10 : phipt+1]
 //line parser/parser.y:120
 		{
-			phiVAL.form = process.NewSplit(phiDollar[2].name, phiDollar[4].name, phiDollar[8].name, phiDollar[10].form, process.UNKNOWN)
+			phiVAL.form = process.NewSplit(phiDollar[2].name, phiDollar[4].name, phiDollar[8].name, phiDollar[10].form, types.UNKNOWN)
 		}
 	case 30:
 		phiDollar = phiS[phipt-11 : phipt+1]
@@ -1100,13 +1100,13 @@ phidefault:
 		phiDollar = phiS[phipt-1 : phipt+1]
 //line parser/parser.y:230
 		{
-			phiVAL.polarity = process.POSITIVE
+			phiVAL.polarity = types.POSITIVE
 		}
 	case 72:
 		phiDollar = phiS[phipt-1 : phipt+1]
 //line parser/parser.y:231
 		{
-			phiVAL.polarity = process.NEGATIVE
+			phiVAL.polarity = types.NEGATIVE
 		}
 	case 73:
 		phiDollar = phiS[phipt-4 : phipt+1]
@@ -1114,7 +1114,7 @@ phidefault:
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{
 				kind: EXEC_DEF,
-				proc: incompleteProcess{Body: process.NewCall(phiDollar[2].strval, []process.Name{}, process.UNKNOWN)}}
+				proc: incompleteProcess{Body: process.NewCall(phiDollar[2].strval, []process.Name{}, types.UNKNOWN)}}
 		}
 	case 74:
 		phiDollar = phiS[phipt-5 : phipt+1]

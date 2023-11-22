@@ -15,6 +15,7 @@ type SessionTypeDefinition struct {
 
 type SessionType interface {
 	String() string
+	// Polarity() uint
 
 	// used for inner checks
 	CheckTypeLabels(LabelledTypesEnv) error
@@ -38,6 +39,7 @@ func NewLabelType(i string) *LabelType {
 
 type WIPType struct{}
 
+// todo remove WIP
 func (q *WIPType) String() string {
 	return "wip"
 }
@@ -137,6 +139,56 @@ func (q *BranchCaseType) String() string {
 func NewBranchCaseType(branches []BranchOption) *BranchCaseType {
 	return &BranchCaseType{
 		Branches: branches,
+	}
+}
+
+// Up shift: m /\ n ...
+type UpType struct {
+	From         Modality
+	To           Modality
+	Continuation SessionType
+}
+
+func (q *UpType) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(ModalityMap[q.From])
+	buffer.WriteString("/\\")
+	buffer.WriteString(ModalityMap[q.To])
+	buffer.WriteString(" ")
+	buffer.WriteString(q.Continuation.String())
+	return buffer.String()
+}
+
+func NewUpType(From, To Modality, Continuation SessionType) *UpType {
+	return &UpType{
+		From:         From,
+		To:           To,
+		Continuation: Continuation,
+	}
+}
+
+// Down shift: m \/ n ...
+type DownType struct {
+	From         Modality
+	To           Modality
+	Continuation SessionType
+}
+
+func (q *DownType) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(ModalityMap[q.From])
+	buffer.WriteString("\\/")
+	buffer.WriteString(ModalityMap[q.To])
+	buffer.WriteString(" ")
+	buffer.WriteString(q.Continuation.String())
+	return buffer.String()
+}
+
+func NewDownType(From, To Modality, Continuation SessionType) *DownType {
+	return &DownType{
+		From:         From,
+		To:           To,
+		Continuation: Continuation,
 	}
 }
 
@@ -286,8 +338,6 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 			// todo check if order matters
 			return equalTypeBranch(f1.Branches, f2.Branches, snapshots, labelledTypesEnv)
 		}
-	case *WIPType:
-		return true
 	}
 
 	fmt.Printf("issue in EqualType for type %s\n", a)
@@ -392,9 +442,6 @@ func CopyType(orig SessionType) SessionType {
 
 			return NewBranchCaseType(branches)
 		}
-
-	case *WIPType:
-		return NewWIPType()
 	}
 
 	panic("Should not happen (type)")

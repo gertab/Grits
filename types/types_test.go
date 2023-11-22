@@ -18,6 +18,7 @@ func TestSimpleStrings(t *testing.T) {
 		{NewReceiveType(label1, label2), "abc -* def"},
 		{NewSelectType([]BranchOption{{Label: "a", Session_type: label1}}), "+{a : abc}"},
 		{NewBranchCaseType([]BranchOption{{Label: "a", Session_type: label1}}), "&{a : abc}"},
+		// {NewUpType(), ""},
 	}
 
 	for i, c := range cases {

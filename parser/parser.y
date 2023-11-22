@@ -21,7 +21,7 @@ import (
 	branches 		[]*process.BranchForm
 	sessionType 	types.SessionType
 	sessionTypeAlt 	[]types.BranchOption
-	polarity 		process.Polarity
+	polarity 		types.Polarity
 }
 
 %token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
@@ -99,25 +99,25 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   | /* Case */ CASE name LPAREN branches RPAREN 
 		   			{ $$ = process.NewCase($2, $4) }
 		   | /* New */ name LEFT_ARROW NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew($1, $4, $6, process.UNKNOWN) } 
+					{ $$ = process.NewNew($1, $4, $6,  types.UNKNOWN) } 
 		   | /* New */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8, process.UNKNOWN) } 		   
+					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8,  types.UNKNOWN) } 		   
 		   | /* New (polarity) */ name LEFT_ARROW polarity NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $5, $7, $3) } 
 		   | /* New (polarity) */ LABEL COLON session_type LEFT_ARROW polarity NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, $5) } 
 		   | /* Call */ LABEL LPAREN optional_names RPAREN
-		   			{ $$ = process.NewCall($1, $3, process.UNKNOWN) }
+		   			{ $$ = process.NewCall($1, $3,  types.UNKNOWN) }
 		   | /* Call (polarity) */ polarity LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, $1) }
 		   | /* Close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
 		   | /* Forward (without explicit polarities) */ FORWARD name name
-				{ $$ = process.NewForward($2, $3, process.UNKNOWN) } 
+				{ $$ = process.NewForward($2, $3,  types.UNKNOWN) } 
 		   | /* Forward (polarity) */ polarity FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, $1) }
 		   | /* Split (without explicit polarities) */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
-		   			{ $$ = process.NewSplit($2, $4, $8, $10, process.UNKNOWN) }
+		   			{ $$ = process.NewSplit($2, $4, $8, $10,  types.UNKNOWN) }
 		   | /* Split (polarity) */ LANGLE name COMMA name RANGLE LEFT_ARROW polarity SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $9, $11, $7) }
 		   | /* Wait */ WAIT name SEQUENCE expression
@@ -227,14 +227,14 @@ session_type_alts :
 	 	  | LABEL COLON session_type COMMA session_type_alts { $$ = append([]types.BranchOption{*types.NewBranchOption($1, $3)}, $5...) };
 
 
-polarity : PLUS { $$ = process.POSITIVE }
-	     | MINUS { $$ = process.NEGATIVE };
+polarity : PLUS { $$ = types.POSITIVE }
+	     | MINUS { $$ = types.NEGATIVE };
 
 /* execute function definitions directly */
 exec_def : EXEC LABEL LPAREN RPAREN
 			{ $$ = unexpandedProcessOrFunction{
 				kind: EXEC_DEF, 
-				proc: incompleteProcess{Body: process.NewCall($2, []process.Name{}, process.UNKNOWN)}}}
+				proc: incompleteProcess{Body: process.NewCall($2, []process.Name{},  types.UNKNOWN)}}}
 		 | EXEC polarity LABEL LPAREN RPAREN
 		 	{ $$ = unexpandedProcessOrFunction{
 		 			kind: EXEC_DEF, 

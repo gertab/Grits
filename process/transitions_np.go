@@ -30,7 +30,7 @@ func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
 
 // Entry point for each process transition
 func (process *Process) transitionLoopNP(re *RuntimeEnvironment) {
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", PolarityMap[process.Body.Polarity()], process.Body.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity()], process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.Delay)

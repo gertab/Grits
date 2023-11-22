@@ -164,6 +164,14 @@ func (q *BranchCaseType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) erro
 	return nil
 }
 
+func (q *UpType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+	return q.Continuation.CheckTypeLabels(labelledTypesEnv)
+}
+
+func (q *DownType) CheckTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
+	return q.Continuation.CheckTypeLabels(labelledTypesEnv)
+}
+
 // Ensures that the labelled types are contractive
 // For example, the following definitions is not allowed:
 // -> type C = D
@@ -212,6 +220,15 @@ func (q *BranchCaseType) isContractive(labelledTypesEnv LabelledTypesEnv, snapsh
 	return true
 }
 
+func (q *UpType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots map[string]bool) bool {
+	// not entirely sure about shifting
+	return true
+}
+
+func (q *DownType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots map[string]bool) bool {
+	return true
+}
+
 // func (q *LabelType) String() string {}
 // func (q *WIPType) String() string {}
 // func (q *UnitType) String() string {}
@@ -219,3 +236,5 @@ func (q *BranchCaseType) isContractive(labelledTypesEnv LabelledTypesEnv, snapsh
 // func (q *ReceiveType) String() string {}
 // func (q *SelectLabelType) String() string {}
 // func (q *BranchCaseType) String() string {}
+// func (q *UpType) String() string {}
+// func (q *DownType) String() string {}

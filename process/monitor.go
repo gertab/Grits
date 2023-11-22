@@ -2,6 +2,7 @@ package process
 
 import (
 	"fmt"
+	"phi/types"
 	"strconv"
 	"sync"
 	"time"
@@ -156,7 +157,7 @@ func (m *Monitor) updateSubscriberProcesses() {
 				providers = append(providers, provider.String())
 			}
 
-			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String(), Polarity: PolarityMap[value.Body.Polarity()]})
+			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String(), Polarity: types.PolarityMap[value.Body.Polarity()]})
 		}
 
 		// Prepare list of links between processes

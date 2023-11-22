@@ -18,7 +18,7 @@ type Name struct {
 	Channel chan Message
 	// Polarity used in NORMAL_[A]SYNC
 	// todo: currently not being set/used, but might be useful to use it
-	Polarity Polarity
+	Polarity types.Polarity
 	// Used for control commands (i.e. fwd, split, ...) in NON_POLARIZED_SYNC
 	ControlChannel chan ControlMessage
 	// Channel ID is a unique id for each channel

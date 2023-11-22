@@ -86,7 +86,7 @@ func TestBasicForms(t *testing.T) {
 
 	input = "cont_c <- +new (close self); close self"
 	output = append(output, parseGetBody(input))
-	expected = append(expected, process.NewNew(cont_c, end, end, process.POSITIVE))
+	expected = append(expected, process.NewNew(cont_c, end, end, types.POSITIVE))
 
 	input = "close from_c"
 	output = append(output, parseGetBody(input))
@@ -94,11 +94,11 @@ func TestBasicForms(t *testing.T) {
 
 	input = "+fwd to_c from_c"
 	output = append(output, parseGetBody(input))
-	expected = append(expected, process.NewForward(to_c, from_c, process.POSITIVE))
+	expected = append(expected, process.NewForward(to_c, from_c, types.POSITIVE))
 
 	input = "<pay_c,cont_c> <- +split from_c; close self"
 	output = append(output, parseGetBody(input))
-	expected = append(expected, process.NewSplit(pay_c, cont_c, from_c, end, process.POSITIVE))
+	expected = append(expected, process.NewSplit(pay_c, cont_c, from_c, end, types.POSITIVE))
 
 	input = "wait from_c; close self"
 	output = append(output, parseGetBody(input))

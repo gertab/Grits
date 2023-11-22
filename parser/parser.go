@@ -20,6 +20,7 @@ type unexpandedProcessOrFunction struct {
 	assumedFreeNameTypes []process.Name
 }
 
+// Different kinds of statements
 type Kind int
 
 const (
@@ -27,6 +28,7 @@ const (
 	FUNCTION_DEF
 	TYPE_DEF
 	ASSUMING_DEF
+	EXEC_DEF
 )
 
 // Process that is currently being parsed and yet to become a process.Process
@@ -130,6 +132,25 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 		} else if p.kind == ASSUMING_DEF {
 			// Collect assumed free names from 'assuming ...'
 			assumedFreeNames = append(assumedFreeNames, p.assumedFreeNameTypes...)
+		}
+	}
+
+	// Define process
+	execCount := 0
+	for _, p := range u.procsAndFuns {
+		if p.kind == EXEC_DEF {
+			execCount += 1
+
+			// fetch type from the function type
+
+			functionName := p.proc.Body.(*process.CallForm).FunctionName()
+
+			function := process.GetFunctionByNameArity(functions, functionName, 0)
+			if function == nil {
+				return nil, nil, nil, fmt.Errorf("invalid calling exec on %s()", functionName)
+			}
+			new_p := process.NewProcess(p.proc.Body, []process.Name{{Ident: fmt.Sprintf("exec%d", execCount), IsSelf: true}}, function.Type, process.LINEAR)
+			processes = append(processes, new_p)
 		}
 	}
 

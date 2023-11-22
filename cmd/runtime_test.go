@@ -221,6 +221,23 @@ func TestSimpleFunctionCalls(t *testing.T) {
 	checkInputRepeatedly(t, input, expected)
 }
 
+func TestExec(t *testing.T) {
+	// Case 9: Function calls, with and without explicit self passed
+
+	input := ` 
+	type A = 1
+
+	let f() : A = x : A <- new close x; 
+					wait x; 
+					close self
+	
+	exec f()`
+	expected := []traceOption{
+		{steps{{"exec1", process.CALL}, {"exec1", process.CUT}, {"exec1", process.CLS}}},
+	}
+	checkInputRepeatedly(t, input, expected)
+}
+
 type step struct {
 	processName string
 	rule        process.Rule

@@ -13,11 +13,14 @@ import (
 
 const program = `
 
-assuming aa : 1 -* 1, bb : 1, x : 1 -* 1, y : 1
-let f3[w: 1, a : 1 -* 1, b : 1] = send a<b, self>
-prc[x] : 1 * 1= f3(aa, bb)
-prc[y] : 1 = f3(self, x, y)
 
+type A = 1
+
+let f() : A = x : A <- new close x; 
+				wait x; 
+				close self
+
+exec g()
 
 // type A = &{label : 1}
 // type B = 1 -* 1
@@ -284,7 +287,7 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-const development = false
+const development = true
 
 func main() {
 	// Flags

@@ -24,13 +24,14 @@ import (
 	polarity 		process.Polarity
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING
+%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
 %type <strval> LABEL
 %type <statements> statements 
 %type <common_type> process_def
 %type <common_type> function_def
 %type <common_type> type_def
 %type <common_type> assuming_def
+%type <common_type> exec_def
 %type <form> expression 
 %type <name> name
 %type <name> name_with_type_ann
@@ -44,12 +45,8 @@ import (
 %type <sessionTypeAlt> session_type_alts
 %type <polarity> polarity
 
-%left SEND
-%left SEQUENCE
-%right TIMES
-%right LOLLI
-
-%left LABEL LEFT_ARROW NEW
+%left SEQUENCE RANGLE
+%right TIMES LOLLI
 
 %%
 
@@ -60,7 +57,7 @@ program :
 		/* todo remove */
 	   expression 
 		{
-			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root", IsSelf: false}}}})
+			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body:$1, Providers: []process.Name{{Ident: "root" , IsSelf: false}}}})
 		}
 	 | statements 
 		{ 
@@ -72,11 +69,13 @@ program :
 statements : process_def             { $$ = []unexpandedProcessOrFunction{$1} }
 		   | process_def statements  { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
 		   | function_def            { $$ = []unexpandedProcessOrFunction{$1} }
-		   | function_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		   | function_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
 		   | type_def 				 { $$ = []unexpandedProcessOrFunction{$1} }
-		   | type_def statements 	 { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		   | type_def statements 	 { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
 		   | assuming_def 			 { $$ = []unexpandedProcessOrFunction{$1} }
-		   | assuming_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		   | assuming_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
+		   | exec_def 			 	 { $$ = []unexpandedProcessOrFunction{$1} }
+		   | exec_def statements 	 { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
 
 /* A process is defined using the prc keyword */
 process_def : 
@@ -91,36 +90,35 @@ process_def :
 /* Expressions form the core part of a program  */
 expression : /* Send */ SEND name LANGLE name COMMA name RANGLE  
 					{ $$ = process.NewSend($2, $4, $6) }
-/* Send Macro */
-/* | SEND name LANGLE name COMMA name RANGLE SEQUENCE expression
-			{ $$ = NewSendMacroForm($2, $4, $6, $9) } */
+		   /* Send Macro */ /* SEND name LANGLE name COMMA name RANGLE SEQUENCE expression
+			{ $$ = NewSendMacro($2, $4, $6, $9) }*/
 		   | /* Receive */ LANGLE name COMMA name RANGLE LEFT_ARROW RECEIVE name SEQUENCE expression 
 		   			{ $$ = process.NewReceive($2, $4, $8, $10) }
-		   | /* select */ name DOT LABEL LANGLE name RANGLE 
+		   | /* Select */ name DOT LABEL LANGLE name RANGLE 
 		   			{ $$ = process.NewSelect($1, process.Label{L: $3}, $5) }
-		   | /* case */ CASE name LPAREN branches RPAREN 
+		   | /* Case */ CASE name LPAREN branches RPAREN 
 		   			{ $$ = process.NewCase($2, $4) }
-		   | /* new */ name LEFT_ARROW NEW expression SEQUENCE expression 
+		   | /* New */ name LEFT_ARROW NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $4, $6, process.UNKNOWN) } 
-		   | /* new */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
+		   | /* New */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8, process.UNKNOWN) } 		   
-		   | /* new (polarity) */ name LEFT_ARROW polarity NEW expression SEQUENCE expression 
+		   | /* New (polarity) */ name LEFT_ARROW polarity NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew($1, $5, $7, $3) } 
-		   | /* new (polarity) */ LABEL COLON session_type LEFT_ARROW polarity NEW expression SEQUENCE expression 
+		   | /* New (polarity) */ LABEL COLON session_type LEFT_ARROW polarity NEW expression SEQUENCE expression 
 					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, $5) } 
-		   | /* call */ LABEL LPAREN optional_names RPAREN
+		   | /* Call */ LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($1, $3, process.UNKNOWN) }
-		   | /* call (polarity) */ polarity LABEL LPAREN optional_names RPAREN
+		   | /* Call (polarity) */ polarity LABEL LPAREN optional_names RPAREN
 		   			{ $$ = process.NewCall($2, $4, $1) }
-		   | /* close */ CLOSE name
+		   | /* Close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
-		   | /* forward (without explicit polarities) */ FORWARD name name
+		   | /* Forward (without explicit polarities) */ FORWARD name name
 				{ $$ = process.NewForward($2, $3, process.UNKNOWN) } 
-		   | /* forward (polarity) */ polarity FORWARD name name
+		   | /* Forward (polarity) */ polarity FORWARD name name
 		   			{ $$ = process.NewForward($3, $4, $1) }
-		   | /* split (without explicit polarities) */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
+		   | /* Split (without explicit polarities) */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $8, $10, process.UNKNOWN) }
-		   | /* split (polarity) */ LANGLE name COMMA name RANGLE LEFT_ARROW polarity SPLIT name SEQUENCE expression
+		   | /* Split (polarity) */ LANGLE name COMMA name RANGLE LEFT_ARROW polarity SPLIT name SEQUENCE expression
 		   			{ $$ = process.NewSplit($2, $4, $9, $11, $7) }
 		   | /* Wait */ WAIT name SEQUENCE expression
 		   			{ $$ = process.NewWait($2, $4) }
@@ -132,15 +130,10 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 					{ $$ = process.NewDrop($2, $4) }
 		   | /* Brackets */ LPAREN expression RPAREN
 					{ $$ = $2 }
-
-					/* used for shared processes */
-					/* for debugging */
-/* remaining expressions:
-	Snew, Cast, Shift
-	Acquire, Accept, Push, Detach, Release
-*/
-		   | /* print - for debugging */ PRINT name SEQUENCE expression
+		   | /* Print - for output */ PRINT name SEQUENCE expression
 		   			{ $$ = process.NewPrint($2, $4) };
+/* remaining expressions - used for shared processes
+	SNew, Acquire, Accept, Push, Detach, Release*/
  
 branches :   /* empty */         										 { $$ = nil }
          |               LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = []*process.BranchForm{process.NewBranch(process.Label{L: $1}, $3, $6)} }
@@ -236,6 +229,17 @@ session_type_alts :
 
 polarity : PLUS { $$ = process.POSITIVE }
 	     | MINUS { $$ = process.NEGATIVE };
+
+/* execute function definitions directly */
+exec_def : EXEC LABEL LPAREN RPAREN
+			{ $$ = unexpandedProcessOrFunction{
+				kind: EXEC_DEF, 
+				proc: incompleteProcess{Body: process.NewCall($2, []process.Name{}, process.UNKNOWN)}}}
+		 | EXEC polarity LABEL LPAREN RPAREN
+		 	{ $$ = unexpandedProcessOrFunction{
+		 			kind: EXEC_DEF, 
+		 			proc: incompleteProcess{Body: process.NewCall($3, []process.Name{}, $2)}}}
+
 %%
 
 // Parse is the entry point to the parser.

@@ -1,6 +1,10 @@
 
 type A = 1
 
-prc[pid0] : A = x : A <- new close x; 
-                wait x; 
-                close self
+let f() : A = x : A <- new close x; 
+                  wait x; 
+                  close self
+
+// prc[pid0] : A = f()
+
+exec f()

@@ -856,6 +856,10 @@ func (p *CallForm) Polarity() Polarity {
 	return p.polarity
 }
 
+func (p *CallForm) FunctionName() string {
+	return p.functionName
+}
+
 // Wait: wait to_c; P
 type WaitForm struct {
 	to_c           Name

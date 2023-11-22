@@ -668,3 +668,42 @@ func TestPreliminaryProcessesChecksIncorrect(t *testing.T) {
 
 	runThroughTypechecker(t, cases, false)
 }
+
+func TestExecCorrect(t *testing.T) {
+
+	cases := []string{
+		`type A = 1
+
+		let f() : A = x : A <- new close x; 
+						  wait x; 
+						  close self
+		
+		exec f()`,
+		`type A = 1
+
+		let f[w : A] = x : A <- new close x; 
+						  wait x; 
+						  close w
+		
+		exec f()
+		exec f()
+		`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestExecIncorrect(t *testing.T) {
+
+	cases := []string{
+		`type A = 1
+
+		let f() : A = x : A <- new close x; 
+						  wait x; 
+						  close self
+		
+		exec g()`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}

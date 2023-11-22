@@ -12,9 +12,11 @@ func SanityChecksTypeDefinitions(typesDefs []SessionTypeDefinition) error {
 		if exists {
 			return fmt.Errorf("error redefinition of the same type called '%s'", j.Name)
 		}
+
+		typeDefNames[j.Name] = true
 	}
 
-	// Mapping of  labels to their session type
+	// Mapping of labels to their session type
 	labelledTypesEnv := ProduceLabelledSessionTypeEnvironment(typesDefs)
 
 	// Check that all labelled reference point to a defined type
@@ -43,8 +45,6 @@ func SanityChecksTypeDefinitions(typesDefs []SessionTypeDefinition) error {
 		if err != nil {
 			return err
 		}
-
-		// }
 	}
 
 	return nil

@@ -1,5 +1,6 @@
 *.output
 todo.md
 .DS_STORE
+.vscode
 
 sketch/*

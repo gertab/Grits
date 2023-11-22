@@ -282,14 +282,14 @@ func TestSimpleFunctionDefinitionsWithoutTypechecking(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		// processes, processesFreeNames, globalEnv, err := ParseString(c.input)
+		// processes, assumedFreeNames, globalEnv, err := ParseString(c.input)
 		_, _, globalEnv, err := ParseString(c.input)
 
 		if err != nil {
 			t.Errorf("compilation error in case #%d: %s\n", i, err.Error())
 		}
 
-		// err = process.Typecheck(processes, processesFreeNames, globalEnv)
+		// err = process.Typecheck(processes, assumedFreeNames, globalEnv)
 
 		// if err != nil {
 		// 	t.Errorf("type error in case #%d: %s\n", i, err.Error())
@@ -312,13 +312,16 @@ func TestProcessesWithoutTypechecking(t *testing.T) {
 		{"prc[a] : 1 * 1 = close self", 1, 0},
 		{"prc[a, b, c] : 1 * 1 = close self", 1, 0},
 		{"prc[a, b, c] = close self", 1, 0},
-		{"prc[a, b, c] = close self % x : 1", 1, 1},
-		{"prc[a, b, c] = close self % x, y, z", 1, 3},
-		{"prc[a, b, c] = close self % x, y : 1 * 1, z", 1, 3},
+		{`assuming x : 1
+		  prc[a, b, c] = close self`, 1, 1},
+		{`assuming x, y, z
+		  prc[a, b, c] = close self`, 1, 3},
+		{`assuming x, y : 1 * 1, z
+		  prc[a, b, c] = close self`, 1, 3},
 	}
 
 	for i, c := range cases {
-		processes, processesFreeNames, _, err := ParseString(c.input)
+		processes, assumedFreeNames, _, err := ParseString(c.input)
 
 		if err != nil {
 			t.Errorf("compilation error in case #%d: %s\n", i, err.Error())
@@ -330,11 +333,7 @@ func TestProcessesWithoutTypechecking(t *testing.T) {
 				t.Errorf("error in case #%d: Got %d processes, expected %d\n", i, len(processes), c.expectedNumberProcesses)
 			}
 
-			if len(processesFreeNames) != c.expectedNumberProcesses {
-				t.Errorf("error in case #%d: Got %d processes, expected %d\n", i, len(processes), c.expectedNumberProcesses)
-			}
-
-			if len(processesFreeNames[0]) != c.expectedNumberFreeNames {
+			if len(assumedFreeNames) != c.expectedNumberFreeNames {
 				t.Errorf("error in case #%d: Got %d free names, expected %d\n", i, len(processes), c.expectedNumberFreeNames)
 			}
 		}

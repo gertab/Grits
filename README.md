@@ -15,15 +15,17 @@ You need to [install the Go language](https://go.dev/doc/install).
 
 Then you can build the project using the following command:
 
-`
-go  build .
-`
+To get dependencies:
+
+`go get .`
+
+To build project:
+
+`go  build .`
 
 To run the project directly, use the following command:
 
-`
-go  run .
-`
+`go  run .`
 
 ## How to use
 
@@ -41,7 +43,8 @@ After building the project (using `go  build .`), you can use the CLI version...
 <statement> ::= type <label> = <type>                               // labelled session type       
               | let <label> ( [<param>] ) : <type> = <term>         // function declaration
               | let <label> '[' <param> ']' = <term>                // function declaration with explicit provider name
-              | prc '[' <name> ']' : <type> = <term> [ '%' param ]  // create processes
+              | assuming <param>                                    // add name type assumptions
+              | prc '[' <name> ']' : <type> = <term>                // create processes
               | exec <label> ( )                                    // todo/execute function
 
 <param> ::= <name> : <type> [ , <param> ]                           // typed variable names

@@ -13,19 +13,20 @@ type allEnvironment struct {
 }
 
 type unexpandedProcessOrFunction struct {
-	kind              Kind
-	proc              incompleteProcess
-	function          process.FunctionDefinition
-	session_type      types.SessionTypeDefinition
-	freeNamesWithType []process.Name
+	kind                 Kind
+	proc                 incompleteProcess
+	function             process.FunctionDefinition
+	session_type         types.SessionTypeDefinition
+	assumedFreeNameTypes []process.Name
 }
 
 type Kind int
 
 const (
-	PROCESS Kind = iota
+	PROCESS_DEF Kind = iota
 	FUNCTION_DEF
 	TYPE_DEF
+	ASSUMING_DEF
 )
 
 // Process that is currently being parsed and yet to become a process.Process
@@ -35,7 +36,7 @@ type incompleteProcess struct {
 	Type      types.SessionType
 }
 
-func ParseString(program string) ([]*process.Process, [][]process.Name, *process.GlobalEnvironment, error) {
+func ParseString(program string) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
 	r := strings.NewReader(program)
 
 	allEnvironment, err := Parse(r)
@@ -44,16 +45,16 @@ func ParseString(program string) ([]*process.Process, [][]process.Name, *process
 		return nil, nil, nil, err
 	}
 
-	expandedProcesses, processInnerNames, globalEnv, err := expandProcesses(allEnvironment)
+	expandedProcesses, assumedFreeNames, globalEnv, err := expandProcesses(allEnvironment)
 
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return expandedProcesses, processInnerNames, globalEnv, nil
+	return expandedProcesses, assumedFreeNames, globalEnv, nil
 }
 
-func ParseFile(fileName string) ([]*process.Process, [][]process.Name, *process.GlobalEnvironment, error) {
+func ParseFile(fileName string) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		panic(err)
@@ -65,13 +66,13 @@ func ParseFile(fileName string) ([]*process.Process, [][]process.Name, *process.
 		return nil, nil, nil, err
 	}
 
-	expandedProcesses, processInnerNames, globalEnv, err := expandProcesses(allEnvironment)
+	expandedProcesses, assumedFreeNames, globalEnv, err := expandProcesses(allEnvironment)
 
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return expandedProcesses, processInnerNames, globalEnv, nil
+	return expandedProcesses, assumedFreeNames, globalEnv, nil
 }
 
 // func Check() {
@@ -85,10 +86,10 @@ func ParseFile(fileName string) ([]*process.Process, [][]process.Name, *process.
 // 	}
 // }
 
-func expandProcesses(u allEnvironment) ([]*process.Process, [][]process.Name, *process.GlobalEnvironment, error) {
+func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
 
 	var processes []*process.Process
-	var processInnerNames [][]process.Name
+	var assumedFreeNames []process.Name
 	var functions []process.FunctionDefinition
 	var types []types.SessionTypeDefinition
 
@@ -104,7 +105,7 @@ func expandProcesses(u allEnvironment) ([]*process.Process, [][]process.Name, *p
 			functions = append(functions, p.function)
 		} else if p.kind == TYPE_DEF {
 			types = append(types, p.session_type)
-		} else if p.kind == PROCESS {
+		} else if p.kind == PROCESS_DEF {
 			// Processes may have multiple provider names:
 			// 		e.g. prc[a, b, c, d]: send self<...>
 
@@ -126,11 +127,13 @@ func expandProcesses(u allEnvironment) ([]*process.Process, [][]process.Name, *p
 
 			// Package all processes along with the types of the free names
 			processes = append(processes, new_p)
-			processInnerNames = append(processInnerNames, p.freeNamesWithType)
+		} else if p.kind == ASSUMING_DEF {
+			// Collect assumed free names from 'assuming ...'
+			assumedFreeNames = append(assumedFreeNames, p.assumedFreeNameTypes...)
 		}
 	}
 
-	return processes, processInnerNames, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}, nil
+	return processes, assumedFreeNames, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}, nil
 }
 
 // // Forms used as shorthand notations

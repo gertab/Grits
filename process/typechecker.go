@@ -6,7 +6,7 @@ import (
 	"phi/types"
 )
 
-func Typecheck(processes []*Process, processesFreeNames [][]Name, globalEnv *GlobalEnvironment) error {
+func Typecheck(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment) error {
 	errorChan := make(chan error)
 	doneChan := make(chan bool)
 
@@ -14,7 +14,7 @@ func Typecheck(processes []*Process, processesFreeNames [][]Name, globalEnv *Glo
 
 	// Running in a separate process allows us to break the typechecking part as soon as the first
 	// error is found
-	go typecheckFunctionsAndProcesses(processes, processesFreeNames, globalEnv, errorChan, doneChan)
+	go typecheckFunctionsAndProcesses(processes, assumedFreeNames, globalEnv, errorChan, doneChan)
 
 	select {
 	case err := <-errorChan:
@@ -26,14 +26,27 @@ func Typecheck(processes []*Process, processesFreeNames [][]Name, globalEnv *Glo
 	return nil
 }
 
-func typecheckFunctionsAndProcesses(processes []*Process, processesFreeNames [][]Name, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
+func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
 	defer func() {
 		// todo replace with WG
 		doneChan <- true
 	}()
 
-	// Start with some preliminary check on the types
-	err := preliminaryChecks(processes, processesFreeNames, globalEnv)
+	assignTypesToProcessProviders(processes)
+
+	// Start with some preliminary check on the labelled types
+	err := preliminaryTypesDefinitionsChecks(globalEnv)
+	if err != nil {
+		errorChan <- err
+	}
+
+	// Start with some preliminary check on the function definitions
+	err = preliminaryFunctionDefinitionsChecks(globalEnv)
+	if err != nil {
+		errorChan <- err
+	}
+
+	err = preliminaryProcessesChecks(processes, assumedFreeNames, globalEnv)
 	if err != nil {
 		errorChan <- err
 	}
@@ -50,7 +63,7 @@ func typecheckFunctionsAndProcesses(processes []*Process, processesFreeNames [][
 	fmt.Println("Function declarations typecheck ok")
 
 	// 2) Typecheck process definitions
-	err = typecheckProcesses(processes, processesFreeNames, globalEnv)
+	err = typecheckProcesses(processes, assumedFreeNames, globalEnv)
 	if err != nil {
 		errorChan <- err
 	}
@@ -58,21 +71,32 @@ func typecheckFunctionsAndProcesses(processes []*Process, processesFreeNames [][
 	fmt.Println("Process declarations typecheck ok")
 }
 
-// Perform some preliminary checks about the type definitions
-// Ensures that types only referred to existing labelled types (i.e. recursion is used correctly). Also, ensures that there are no missing types and that types are well formed
-func preliminaryChecks(processes []*Process, processesFreeNames [][]Name, globalEnv *GlobalEnvironment) error {
-
-	// First analyse the labelled types (i.e. type A = ...)
-	err := types.SanityChecksTypeDefinitions(*globalEnv.Types)
-
-	if err != nil {
-		return err
+// Sets a common type to all provider names
+func assignTypesToProcessProviders(processes []*Process) {
+	for i := range processes {
+		SetTypesToNames(processes[i].Providers, processes[i].Type)
 	}
+}
+
+//////////////////////////////////////////////////////
+///////////////// Preliminary checks /////////////////
+//////////////////////////////////////////////////////
+
+// Ensures that labelled types are well defined
+func preliminaryTypesDefinitionsChecks(globalEnv *GlobalEnvironment) error {
+	// First analyse the labelled types (i.e. type A = ...)
+	return types.SanityChecksTypeDefinitions(*globalEnv.Types)
+}
+
+// Perform some preliminary checks about the types in function definitions
+// Ensures that types only referred to existing labelled types (i.e. recursion is used correctly). Also, ensures that there are no missing types and that types are well formed
+func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
+
+	var typesToCheck []types.SessionType
 
 	// Analyse the function declarations types (i.e. let f(x : B) : A = ...)
 	unique := make(map[string]bool)
 	for _, f := range *globalEnv.FunctionDefinitions {
-		var typesToCheck []types.SessionType
 
 		// Check for duplicate function names
 		exists := unique[f.FunctionName]
@@ -97,21 +121,70 @@ func preliminaryChecks(processes []*Process, processesFreeNames [][]Name, global
 			}
 		}
 
+		// Ensure unique parameter names
 		if !AllNamesUnique(f.Parameters) {
 			return fmt.Errorf("in function definition %s, parameter/s %s are defined more than once", f.String(), NamesToString(DuplicateNames(f.Parameters)))
 		}
 
 		// Run the actual checks on the types
-		err = types.SanityChecksType(typesToCheck, *globalEnv.Types)
+		err := types.SanityChecksType(typesToCheck, *globalEnv.Types)
 		if err != nil {
 			return fmt.Errorf("type error in function definition %s; %s", f.String(), err)
 		}
 	}
 
-	var processNames []Name
+	return nil
+}
+
+// Perform similar preliminary checks on process definitions
+func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment) error {
+	// copy(assumedFreeNames, assumedFreeNames)
+
+	// Make sure that the assumed free names are unique and have an assigned type
+	// These are defined using the 'assuming' keyword: assuming a : A, b : B, ...
+	if !AllNamesUnique(assumedFreeNames) {
+		return fmt.Errorf("in the names assumptions, the free names %s are defined more than once", NamesToString(DuplicateNames(assumedFreeNames)))
+	}
+
+	var typesToCheck []types.SessionType
+	remainingAssumedFreeNames := make(map[string]bool)
+	for _, fn := range assumedFreeNames {
+		if fn.Type == nil {
+			return fmt.Errorf("the assumed name %s has no declared type. Use 'assuming %s : T' instead", fn.String(), fn.String())
+		}
+
+		// This will be used to make sure that all declared free names are used (exactly once) by some process
+		remainingAssumedFreeNames[fn.Ident] = true
+
+		typesToCheck = append(typesToCheck, fn.Type)
+	}
+
+	err := types.SanityChecksType(typesToCheck, *globalEnv.Types)
+	if err != nil {
+		return fmt.Errorf("type error when assuming name; %s", err)
+	}
+
+	// Check for uniqueness of provider names
+	allProcessNames := make(map[string]bool)
+	for i := range processes {
+		// Check for uniqueness of provider name within the local process definition
+		if !AllNamesUnique(processes[i].Providers) {
+			return fmt.Errorf("in process definition %s, the providers contain duplicate names (%s)", processes[i].OutlineString(), NamesToString(DuplicateNames(processes[i].Providers)))
+		}
+
+		// Check for uniqueness of provider names compared to all processes
+		for _, provider := range processes[i].Providers {
+			if allProcessNames[provider.Ident] {
+				return fmt.Errorf("in process definition %s, the provider used (%s) is already in use by other processes. Please use a different name", processes[i].OutlineString(), provider.Ident)
+			}
+			allProcessNames[provider.Ident] = true
+		}
+	}
 
 	// Check the types for the processes (i.e. prc[a] : A = ...)
 	for i := range processes {
+
+		// Check the provider type
 		var typesToCheck []types.SessionType
 		if processes[i].Type != nil {
 			typesToCheck = append(typesToCheck, processes[i].Type)
@@ -119,52 +192,65 @@ func preliminaryChecks(processes []*Process, processesFreeNames [][]Name, global
 			return fmt.Errorf("process %s has a missing type of provider", processes[i].OutlineString())
 		}
 
-		// Check also that the types annotated for each process are correct
-		// -> prc[a] : A = ... % b : A1, c : A2, ...
-		actualFreeNames := processes[i].Body.FreeNames()
-		// Remove provider names, since those are bound
-		actualFreeNames = NamesInFirstListOnly(actualFreeNames, processes[i].Providers)
-
-		if !AllNamesUnique(processesFreeNames[i]) {
-			return fmt.Errorf("in process declaration %s, the types for the free names %s are defined more than once", processes[i].OutlineString(), NamesToString(DuplicateNames(processesFreeNames[i])))
-		}
-
-		// Compare the free names with their types
-		// Left contains the free names with a defined type,
-		// while right contains the extra type definitions
-		left, right := NamesNotCommon(actualFreeNames, processesFreeNames[i])
-
-		if len(left) > len(right) {
-			return fmt.Errorf("in process %s, the free names %s do not have a defined type. Use '%%' followed by their type, e.g. '%% %s : 1'", processes[i].OutlineString(), NamesToString(left), left[0].String())
-		} else if len(right) > 0 {
-			return fmt.Errorf("in process %s, the types for %s are not used", processes[i].OutlineString(), NamesToString(right))
-		}
-
-		// Check that for uniqueness of name in process providers
-		if !AllNamesUnique(processes[i].Providers) {
-			return fmt.Errorf("in process definition %s, the providers contain duplicate names (%s)", processes[i].OutlineString(), NamesToString(DuplicateNames(processes[i].Providers)))
-		}
-
-		processNames = append(processNames, processes[i].Providers...)
-		if !AllNamesUnique(processNames) {
-			return fmt.Errorf("in process definition %s, the provider used (%s) is already in use by other processes. Please use a different name", processes[i].OutlineString(), NamesToString(DuplicateNames(processNames)))
-		}
-
-		// Check that the free names are declared with a type
-		for _, fn := range processesFreeNames[i] {
-			if fn.Type != nil {
-				typesToCheck = append(typesToCheck, fn.Type)
-			} else {
-				return fmt.Errorf("in process %s, name '%s' is declared with a missing type", processes[i].OutlineString(), fn.String())
-			}
-		}
-
-		// Run the actual checks on the types
+		// Run the checks
 		err = types.SanityChecksType(typesToCheck, *globalEnv.Types)
 		if err != nil {
 			return fmt.Errorf("type error in process %s; %s", processes[i].OutlineString(), err)
 		}
+
+		// Check also that the free names being used exist either as one of the other provider names, or as an assumed free name
+		processFreeNames := processes[i].Body.FreeNames()
+		// Remove provider names, since those are bound
+		processFreeNames = NamesInFirstListOnly(processFreeNames, processes[i].Providers)
+
+		for _, fn := range processFreeNames {
+			assumedNameCanBeUsed, foundInAssumed := remainingAssumedFreeNames[fn.Ident]
+			processNameCanBeUsed, foundInProcessNames := allProcessNames[fn.Ident]
+
+			if !foundInAssumed && !foundInProcessNames {
+				return fmt.Errorf("in process definition %s, the name %s is not defined. Use 'assume %s : T'", processes[i].OutlineString(), fn.Ident, fn.Ident)
+			} else if foundInAssumed && assumedNameCanBeUsed {
+				// Referring to an assumed free name
+				remainingAssumedFreeNames[fn.Ident] = false
+			} else if foundInAssumed && !assumedNameCanBeUsed {
+				// Referring to assumed name however it is already used
+				return fmt.Errorf("in process definition %s, the assumed name %s is already used elsewhere", processes[i].OutlineString(), fn.Ident)
+			} else if foundInProcessNames && processNameCanBeUsed {
+				// Referring to a process name
+				allProcessNames[fn.Ident] = false
+			} else if foundInProcessNames && !processNameCanBeUsed {
+				// Referring to process provider name however it is already used
+				return fmt.Errorf("in process definition %s, the process name %s is already used elsewhere", processes[i].OutlineString(), fn.Ident)
+			}
+		}
 	}
+
+	for name, remainingName := range remainingAssumedFreeNames {
+		if remainingName {
+			return fmt.Errorf("the assume name %s has never been used", name)
+		}
+	}
+
+	// // Compare the free names with their types
+	// // Left contains the free names with a defined type,
+	// // while right contains the extra type definitions
+	// left, right := NamesNotCommon(actualFreeNames, assumedFreeNames[i])
+
+	// // if len(left) > len(right) {
+	// // 	return fmt.Errorf("in process %s, the free names %s do not have a defined type. Use '%%' followed by their type, e.g. '%% %s : 1'", processes[i].OutlineString(), NamesToString(left), left[0].String())
+	// // } else if len(right) > 0 {
+	// // 	return fmt.Errorf("in process %s, the types for %s are not used", processes[i].OutlineString(), NamesToString(right))
+	// // }
+
+	// //todo fix
+	// // Check that the free names are declared with a type
+	// for _, fn := range assumedFreeNames[i] {
+	// 	if fn.Type != nil {
+	// 		typesToCheck = append(typesToCheck, fn.Type)
+	// 	} else {
+	// 		return fmt.Errorf("in process %s, name '%s' is declared with a missing type", processes[i].OutlineString(), fn.String())
+	// 	}
+	// }
 
 	return nil
 }
@@ -190,12 +276,13 @@ func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 // -> prc[a] : A = P % x: B, ...
 // using the judgement as follows:
 // -> x: B, ... ⊢ P :: (a : A)
-func typecheckProcesses(processes []*Process, processesFreeNames [][]Name, globalEnv *GlobalEnvironment) error {
+func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment) error {
 	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
 	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions)
 
 	for i := range processes {
-		gammaNameTypesCtx := produceNameTypesCtx(processesFreeNames[i])
+		// todo from the assumedFreeNames and defined process providers, take the free names from processes[i].Body
+		gammaNameTypesCtx := produceNameTypesCtx(assumedFreeNames)
 		providerType := processes[i].Type
 		// might be a good idea to set the shadowProvider name to processes[i].Providers[0] (when there is only one provider)
 		err := processes[i].Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv)

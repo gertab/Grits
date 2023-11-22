@@ -13,8 +13,10 @@ import (
 
 const program = `
 
-// prc[pid0] : 1 = x : 1 <- new close x; wait x; close self
-
+assuming x : 1, y : 1
+prc[a, b] : 1 = close self
+prc[c] : 1 = wait a; wait x; close self
+prc[d] : 1 = wait b; drop y; close self
 
 // type A = &{label : 1}
 // type B = 1 -* 1
@@ -31,19 +33,19 @@ const program = `
 
 
 
-type A = 1 * 1
+// type A = 1 * 1
 
-prc[pid1] : 1 = 
-		<a, b> <- +split pid2; 
-		<a2, b2> <- recv a; 
-		<a3, b3> <- recv b; 
-		wait a2; 
-		wait b2; 
-		wait a3; 
-		wait b3; 
-		close self   % pid2 : A
-prc[pid2] : A = send self<pid3, pid4>	% pid3 : 1, pid4 : 1
-prc[pid3, pid4] : 1 = close self
+// prc[pid1] : 1 = 
+// 		<a, b> <- +split pid2; 
+// 		<a2, b2> <- recv a; 
+// 		<a3, b3> <- recv b; 
+// 		wait a2; 
+// 		wait b2; 
+// 		wait a3; 
+// 		wait b3; 
+// 		close self   % pid2 : A
+// prc[pid2] : A = send self<pid3, pid4>	% pid3 : 1, pid4 : 1
+// prc[pid3, pid4] : 1 = close self
 
 
 
@@ -281,7 +283,7 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-const development = false
+const development = true
 
 func main() {
 	// Flags
@@ -310,7 +312,7 @@ func main() {
 	args := flag.Args()
 
 	var processes []*process.Process
-	var processesFreeNames [][]process.Name
+	var assumedFreeNames []process.Name
 	var globalEnv *process.GlobalEnvironment
 	var err error
 
@@ -321,14 +323,14 @@ func main() {
 	}
 
 	if development {
-		processes, processesFreeNames, globalEnv, err = parser.ParseString(program)
+		processes, assumedFreeNames, globalEnv, err = parser.ParseString(program)
 	} else {
 		if len(args) < 1 {
 			fmt.Println("expected name of file to be executed")
 			return
 		}
 
-		processes, processesFreeNames, globalEnv, err = parser.ParseFile(args[0])
+		processes, assumedFreeNames, globalEnv, err = parser.ParseFile(args[0])
 	}
 
 	if err != nil {
@@ -337,7 +339,7 @@ func main() {
 	}
 
 	if typecheckRes {
-		err = process.Typecheck(processes, processesFreeNames, globalEnv)
+		err = process.Typecheck(processes, assumedFreeNames, globalEnv)
 		if err != nil {
 			log.Fatal(err)
 			return

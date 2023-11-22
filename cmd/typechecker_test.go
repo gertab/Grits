@@ -11,13 +11,13 @@ import (
 // Parses the cases and expects each to pass the typechecking phase successfully (or not)
 func runThroughTypechecker(t *testing.T, cases []string, pass bool) {
 	for i, c := range cases {
-		processes, processesFreeNames, globalEnv, err := parser.ParseString(c)
+		processes, assumedFreeNames, globalEnv, err := parser.ParseString(c)
 
 		if err != nil {
 			t.Errorf("compilation error in case #%d: %s\n", i, err.Error())
 		}
 
-		err = process.Typecheck(processes, processesFreeNames, globalEnv)
+		err = process.Typecheck(processes, assumedFreeNames, globalEnv)
 
 		if pass {
 			if err != nil {
@@ -506,6 +506,130 @@ func TestTypecheckIncorrectSplit(t *testing.T) {
 		prc[x] : 1 = close self`,
 		`let f(x: 1, y : 1) : 1 = <u, x> <- split y; wait x; close self`,
 		`let f(x: 1, y : 1) : 1 = <u1, u2> <- split y; wait x; close self`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+// Preliminary Checks
+func TestPreliminaryFunctionDefChecksCorrect(t *testing.T) {
+
+	cases := []string{
+		`type A = 1`,
+		`type A = 1		
+		 type B = A -* 1`,
+		`type C = D
+		 type D = E
+		 type E = 1`,
+		`let f() : 1 = close self
+		 let f2() : 1 = close self`,
+		`let f(x : 1) : 1 = wait x; close self`,
+		`let f(x : 1, y : 1) : 1 = wait x; drop y; close self`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestPreliminaryFunctionDefChecksIncorrect(t *testing.T) {
+
+	cases := []string{
+		// B is undefined
+		`type A = B`,
+		// Duplicate label A
+		`type A = 1
+		 type A = 1`,
+		// D undefined
+		`type A = 1		
+		 type B = A -* 1
+		 type C = A -* D`,
+		// Non-contractive type
+		`type C = D
+		 type D = E
+		 type E = C`,
+		// Duplicate function name
+		`let f() : 1 = close self
+		 let f() : 1 = close self`,
+		`let f() : 1 = close self
+		 let f[w : 1] = close w`,
+		// No provider type
+		`let f() = close self`,
+		`let f(w) = close w`,
+		// No parameter type
+		`let f(x) : 1 = wait x; close self`,
+		// Duplicate parameter names
+		`let f(x : 1, x : 1) : 1 = wait x; drop x; close self`,
+		// Invalid parameter type
+		`type C = D
+		 let f(x : C) : 1 = wait x; close self`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+func TestPreliminaryProcessesChecksCorrect(t *testing.T) {
+
+	cases := []string{
+		`type A = 1`,
+		`assuming a : 1, b : 1`,
+		`prc[a, b] : 1 = close self`,
+		`assuming x : 1, y : 1
+		 prc[a, b] : 1 = close self
+		 prc[c] : 1 = wait a; close self
+		 prc[d] : 1 = wait b; close self
+		 prc[e] : 1 = wait x; wait y; close self`,
+		`assuming x : 1
+		 prc[a, b] : 1 = close self
+		 prc[c] : 1 = wait a; wait x; close self
+		 prc[d] : 1 = wait b; close self`,
+		`assuming x : 1, y : 1
+		 prc[a, b] : 1 = close self
+		 prc[c] : 1 = wait a; wait x; close self
+		 prc[d] : 1 = wait b; drop y; close self`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestPreliminaryProcessesChecksIncorrect(t *testing.T) {
+
+	cases := []string{
+		// Duplicate name assumptions
+		`assuming a : 1, b : 1, a : 1`,
+		`assuming a : 1, b : 1
+		assuming a : 1`,
+		// Assumptions without types
+		`assuming a : 1, b`,
+		// Undefined type B
+		`assuming a : 1, b : 1 * B`,
+		// Missing type of provider
+		`prc[a] = close self`,
+		// Duplicate provider names
+		`prc[a, b, a] : 1 = close self`,
+		`prc[a, b] : 1 = close self
+		 prc[a] : 1 = close self`,
+		`assuming x : 1, y : 1
+		 prc[b] : 1 = close aaa
+		 prc[c] : 1 = wait aaa; close self`,
+		`assuming x : 1
+		 prc[a, b] : 1 = close aaa
+		 prc[c] : 1 = wait a; wait x; close self`,
+		// assumed name used elsewhere
+		`assuming x : 1
+		prc[a, b] : 1 = close self
+		prc[c] : 1 = wait a; wait x; close self
+		prc[d] : 1 = wait b; close self
+		prc[e] : 1 = wait x; close self`,
+		// process name used elsewhere
+		`assuming x : 1
+		prc[a, b] : 1 = close self
+		prc[c] : 1 = wait a; wait x; close self
+		prc[d] : 1 = wait b; close self
+		prc[e] : 1 = wait b; close self`,
+		// remaining unused assumed names
+		`assuming x : 1, y : 1
+		prc[a, b] : 1 = close self
+		prc[c] : 1 = wait a; wait x; close self
+		prc[d] : 1 = wait b; close self`,
 	}
 
 	runThroughTypechecker(t, cases, false)

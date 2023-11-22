@@ -205,7 +205,7 @@ func AllNamesUnique(list []Name) bool {
 	return true
 }
 
-// Returns the duplicates in a list of namess
+// Returns the duplicates in a list of names
 func DuplicateNames(names []Name) []Name {
 	var duplicates []Name
 
@@ -218,6 +218,13 @@ func DuplicateNames(names []Name) []Name {
 	}
 
 	return duplicates
+}
+
+// Sets a common type to all names
+func SetTypesToNames(names []Name, t types.SessionType) {
+	for _, name := range names {
+		name.Type = types.CopyType(t)
+	}
 }
 
 func (name1 *Name) Equal(name2 Name) bool {

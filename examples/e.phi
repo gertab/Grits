@@ -2,7 +2,7 @@
 type A = &{labelok : 1, label2 : 1, label3 : 1}
 
 let f() : A = case self ( labelok<b> => close b
-//                        | label2<b>  => close b
+                        | label2<b>  => close b
                         | label3<b>  => close b )
 
 prc[pid1] : 1 = x <- new f();

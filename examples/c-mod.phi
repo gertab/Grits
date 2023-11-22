@@ -2,7 +2,9 @@
 
 type A = 1 * 1
 
-prc[pid1] : 1 using pid2 = 
+assuming pid2 : A, pid3 : 1, pid4 : 1
+
+prc[pid1] : 1 = 
 		<a, b> <- +split pid2; 
 		<a2, b2> <- recv a; 
 		<a3, b3> <- recv b; 
@@ -10,10 +12,10 @@ prc[pid1] : 1 using pid2 =
 		wait b2; 
 		wait a3; 
 		wait b3; 
-		close self   
-    % pid2 : A
+		close self
 
-prc[pid2] : A = send self<pid3, pid4>	% pid3 : 1, pid4 : 1
+prc[pid2] : A = send self<pid3, pid4>
+
 prc[pid3, pid4] : 1 = close self
 
 

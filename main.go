@@ -284,7 +284,7 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-const development = true
+const development = false
 
 func main() {
 	// Flags

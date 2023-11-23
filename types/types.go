@@ -15,7 +15,7 @@ type SessionTypeDefinition struct {
 
 type SessionType interface {
 	String() string
-	// Polarity() uint
+	Polarity() Polarity
 
 	// used for inner checks
 	checkTypeLabels(LabelledTypesEnv) error

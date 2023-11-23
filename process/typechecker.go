@@ -241,7 +241,7 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 
 func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
-	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions)
+	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions, labelledTypesEnv)
 
 	for _, funcDef := range *globalEnv.FunctionDefinitions {
 		gammaNameTypesCtx := produceNameTypesCtx(funcDef.Parameters)
@@ -262,7 +262,7 @@ func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 // -> x: B, ... ⊢ P :: (a : A)
 func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment) error {
 	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
-	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions)
+	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions, labelledTypesEnv)
 
 	for i := range processes {
 		// Obtain the free name types (to be set as Gamma)
@@ -753,6 +753,12 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationError)
 			}
 
+			// Check explicit polarities
+			if p.polarity != types.UNKNOWN && p.polarity != functionSignature.Type.Polarity() {
+				// Make sure that the explicit polarity matches as well
+				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[functionSignature.Type.Polarity()], types.PolarityMap[p.polarity])
+			}
+
 			// Set type
 			p.continuation_c.Type = functionSignature.Type
 		default:
@@ -784,7 +790,14 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			}
 
 			// Add new channel name to gamma
+			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
 			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: p.continuation_c.Type}
+
+			// Check explicit polarities
+			if p.polarity != types.UNKNOWN && p.polarity != p.continuation_c.Type.Polarity() {
+				// Make sure that the explicit polarity matches as well
+				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[p.continuation_c.Type.Polarity()], types.PolarityMap[p.polarity])
+			}
 
 			// typecheck the continuation of the cut rule
 			continuationBodyError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
@@ -887,12 +900,23 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	}
 
 	clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
+	clientType = types.Unfold(clientType, labelledTypesEnv)
 	if errorClient != nil {
 		return fmt.Errorf("error in %s; %s", p.String(), errorClient)
 	}
 
 	if !types.EqualType(providerType, clientType, labelledTypesEnv) {
 		return fmt.Errorf("problem in %s. Type of %s (%s) and %s (%s) do do not match", p.String(), p.to_c.String(), providerType.String(), p.from_c.String(), clientType.String())
+	}
+
+	// Check polarities
+	providerType = types.Unfold(providerType, labelledTypesEnv)
+	if clientType.Polarity() != providerType.Polarity() {
+		// Make sure that the polarities match
+		return fmt.Errorf("invalid polarities in %s: name '%s' is %s, while '%s' is %s", p.String(), p.to_c.String(), types.PolarityMap[providerType.Polarity()], p.from_c.String(), types.PolarityMap[clientType.Polarity()])
+	} else if p.polarity != types.UNKNOWN && p.polarity != providerType.Polarity() {
+		// Make sure that the explicit polarity matches as well
+		return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[providerType.Polarity()], types.PolarityMap[p.polarity])
 	}
 
 	// Set types
@@ -1017,6 +1041,12 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	// Set type
 	p.ProviderType = functionSignature.Type
 
+	// Check explicit polarities
+	if p.polarity != types.UNKNOWN && p.polarity != functionSignature.Type.Polarity() {
+		// Make sure that the explicit polarity matches as well
+		return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[functionSignature.Type.Polarity()], types.PolarityMap[p.polarity])
+	}
+
 	// make sure that no variables are left in gamma
 	err := linearGammaContext(gammaNameTypesCtx)
 
@@ -1060,6 +1090,12 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	p.channel_one.Type = foundType
 	p.channel_two.Type = foundType
 
+	// Check explicit polarities
+	if p.polarity != types.UNKNOWN && p.polarity != foundType.Polarity() {
+		// Make sure that the explicit polarity matches as well
+		return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.StringShort(), types.PolarityMap[foundType.Polarity()], types.PolarityMap[p.polarity])
+	}
+
 	// Continue checking the remaining process
 	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
@@ -1092,10 +1128,10 @@ type FunctionType struct {
 	Type         types.SessionType
 }
 
-func produceFunctionDefinitionsEnvironment(functionDefs []FunctionDefinition) FunctionTypesEnv {
+func produceFunctionDefinitionsEnvironment(functionDefs []FunctionDefinition, labelledTypesEnv types.LabelledTypesEnv) FunctionTypesEnv {
 	functionTypesEnv := make(FunctionTypesEnv)
 	for _, j := range functionDefs {
-		functionTypesEnv[j.FunctionName] = FunctionType{Type: j.Type, FunctionName: j.FunctionName, Parameters: j.Parameters}
+		functionTypesEnv[j.FunctionName] = FunctionType{Type: types.Unfold(j.Type, labelledTypesEnv), FunctionName: j.FunctionName, Parameters: j.Parameters}
 	}
 
 	return functionTypesEnv

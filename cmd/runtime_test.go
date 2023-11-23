@@ -29,7 +29,9 @@ func TestSimpleFWDRCV(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleFWDSND(t *testing.T) {
@@ -43,7 +45,9 @@ func TestSimpleFWDSND(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid1", process.SND}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleSND(t *testing.T) {
@@ -55,7 +59,9 @@ func TestSimpleSND(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"pid2", process.SND}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleCUTSND(t *testing.T) {
@@ -67,7 +73,9 @@ func TestSimpleCUTSND(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"pid1", process.CUT}, {"x", process.SND}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleCUTSNDFWDRCV(t *testing.T) {
@@ -83,7 +91,9 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 		// non polarized
 		{steps{{"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleMultipleFWD(t *testing.T) {
@@ -99,7 +109,9 @@ func TestSimpleMultipleFWD(t *testing.T) {
 		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}},
 		{steps{{"pid2", process.FWD}, {"pid3", process.FWD}, {"pid2", process.RCV}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleSPLITCUT(t *testing.T) {
@@ -118,22 +130,70 @@ func TestSimpleSPLITCUT(t *testing.T) {
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"x", process.SND}, {"x1", process.DUP}, {"x1", process.FWD}}},
 		// {steps{{"pid0", process.SPLIT}, {"pid2", process.SND}, {"pid2", process.FWD}, {"x1", process.CUT}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.CUT}}, 2},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleSPLITSNDSND(t *testing.T) {
 	// Case 6: SPLIT + SND rule (x 2)
 
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
-	prc[pid1] = <a, b> <- +split pid2; <a2, b2> <- recv a; <a3, b3> <- recv b; close self
-	prc[pid2] = send self<pid3, self>
-	`
+	assuming pid3 : 1, pid4 : 1
+
+	prc[pid1] : 1 = <a, b> <- +split pid2; 
+					<a2, b2> <- recv a; drop a2; drop b2;
+					<a3, b3> <- recv b; drop a3; drop b3;
+					close self
+	prc[pid2] : 1 * 1 = send self<pid3, pid4>`
 	expected := []traceOption{
-		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SND}}},
+		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SND}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"pid1", process.DROP}}},
 		// {steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SPLIT}}},
 		// not sure about this ^
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestSimpleSPLITRCVRCV(t *testing.T) {
+	// Case 6: SPLIT + RCV rule (x 2)
+
+	input := ` 	/* Simple SPLIT + RCV rule (x 2) */
+	prc[pid1]= <pid2_first, pid2_second> <- -split pid2; 
+					k<- new send pid2_first<pid3, self>;
+					wait k;
+					send pid2_second<pid4, self>
+	prc[pid2] = <a, b> <- recv self; 
+						 drop a; 
+						 close self`
+	expected := []traceOption{
+		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.FWD}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
+	}
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestSimpleSPLITRCVRCVWithTyping(t *testing.T) {
+	// Case 6: SPLIT + RCV rule (x 2) (needs types)
+
+	input := ` 	/* Simple SPLIT + RCV rule (x 2) */
+	assuming pid3 : 1, pid4 : 1
+
+	prc[pid1] : 1 = <pid2_first, pid2_second> <- split pid2; /* split gets its polarity from the types */
+					k : 1 <- new send pid2_first<pid3, self>;
+					wait k;
+					send pid2_second<pid4, self>
+	prc[pid2] : 1 -* 1 = <a, b> <- recv self; 
+						 drop a; 
+						 close self`
+	expected := []traceOption{
+		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.FWD}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleSPLITCALL(t *testing.T) {
@@ -144,14 +204,15 @@ func TestSimpleSPLITCALL(t *testing.T) {
 
 				prc[pid0] = <x1, x2> <- +split pid1; close self
 				prc[pid1] = +D1(pid2)
-				prc[pid2] = send self<pid3, self>
-			`
+				prc[pid2] = send self<pid3, pid4>`
 	expected := []traceOption{
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}}},
 		{steps{{"pid0", process.SPLIT}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.CALL}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleMultipleProvidersInitially(t *testing.T) {
@@ -167,7 +228,9 @@ func TestSimpleMultipleProvidersInitially(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"pa", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleDUP(t *testing.T) {
@@ -182,12 +245,13 @@ func TestSimpleDUP(t *testing.T) {
 		prc[p] = <f, g> <- recv d; wait f; wait g; close self
 
 		prc[x] = close self
-		prc[y] = close self
-			`
+		prc[y] = close self`
 	expected := []traceOption{
 		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleFunctionCalls(t *testing.T) {
@@ -218,7 +282,9 @@ func TestSimpleFunctionCalls(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"pid1", process.CLS}, {"pid1", process.CALL}, {"pid10", process.CLS}, {"pid10", process.CALL}, {"pid11", process.RCV}, {"pid11", process.CALL}, {"pid2", process.RCV}, {"pid2", process.CALL}, {"pid4", process.CLS}, {"pid4", process.CALL}, {"pid5", process.RCV}, {"pid5", process.CALL}, {"pid7", process.CLS}, {"pid7", process.CALL}, {"pid8", process.RCV}, {"pid8", process.CALL}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestExec(t *testing.T) {
@@ -235,7 +301,105 @@ func TestExec(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"exec1", process.CALL}, {"exec1", process.CUT}, {"exec1", process.CLS}}},
 	}
-	checkInputRepeatedly(t, input, expected)
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestCallPolarity(t *testing.T) {
+	// Case 10: Function calls
+
+	input := ` 
+	type A = &{label : 1}
+	type B = 1
+
+	let f1(x : A) : B = x.label<self>
+	let f2() : A = case self (label<zz> => close self )
+
+	prc[y] : B = +f1(z)
+	prc[z] : A = -f2()`
+	expected := []traceOption{
+		{steps{{"y", process.CALL}, {"z", process.CALL}, {"z", process.CSE}}},
+	}
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestNewPolarity(t *testing.T) {
+	// Case 10: Function calls (explicit polarities)
+
+	input := ` 
+	type A = +{label : 1}
+	
+	prc[y] : 1 = m : A <- +new self.label<z>; 
+			     case m (label<zz> => wait zz; 
+				 close self)
+	prc[z] : 1 = close self`
+
+	expected := []traceOption{
+		{steps{{"y", process.CUT}, {"y", process.SEL}, {"y", process.CLS}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestFwdPolarity(t *testing.T) {
+	// Case 10: Forwards (explicit polarities)
+
+	input := ` 
+	type A = &{labelok : 1}
+
+	prc[x] : 1 = y.labelok<self> 
+	prc[y] : A = -fwd self z
+	prc[z] : A = case self ( labelok<b> => close b )`
+
+	expected := []traceOption{
+		{steps{{"y", process.FWD}, {"y", process.CSE}}},
+	}
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestFwdCutPolarityWithTyping(t *testing.T) {
+	// Case 10: Forwards and cut (implicit polarities from types)
+
+	input := `
+	type A = &{labelok : 1}
+
+	prc[x] : 1 = y.labelok<self>
+	prc[y] : A = zz : A <- new fwd self z;
+				 fwd self zz
+				// y is a -ve fwd
+	prc[z] : A = case self ( labelok<b> => close b )`
+
+	expected := []traceOption{
+		{steps{{"y", process.CUT}, {"y", process.FWD}, {"zz", process.FWD}, {"y", process.CSE}}},
+		{steps{{"y", process.CUT}, {"y", process.FWD}, {"y", process.FWD}, {"y", process.CSE}}},
+	}
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestFwdPolarityWithTyping(t *testing.T) {
+	// Case 10: Forwards (implicit polarities from types)
+
+	input := ` 
+	type A = &{labelok : 1}
+
+	prc[x] : 1 = y.labelok<self> 
+	prc[y] : A = fwd self z /* this is a negative fwd*/
+	prc[z] : A = case self ( labelok<b> => close b )`
+
+	expected := []traceOption{
+		{steps{{"y", process.FWD}, {"y", process.CSE}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 type step struct {
@@ -261,20 +425,20 @@ type traceOption struct {
 	// deadProcesses int
 }
 
-func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOption) {
+func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOption, typecheck bool) {
 	// If you increase the number of repetitions to a very high number, make sure to increase
 	// the monitor inactiveTimer (to avoid the monitor timing out before terminating).
 
 	wg := new(sync.WaitGroup)
 	wg.Add(numberOfIterations)
 	for i := 0; i < numberOfIterations; i++ {
-		go checkInput(t, input, expectedOptions, wg)
+		go checkInput(t, input, expectedOptions, wg, typecheck)
 	}
 
 	wg.Wait()
 }
 
-func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *sync.WaitGroup) {
+func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *sync.WaitGroup, typecheck bool) {
 	defer wg.Done()
 
 	// Test all operational semantic versions
@@ -285,11 +449,18 @@ func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *s
 	}
 
 	for _, execVersion := range execVersions {
-		processes, _, globalEnv, err := parser.ParseString(input)
-
+		processes, assumedFreeNames, globalEnv, err := parser.ParseString(input)
 		if err != nil {
 			t.Errorf("Error during parsing")
 			return
+		}
+
+		if typecheck {
+			err = process.Typecheck(processes, assumedFreeNames, globalEnv)
+			if err != nil {
+				t.Errorf("typing error: %s", err)
+				return
+			}
 		}
 
 		deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv, execVersion)

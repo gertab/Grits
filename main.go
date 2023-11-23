@@ -13,14 +13,24 @@ import (
 
 const program = `
 
+assuming pid3 : 1, pid4 : 1
 
-type A = 1
+prc[pid1] : 1 = <a, b> <- -split pid2; 
+				k : 1 <- new send a<pid3, self>;
+				wait k;
+				send b<pid4, self>
+prc[pid2] : 1 -* 1 = <a, b> <- recv self; 
+					 drop a; 
+					 close self
 
-let f() : A = x : A <- new close x; 
-				wait x; 
-				close self
+// prc[pid3] : 1 = close self
+// prc[pid4] : 1 = close self
 
-exec g()
+
+
+// prc[a] : 1 = close self
+// prc[b] : 1 = -fwd self a 
+// prc[c] : 1 = wait b; close self
 
 // type A = &{label : 1}
 // type B = 1 -* 1

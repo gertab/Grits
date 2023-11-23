@@ -63,9 +63,9 @@ After building the project (using `go  build .`), you can use the CLI version...
         | '<' <name> , <name> '>' <- recv <name> ; <term>           // receive names
         | <name> . <label> '<' <name> '>'                           // send label
         | case <name> ( <branches> )                                // receive label
-        | <name> <- [<pol>] new ( <term> ) ; <term>                 // spawn new process
+        | <name> [ : <type> ] <- [<pol>] new <term>; <term>                 // spawn new process
         | [<pol>] <label> ( [<names>] )                             // function call
-        | [<pol>] fwd <names> <names>                               // forward name
+        | [<pol>] fwd <name> <name>                               // forward name
         | '<' <name> , <name> '>' <- [<pol>] split <name> ; <term>  // split name
         | close <name>                                              // close name
         | wait <name> ; term                                        // wait for name to close

@@ -186,6 +186,13 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 		}
 	}
 
+	// make sure that there aren't any assumed names that are then defined as a process
+	for name := range allProcessNames {
+		if remainingAssumedFreeNames[name] {
+			return fmt.Errorf("the assumed name '%s' is later defined as a process", name)
+		}
+	}
+
 	// Check the types for the processes (i.e. prc[a] : A = ...)
 	for i := range processes {
 

@@ -464,12 +464,10 @@ func TestTypecheckCorrectCut(t *testing.T) {
 		 prc[pid1] : 1 = x : 1 <- new f(); wait x; close self`,
 		`let f2[w : 1] = close w
 		 prc[pid2] : 1 = x : 1 <- new f2(); wait x; close self`,
-		`assuming pid2 : &{labelok : 1}
-		 let f(p : &{labelok : 1}) : 1 = p.labelok<self>
+		`let f(p : &{labelok : 1}) : 1 = p.labelok<self>
 		 prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self
 		 prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
-		`assuming  ff : 1
-		 prc[pid1] : 1 = xy : +{labelok : 1} <- new ( self.labelok<ff> );
+		`prc[pid1] : 1 = xy : +{labelok : 1} <- new ( self.labelok<ff> );
 					case xy (labelok<b> => print b; wait b; close self)
 		 prc[ff] : 1 = close self`,
 		`let f() : 1 = close self
@@ -518,7 +516,6 @@ func TestTypecheckCorrectSplit(t *testing.T) {
 		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
 		 prc[x] : 1 = close self`,
 		`type A = 1 * 1
-		 assuming pid2 : A
 		 prc[pid1] : 1 = <a, b> <- +split pid2;
 		 				 <a2, b2> <- recv a;
 						 <a3, b3> <- recv b;

@@ -74,6 +74,11 @@ func (p *SendForm) FreeNames() []Name {
 
 // Polarity of a send process can be inferred directly from itself
 func (p *SendForm) Polarity() types.Polarity {
+	if p.to_c.Type != nil {
+		// Get polarity from the type
+		return p.to_c.Type.Polarity()
+	}
+
 	if p.to_c.IsSelf {
 		return types.POSITIVE
 	} else {
@@ -142,6 +147,11 @@ func (p *ReceiveForm) FreeNames() []Name {
 
 // Polarity of a receive process can be inferred directly from itself
 func (p *ReceiveForm) Polarity() types.Polarity {
+	if p.from_c.Type != nil {
+		// Get polarity from the type
+		return p.from_c.Type.Polarity()
+	}
+
 	if p.from_c.IsSelf {
 		return types.NEGATIVE
 	} else {
@@ -192,6 +202,11 @@ func (p *SelectForm) FreeNames() []Name {
 }
 
 func (p *SelectForm) Polarity() types.Polarity {
+	if p.to_c.Type != nil {
+		// Get polarity from the type
+		return p.to_c.Type.Polarity()
+	}
+
 	if p.to_c.IsSelf {
 		return types.POSITIVE
 	} else {
@@ -275,6 +290,11 @@ func (p *BranchForm) FreeNames() []Name {
 }
 
 func (p *BranchForm) Polarity() types.Polarity {
+	if p.payload_c.Type != nil {
+		// Get polarity from the type
+		return p.payload_c.Type.Polarity()
+	}
+
 	return p.polarity
 }
 
@@ -345,6 +365,11 @@ func (p *CaseForm) FreeNames() []Name {
 }
 
 func (p *CaseForm) Polarity() types.Polarity {
+	if p.from_c.Type != nil {
+		// Get polarity from the type
+		return p.from_c.Type.Polarity()
+	}
+
 	if p.from_c.IsSelf {
 		return types.NEGATIVE
 	} else {
@@ -406,6 +431,12 @@ func (p *NewForm) FreeNames() []Name {
 }
 
 func (p *NewForm) Polarity() types.Polarity {
+	// might be more accurate if you take the polarity of continuation_e
+	if p.continuation_c.Type != nil {
+		// Get polarity from the type
+		return p.continuation_c.Type.Polarity()
+	}
+
 	return p.polarity
 }
 
@@ -440,6 +471,11 @@ func (p *CloseForm) FreeNames() []Name {
 }
 
 func (p *CloseForm) Polarity() types.Polarity {
+	if p.from_c.Type != nil {
+		// Get polarity from the type
+		return p.from_c.Type.Polarity()
+	}
+
 	return types.POSITIVE
 }
 
@@ -480,11 +516,15 @@ func (p *ForwardForm) FreeNames() []Name {
 }
 
 func (p *ForwardForm) Polarity() types.Polarity {
-	// todo get polarity from the type
+	if p.to_c.Type != nil {
+		// Get polarity from the type
+		return p.to_c.Type.Polarity()
+	}
+
 	return p.polarity
 }
 
-// Split: <channel_one, channel_two> <- recv from_c; P
+// Split: <channel_one, channel_two> <- split from_c; P
 type SplitForm struct {
 	channel_one    Name
 	channel_two    Name
@@ -545,6 +585,11 @@ func (p *SplitForm) FreeNames() []Name {
 }
 
 func (p *SplitForm) Polarity() types.Polarity {
+	if p.from_c.Type != nil {
+		// Get polarity from the type
+		return p.from_c.Type.Polarity()
+	}
+
 	return p.polarity
 }
 
@@ -592,6 +637,11 @@ func (p *CallForm) FreeNames() []Name {
 
 func (p *CallForm) Polarity() types.Polarity {
 	// todo ProviderType
+	if p.ProviderType != nil {
+		// Get polarity from the type
+		return p.ProviderType.Polarity()
+	}
+
 	return p.polarity
 }
 
@@ -641,6 +691,11 @@ func (p *WaitForm) FreeNames() []Name {
 }
 
 func (p *WaitForm) Polarity() types.Polarity {
+	if p.to_c.Type != nil {
+		// Get polarity from the type
+		return p.to_c.Type.Polarity()
+	}
+
 	return types.POSITIVE
 }
 
@@ -685,6 +740,11 @@ func (p *CastForm) FreeNames() []Name {
 
 // Polarity of a send process can be inferred directly from itself
 func (p *CastForm) Polarity() types.Polarity {
+	if p.to_c.Type != nil {
+		// Get polarity from the type
+		return p.to_c.Type.Polarity()
+	}
+
 	if p.to_c.IsSelf {
 		return types.POSITIVE
 	} else {
@@ -744,6 +804,11 @@ func (p *ShiftForm) FreeNames() []Name {
 
 // Polarity of a receive process can be inferred directly from itself
 func (p *ShiftForm) Polarity() types.Polarity {
+	if p.from_c.Type != nil {
+		// Get polarity from the type
+		return p.from_c.Type.Polarity()
+	}
+
 	if p.from_c.IsSelf {
 		return types.NEGATIVE
 	} else {
@@ -793,6 +858,11 @@ func (p *DropForm) FreeNames() []Name {
 }
 
 func (p *DropForm) Polarity() types.Polarity {
+	if p.client_c.Type != nil {
+		// Get polarity from the type
+		return p.client_c.Type.Polarity()
+	}
+
 	return types.POSITIVE
 }
 
@@ -840,6 +910,11 @@ func (p *PrintForm) FreeNames() []Name {
 }
 
 func (p *PrintForm) Polarity() types.Polarity {
+	if p.name_c.Type != nil {
+		// Get polarity from the type
+		return p.name_c.Type.Polarity()
+	}
+
 	return types.UNKNOWN
 }
 

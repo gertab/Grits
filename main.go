@@ -13,18 +13,26 @@ import (
 
 const program = `
 
-assuming pid3 : 1, pid4 : 1
 
-prc[pid1] : 1 = <a, b> <- -split pid2; 
-				k : 1 <- new send a<pid3, self>;
-				wait k;
-				send b<pid4, self>
-prc[pid2] : 1 -* 1 = <a, b> <- recv self; 
-					 drop a; 
-					 close self
+type A = &{label : 1}
+type B = 1
 
-// prc[pid3] : 1 = close self
-// prc[pid4] : 1 = close self
+let f1(x : A) : B = x.label<self>
+let f2() : A = case self (label<zz> => close self )
+
+prc[y] : B = +f1(z)
+prc[z] : A = -f2()
+
+// type A = 1
+
+// let f() : A = x : A <- new close x; 
+// 			wait x; 
+// 			close self
+
+// exec f()
+
+
+
 
 
 

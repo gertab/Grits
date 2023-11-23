@@ -17,8 +17,6 @@ type Name struct {
 	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
 	Channel chan Message
 	// Polarity used in NORMAL_[A]SYNC
-	// todo: currently not being set/used, but might be useful to use it
-	Polarity types.Polarity
 	// Used for control commands (i.e. fwd, split, ...) in NON_POLARIZED_SYNC
 	ControlChannel chan ControlMessage
 	// Channel ID is a unique id for each channel
@@ -199,7 +197,6 @@ func (n *Name) Substitute(old, new Name) {
 		n.Channel = new.Channel
 		n.IsSelf = new.IsSelf
 		n.ControlChannel = new.ControlChannel
-		n.Polarity = new.Polarity
 		// n.Type = new.Type [type should remain the same, as set by the typechecker]
 		if new.Ident != "" {
 			// not sure if this works
@@ -212,7 +209,6 @@ func (n *Name) Substitute(old, new Name) {
 			n.Channel = new.Channel
 			n.ChannelID = new.ChannelID
 			n.IsSelf = new.IsSelf
-			n.Polarity = new.Polarity
 			n.ControlChannel = new.ControlChannel
 			// n.Type = new.Type
 		}

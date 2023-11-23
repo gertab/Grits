@@ -108,6 +108,7 @@ func TestSimpleMultipleFWD(t *testing.T) {
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}},
 		{steps{{"pid2", process.FWD}, {"pid3", process.FWD}, {"pid2", process.RCV}}},
+		{steps{{"pid2", process.RCV}, {"pid3", process.FWD}, {"pid2", process.RCV}}},
 	}
 
 	typecheck := false
@@ -169,6 +170,7 @@ func TestSimpleSPLITRCVRCV(t *testing.T) {
 						 close self`
 	expected := []traceOption{
 		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.FWD}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
+		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.RCV}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
 	}
 
 	typecheck := false
@@ -302,7 +304,7 @@ func TestExec(t *testing.T) {
 		{steps{{"exec1", process.CALL}, {"exec1", process.CUT}, {"exec1", process.CLS}}},
 	}
 
-	typecheck := false
+	typecheck := true
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
@@ -380,7 +382,7 @@ func TestFwdCutPolarityWithTyping(t *testing.T) {
 		{steps{{"y", process.CUT}, {"y", process.FWD}, {"y", process.FWD}, {"y", process.CSE}}},
 	}
 
-	typecheck := false
+	typecheck := true
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 

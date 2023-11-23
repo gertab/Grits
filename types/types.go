@@ -18,7 +18,9 @@ type SessionType interface {
 	// Polarity() uint
 
 	// used for inner checks
-	CheckTypeLabels(LabelledTypesEnv) error
+	checkTypeLabels(LabelledTypesEnv) error
+	// checkTypePolarities(LabelledTypesEnv) error
+	// checkTypeModalities(LabelledTypesEnv) error
 	isContractive(LabelledTypesEnv, map[string]bool) bool
 }
 
@@ -151,9 +153,9 @@ type UpType struct {
 
 func (q *UpType) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(ModalityMap[q.From])
+	buffer.WriteString(q.From.String())
 	buffer.WriteString("/\\")
-	buffer.WriteString(ModalityMap[q.To])
+	buffer.WriteString(q.To.String())
 	buffer.WriteString(" ")
 	buffer.WriteString(q.Continuation.String())
 	return buffer.String()
@@ -176,9 +178,9 @@ type DownType struct {
 
 func (q *DownType) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(ModalityMap[q.From])
+	buffer.WriteString(q.From.String())
 	buffer.WriteString("\\/")
-	buffer.WriteString(ModalityMap[q.To])
+	buffer.WriteString(q.To.String())
 	buffer.WriteString(" ")
 	buffer.WriteString(q.Continuation.String())
 	return buffer.String()

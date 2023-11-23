@@ -1264,7 +1264,7 @@ func checkNameType(name Name, labelledTypesEnv types.LabelledTypesEnv) error {
 	}
 
 	// run type related checks
-	err := name.Type.CheckTypeLabels(labelledTypesEnv)
+	err := types.CheckTypeWellFormedness(name.Type, labelledTypesEnv)
 
 	return err
 }

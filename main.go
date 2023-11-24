@@ -14,14 +14,33 @@ import (
 const program = `
 
 
-type A = &{label : 1}
-type B = 1
+type A = &{label : +{next : 1}}
+let f1(x : A) : +{next : 1} = x.label<self>
+let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
 
-let f1(x : A) : B = x.label<self>
-let f2() : A = case self (label<zz> => close self )
+prc[x] : +{next : 1} = f1(z)
+prc[z] : A = f2(y)
+prc[y] : 1 = close self
+prc[final] : 1 = case x (next<z> => print z; drop z; close self)
 
-prc[y] : B = +f1(z)
-prc[z] : A = -f2()
+
+// type A = 1 -* (1 -* (1 * 1))
+// prc[x1] : 1 -* (1 * 1) = send z<yy, self>
+// prc[x2] : 1 * 1 = send x1<xx, self>
+// prc[z] : A = <x, y> <- recv self; 
+// 			 <xx, y> <- recv y; 
+// 			 send y<x, xx>
+// prc[xx] : 1 = close self
+// prc[yy] : 1 = close self
+
+// prc[final] : 1 = <g1, g2> <- recv x2;
+// 			     print g1;
+// 			     print g2;
+// 			     drop g1;
+// 			     drop g2;
+// 			     close self
+
+
 
 // type A = 1
 
@@ -374,7 +393,7 @@ func main() {
 			Debug:             true,
 			Color:             true,
 			LogLevels:         generateLogLevel(*logLevel),
-			ExecutionVersion:  process.NORMAL_ASYNC,
+			ExecutionVersion:  process.NON_POLARIZED_SYNC,
 		}
 
 		process.InitializeProcesses(processes, nil, nil, re)

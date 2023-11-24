@@ -43,12 +43,10 @@ func (process *Process) transitionLoop(re *RuntimeEnvironment) {
 }
 
 // When a process starts transitioning, a process chooses to transition as one of these forms:
-//   (a) a provider     -> tries to send the final result (on the self/provider channel)
-//   (b) a client       -> retrieves any pending messages (on the self/provider channel) and consumes them
-//   (c) a special form (i.e. forward/split) -> sends a control message on an external channel
+//   (a) a provider     -> tries to send the final result
+//   (b) a client       -> retrieves any pending messages and consumes them
+//   (c) a special form (i.e. forward)
 //   (d) internally     -> transitions immediately without sending/receiving messages
-//
-// A process' control channel is checked for incoming messages. If there are any, the execution of (a-d) may be relegated for later on.
 
 func TransitionBySending(process *Process, toChan chan Message, continuationFunc func(), sendingMessage Message, re *RuntimeEnvironment) {
 
@@ -198,7 +196,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			new_body := f.continuation_e
 			new_body.Substitute(f.payload_c, message.Channel1)
-			new_body.Substitute(f.continuation_c, Name{IsSelf: true})
+			new_body.Substitute(f.continuation_c, NewSelf(message.Channel1.Ident))
 
 			process.finishedRule(RCV, "[receive, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being received
@@ -357,6 +355,7 @@ func (f *CallForm) Transition(process *Process, re *RuntimeEnvironment) {
 	// }
 }
 
+// select: to_c.label<continuation_c>
 func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of select: %s\n", f.String())
 
@@ -377,7 +376,7 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 		}
 
 		TransitionBySending(process, process.Providers[0].Channel, selRule, message, re)
-	} else {
+	} else if f.continuation_c.IsSelf {
 		// CSE rule (client, -ve)
 		//
 		// [to_c.label<...>]
@@ -403,6 +402,8 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 		}
 
 		TransitionBySending(process, f.to_c.Channel, cseRule, message, re)
+	} else {
+		re.errorf(process, "in %s, neither the sender ('%s') or continuation ('%s') is self", f.String(), f.to_c.String(), f.continuation_c.String())
 	}
 }
 
@@ -417,11 +418,11 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	if f.from_c.IsSelf {
 		// CSE rule (provider, -ve)
 		//
-		// [to_c.label<self>]
+		// to_c.label<self>
 		//    |
 		//    |
 		//   \|/
-		// case self (...)
+		// [case self (...)]
 
 		cseRule := func(message Message) {
 			re.logProcessf(LOGRULEDETAILS, process, "[case, provider] finished receiving on self. Received label '%s'\n", message.Label.String())
@@ -438,7 +439,8 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 					// Found a matching label
 					found = true
 					new_body = j.continuation_e
-					new_body.Substitute(j.payload_c, message.Channel1)
+					// Substitute the payload with 'self'
+					new_body.Substitute(j.payload_c, NewSelf(message.Channel1.Ident))
 					break
 				}
 			}
@@ -583,7 +585,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		message := Message{Rule: FWD, Providers: process.Providers}
 		f.from_c.Channel <- message
-		re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to control channel %s\n", f.from_c.String())
+		re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to client %s\n", f.from_c.String())
 
 		// todo check if this is needed: process.finishedRule(FWD, "[forward, client]", "", re)
 		process.terminateForward(re)
@@ -813,7 +815,7 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of shift: %s\n", f.String())
 
 	if f.from_c.IsSelf {
-		// RCV rule (provider, -ve)
+		// SHF rule (provider, -ve)
 		//
 		// cast to_c<self>
 		//    |
@@ -829,7 +831,7 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 			}
 
 			new_body := f.continuation_e
-			new_body.Substitute(f.continuation_c, Name{IsSelf: true})
+			new_body.Substitute(f.continuation_c, NewSelf(message.Channel1.Ident))
 
 			process.finishedRule(SHF, "[shift, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being received

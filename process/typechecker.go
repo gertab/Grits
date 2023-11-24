@@ -441,13 +441,6 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 			return fmt.Errorf("variable names <%s, %s> are the same. Use unique names", p.payload_c.String(), p.continuation_c.String())
 		}
 
-		// todo maybe remove check
-		if isProvider(p.payload_c, providerShadowName) ||
-			isProvider(p.continuation_c, providerShadowName) {
-			// Unwanted reference to self
-			return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
-		}
-
 		gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
 
 		p.from_c.Type = providerReceiveType
@@ -761,9 +754,9 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			}
 
 			// Check explicit polarities
-			if p.polarity != types.UNKNOWN && p.polarity != functionSignature.Type.Polarity() {
+			if p.continuation_e_polarity != types.UNKNOWN && p.continuation_e_polarity != functionSignature.Type.Polarity() {
 				// Make sure that the explicit polarity matches as well
-				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[functionSignature.Type.Polarity()], types.PolarityMap[p.polarity])
+				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[functionSignature.Type.Polarity()], types.PolarityMap[p.continuation_e_polarity])
 			}
 
 			// Set type
@@ -801,9 +794,9 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: p.continuation_c.Type}
 
 			// Check explicit polarities
-			if p.polarity != types.UNKNOWN && p.polarity != p.continuation_c.Type.Polarity() {
+			if p.continuation_e_polarity != types.UNKNOWN && p.continuation_e_polarity != p.continuation_c.Type.Polarity() {
 				// Make sure that the explicit polarity matches as well
-				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[p.continuation_c.Type.Polarity()], types.PolarityMap[p.polarity])
+				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[p.continuation_c.Type.Polarity()], types.PolarityMap[p.continuation_e_polarity])
 			}
 
 			// typecheck the continuation of the cut rule

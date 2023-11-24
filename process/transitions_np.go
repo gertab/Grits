@@ -196,7 +196,7 @@ func (f *ReceiveForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 			new_body := f.continuation_e
 			new_body.Substitute(f.payload_c, message.Channel1)
-			new_body.Substitute(f.continuation_c, Name{IsSelf: true})
+			new_body.Substitute(f.continuation_c, NewSelf(message.Channel1.Ident))
 
 			process.finishedRule(RCV, "[receive, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being received
@@ -273,6 +273,7 @@ func (f *NewForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	TransitionInternallyNP(process, newRule, re)
 }
 
+// select: to_c.label<continuation_c>
 func (f *SelectForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of select: %s\n", f.String())
 
@@ -287,7 +288,7 @@ func (f *SelectForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		}
 
 		TransitionBySendingNP(process, process.Providers[0].Channel, selRule, message, re)
-	} else {
+	} else if f.continuation_c.IsSelf {
 		// CSE rule (client, -ve)
 
 		if !f.continuation_c.IsSelf {
@@ -307,6 +308,8 @@ func (f *SelectForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		}
 
 		TransitionBySendingNP(process, f.to_c.Channel, cseRule, message, re)
+	} else {
+		re.errorf(process, "in %s, neither the sender ('%s') or continuation ('%s') is self", f.String(), f.to_c.String(), f.continuation_c.String())
 	}
 }
 
@@ -336,7 +339,7 @@ func (f *CaseForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 					// Found a matching label
 					found = true
 					new_body = j.continuation_e
-					new_body.Substitute(j.payload_c, message.Channel1)
+					new_body.Substitute(j.payload_c, NewSelf(message.Channel1.Ident))
 					break
 				}
 			}
@@ -725,7 +728,7 @@ func (f *ShiftForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 			}
 
 			new_body := f.continuation_e
-			new_body.Substitute(f.continuation_c, Name{IsSelf: true})
+			new_body.Substitute(f.continuation_c, NewSelf(message.Channel1.Ident))
 
 			process.finishedRule(SHF, "[shift, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being shifted

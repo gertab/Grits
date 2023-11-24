@@ -404,6 +404,53 @@ func TestFwdPolarityWithTyping(t *testing.T) {
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
+func TestNestedSelectWithTyping(t *testing.T) {
+	// Case 10: Nested branch/select
+
+	input := ` 
+	type A = &{label : +{next : 1}}
+	let f1(x : A) : +{next : 1} = x.label<self>
+	let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
+
+	prc[x] : +{next : 1} = f1(z)
+	prc[z] : A = f2(y)
+	prc[y] : 1 = close self
+	prc[final] : 1 = case x (next<z> => drop z; close self)`
+
+	expected := []traceOption{
+		{steps{{"x", process.CALL}, {"z", process.CALL}, {"z", process.CSE}, {"final", process.SEL}, {"final", process.DROP}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestNestedReceiveWithTyping(t *testing.T) {
+	// Case 10: Nested receive/send
+
+	input := ` 
+	type A = 1 -* (1 -* (1 * 1))
+	prc[x1] : 1 -* (1 * 1) = send z<yy, self>
+	prc[x2] : 1 * 1 = send x1<xx, self>
+	prc[z] : A = <x, y> <- recv self; 
+				 <xx, y> <- recv y; 
+				 send y<x, xx>
+	prc[xx] : 1 = close self
+	prc[yy] : 1 = close self
+	
+	prc[final] : 1 = <g1, g2> <- recv x2;
+					 drop g1;
+					 drop g2;
+					 close self`
+
+	expected := []traceOption{
+		{steps{{"x1", process.RCV}, {"z", process.RCV}, {"final", process.SND}, {"final", process.DROP}, {"final", process.DROP}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
 type step struct {
 	processName string
 	rule        process.Rule

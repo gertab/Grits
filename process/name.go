@@ -31,15 +31,13 @@ func (n *Name) Initialized() bool {
 func (n *Name) String() string {
 	m := ""
 
-	if n.IsSelf {
+	if n.Ident != "" {
+		m = n.Ident
+	} else if n.IsSelf {
 		m = "self"
 	} else {
-		if n.Ident == "" {
-			// Set anonymous process names to *
-			m = "*"
-		} else {
-			m = n.Ident
-		}
+		// Set anonymous process names to *
+		m = "*"
 	}
 
 	if printTypes && n.Type != nil {
@@ -50,6 +48,13 @@ func (n *Name) String() string {
 		return m + "[" + strconv.FormatUint(n.ChannelID, 10) + "]"
 	} else {
 		return m
+	}
+}
+
+func NewSelf(Ident string) Name {
+	return Name{
+		Ident:  Ident,
+		IsSelf: true,
 	}
 }
 
@@ -212,5 +217,24 @@ func (n *Name) Substitute(old, new Name) {
 			n.ControlChannel = new.ControlChannel
 			// n.Type = new.Type
 		}
+	}
+}
+
+func (n *Name) ElementOf(names []Name) bool {
+	for _, j := range names {
+		if n.Equal(j) {
+			return true
+		}
+	}
+
+	return false
+}
+func (n *Name) Copy() *Name {
+	return &Name{
+		Ident:          n.Ident,
+		Channel:        n.Channel,
+		ChannelID:      n.ChannelID,
+		IsSelf:         n.IsSelf,
+		ControlChannel: n.ControlChannel,
 	}
 }

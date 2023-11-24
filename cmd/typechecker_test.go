@@ -59,6 +59,13 @@ func TestTypecheckCorrectSendReceive(t *testing.T) {
 		"let f1() : (1 * 1) -* 1 = <x, y> <- recv self; <x2, y2> <- recv x; wait x2; wait y2; close y",
 		`type A = 1 -* 1
 		 let f1() : A = <x, y> <- recv self; wait x; close y`,
+		`assuming b : 1
+		 prc[y] : 1 -* (1 -* (1 -* (1 * 1))) = <x, y> <- recv self;
+								 drop x;
+								 <x, y> <- recv y;
+								 drop x;
+								 <x, y> <- recv y;
+								 send y<x, b>`,
 		// MulL
 		"let f1(u : 1 * 1) : 1 = <x, y> <- recv u; wait x; wait y; close self",
 		`type A = 1 * 1

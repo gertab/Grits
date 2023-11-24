@@ -379,20 +379,20 @@ func (p *CaseForm) Polarity() types.Polarity {
 
 // New: continuation_c <- new (body); continuation_e
 type NewForm struct {
-	continuation_c   Name
-	body             Form
-	continuation_e   Form
-	polarity         types.Polarity // user inputted polarity [used as an alternative when types are omitted]
-	derivedFromMacro bool
+	continuation_c          Name
+	body                    Form
+	continuation_e          Form
+	continuation_e_polarity types.Polarity // user inputted polarity [used as an alternative when types are omitted]
+	derivedFromMacro        bool
 }
 
-func NewNew(continuation_c Name, body, continuation_e Form, polarity types.Polarity) *NewForm {
+func NewNew(continuation_c Name, body, continuation_e Form, continuation_e_polarity types.Polarity) *NewForm {
 	return &NewForm{
-		continuation_c:   continuation_c,
-		body:             body,
-		continuation_e:   continuation_e,
-		polarity:         polarity,
-		derivedFromMacro: false,
+		continuation_c:          continuation_c,
+		body:                    body,
+		continuation_e:          continuation_e,
+		continuation_e_polarity: continuation_e_polarity,
+		derivedFromMacro:        false,
 	}
 }
 
@@ -437,7 +437,7 @@ func (p *NewForm) Polarity() types.Polarity {
 		return p.continuation_c.Type.Polarity()
 	}
 
-	return p.polarity
+	return p.continuation_e_polarity
 }
 
 // Close: close from_c
@@ -1107,7 +1107,7 @@ func CopyForm(orig Form) Form {
 		if ok {
 			body := CopyForm(p.body)
 			cont := CopyForm(p.continuation_e)
-			return NewNew(p.continuation_c, body, cont, p.polarity)
+			return NewNew(p.continuation_c, body, cont, p.continuation_e_polarity)
 		}
 	case *ForwardForm:
 		p, ok := orig.(*ForwardForm)

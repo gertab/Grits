@@ -84,21 +84,21 @@ func TestBasicForms(t *testing.T) {
 	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewSelect(to_c, process.Label{L: "label1"}, cont_c))
 
-	input = "cont_c <- +new (close self); close self"
+	input = "cont_c <- new (close self); close self"
 	output = append(output, parseGetBody(input))
-	expected = append(expected, process.NewNew(cont_c, end, end, types.POSITIVE))
+	expected = append(expected, process.NewNew(cont_c, end, end))
 
 	input = "close from_c"
 	output = append(output, parseGetBody(input))
 	expected = append(expected, process.NewClose(from_c))
 
-	input = "+fwd to_c from_c"
+	input = "fwd to_c from_c"
 	output = append(output, parseGetBody(input))
-	expected = append(expected, process.NewForward(to_c, from_c, types.POSITIVE))
+	expected = append(expected, process.NewForward(to_c, from_c))
 
-	input = "<pay_c,cont_c> <- +split from_c; close self"
+	input = "<pay_c,cont_c> <- split from_c; close self"
 	output = append(output, parseGetBody(input))
-	expected = append(expected, process.NewSplit(pay_c, cont_c, from_c, end, types.POSITIVE))
+	expected = append(expected, process.NewSplit(pay_c, cont_c, from_c, end))
 
 	input = "wait from_c; close self"
 	output = append(output, parseGetBody(input))

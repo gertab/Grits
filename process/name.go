@@ -6,6 +6,9 @@ import (
 	"strconv"
 )
 
+const showPolarities = false
+const printTypes = false
+
 // Name is channel or value.
 type Name struct {
 	// Ident refers to the original name of the channel (used for pretty printing)
@@ -31,26 +34,46 @@ func (n *Name) Initialized() bool {
 }
 
 func (n *Name) String() string {
-	m := ""
+	var buffer bytes.Buffer
 
 	if n.Ident != "" {
-		m = n.Ident
+		buffer.WriteString(n.Ident)
 	} else if n.IsSelf {
-		m = "self"
+		buffer.WriteString("self")
 	} else {
 		// Set anonymous process names to *
-		m = "*"
+		buffer.WriteString("*")
 	}
 
 	if printTypes && n.Type != nil {
-		m = m + "|" + n.Type.String() + "|"
+		buffer.WriteString("|")
+		buffer.WriteString(n.Type.String())
+		buffer.WriteString("|")
+
 	}
 
 	if n.Initialized() {
-		return m + "[" + strconv.FormatUint(n.ChannelID, 10) + "]"
-	} else {
-		return m
+		buffer.WriteString("[")
+		buffer.WriteString(strconv.FormatUint(n.ChannelID, 10))
+		buffer.WriteString("]")
 	}
+
+	if showPolarities {
+		buffer.WriteString("{")
+		if n.Type != nil {
+			_, labelType := n.Type.(*types.LabelType)
+			if !labelType {
+				buffer.WriteString(types.PolarityMap[n.Type.Polarity()])
+			}
+		} else if n.ExplicitPolarity != nil {
+			buffer.WriteString(types.PolarityMap[*n.ExplicitPolarity])
+		} else {
+			buffer.WriteString("")
+		}
+		buffer.WriteString("}")
+	}
+
+	return buffer.String()
 }
 
 func NewSelf(Ident string) Name {
@@ -230,6 +253,7 @@ func (n *Name) Substitute(old, new Name) {
 		n.IsSelf = new.IsSelf
 		n.ControlChannel = new.ControlChannel
 		// n.Type = new.Type [type should remain the same, as set by the typechecker]
+		// n.ExplicitPolarity
 		if new.Ident != "" {
 			// not sure if this works
 			n.Ident = new.Ident

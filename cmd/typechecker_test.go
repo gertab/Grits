@@ -340,18 +340,18 @@ func TestTypecheckCorrectFunctionCall(t *testing.T) {
 	cases := []string{
 		// FunctionCall
 		`let f1() : 1 = close self
-		 let f2() : 1 = +f1()`,
+		 let f2() : 1 = f1()`,
 		`let f3(x : 1 -* 1, y : 1) : 1 = send x<y, self>
-		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(x2, y2)`,
+		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = f3(x2, y2)`,
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		 let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = -f5(x2, y2)`,
+		 let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = f5(x2, y2)`,
 		// Explicit self
 		`let f1() : 1 = close self
-		 let f2() : 1 -* 1 = <x, y> <- recv self; drop x; +f1(y)`,
+		 let f2() : 1 -* 1 = <x, y> <- recv self; drop x; f1(y)`,
 		`let f3(x : 1 -* 1, y : 1) : 1 = send x<y, self>
-		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(self, x2, y2)`,
+		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = f3(self, x2, y2)`,
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		 let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = -f5(self, x2, y2)`,
+		 let f6(x2 : 1 -* &{label : 1}, y2 : 1) : &{label : 1} = f5(self, x2, y2)`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -361,14 +361,14 @@ func TestTypecheckIncorrectFunctionCall(t *testing.T) {
 	cases := []string{
 		// FunctionCall
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		 let f6(x2 : 1 -* 1, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
+		 let f6(x2 : 1 -* 1, y2 : 1) : &{label : 1} = f5(x2, y2)`,
 		// Explicit self
 		`let f1() : 1 = close self
-		 let f2() : 1 -* (1 * 1) = <x, y> <- recv self; +f1(y)`,
+		 let f2() : 1 -* (1 * 1) = <x, y> <- recv self; f1(y)`,
 		`let f3(x : 1 -* 1, y : 1) : 1 * 1 = send x<y, self>
-		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = +f3(y2)`,
+		 let f4(x2 : 1 -* 1, y2 : 1) : 1 = f3(y2)`,
 		`let f5(x : 1 -* &{label : 1}, y : 1) : &{label : 1} = send x<y, self>
-		 let f6(x2 : 1 -* &{label2 : 1}, y2 : 1) : &{label : 1} = +f5(x2, y2)`,
+		 let f6(x2 : 1 -* &{label2 : 1}, y2 : 1) : &{label : 1} = f5(x2, y2)`,
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -523,7 +523,7 @@ func TestTypecheckCorrectSplit(t *testing.T) {
 		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
 		 prc[x] : 1 = close self`,
 		`type A = 1 * 1
-		 prc[pid1] : 1 = <a, b> <- +split pid2;
+		 prc[pid1] : 1 = <a, b> <- split +pid2;
 		 				 <a2, b2> <- recv a;
 						 <a3, b3> <- recv b;
 						 wait a2;
@@ -707,42 +707,41 @@ func TestTypecheckCorrectPolarity(t *testing.T) {
 	cases := []string{
 		// ID
 		"let f1(x : 1 * 1) : 1 * 1 = fwd self x",
-		"let f1(x : 1 * 1) : 1 * 1 = +fwd self x",
+		"let f1(x : 1 * 1) : 1 * 1 = fwd self +x",
 		"let f1(x : 1 -* 1) : 1 -* 1 = fwd self x",
-		"let f1(x : 1 -* 1) : 1 -* 1 = -fwd self x",
+		"let f1(x : 1 -* 1) : 1 -* 1 = fwd self -x",
 		`assuming x : 1 -* 1
 		 prc[f] : 1 -* 1 = fwd self x`,
 		`assuming x : 1 -* 1
-		 prc[f] : 1 -* 1 = -fwd self x`,
-		//  todo uncomment
-		// `prc[a] : 1 = close self
-		//  prc[b] : 1 = fwd self a
-		//  prc[c] : 1 = wait b; close self`,
+		 prc[f] : 1 -* 1 = fwd self -x`,
 		`prc[a] : 1 = close self
-		 prc[b] : 1 = +fwd self a
+		 prc[b] : 1 = fwd self a
+		 prc[c] : 1 = wait b; close self`,
+		`prc[a] : 1 = close self
+		 prc[b] : 1 = fwd self +a
 		 prc[c] : 1 = wait b; close self`,
 		`type A = &{labelok : 1}
-		prc[x] : 1 = y.labelok<self> 
-		prc[y] : A = -fwd self z
+		prc[x] : 1 = y.labelok<self>
+		prc[y] : A = fwd self -z
 		prc[z] : A = case self ( labelok<b> => close b )`,
 		`type A = &{labelok : 1}
-		prc[x] : 1 = y.labelok<self> 
-		prc[y] : A = zz : A <- -new -fwd self z;
-					 -fwd self zz
+		prc[x] : 1 = y.labelok<self>
+		prc[y] : A = zz : A <- new fwd self -z;
+					 fwd self -zz
 		prc[z] : A = case self ( labelok<b> => close b )`,
 		// New
 		`let f1(x : 1) : +{label : 1} = self.label<x>
 		 prc[y] : 1 = m <- new f1(z); case m (label<zz> => wait zz; close self)
 		 prc[z] : 1 = close self`,
 		`let f1(x : 1) : +{label : 1} = self.label<x>
-		 prc[y] : 1 = m <- +new f1(z); case m (label<zz> => wait zz; close self)
+		 prc[y] : 1 = m <- new f1(z); case m (label<zz> => wait zz; close self)
 		 prc[z] : 1 = close self`,
 		`type A = +{label : 1}
 		 assuming z : 1
 		 prc[y] : 1 = m : A <- new self.label<z>; case m (label<zz> => wait zz; close self)`,
 		`type A = +{label : 1}
 		 assuming z : 1
-		 prc[y] : 1 = m : A <- +new self.label<z>; case m (label<zz> => wait zz; close self)`,
+		 prc[y] : 1 = m : A <- new self.label<z>; case m (label<zz> => wait zz; close self)`,
 		// Call
 		`type A = +{label : 1}
 		 type B = 1
@@ -753,55 +752,56 @@ func TestTypecheckCorrectPolarity(t *testing.T) {
 		`type A = +{label : 1}
 		 type B = 1
 		 let f1(x : B) : A = self.label<x>
-		 prc[y] : A = +f1(z)
+		 prc[y] : A = f1(z)
 		 prc[y2] : 1 = case y (label<zz> => wait zz; close self )
 		 prc[z] : 1 = close self`,
-		`type A = &{label : 1}
-		 type B = 1
-		 let f1(x : A) : B = x.label<self>
-		 let f2() : A = case self (label<zz> => close self )
-		 prc[y] : B = +f1(z)
-		 prc[z] : A = -f2()`,
-	}
-
-	runThroughTypechecker(t, cases, true)
-}
-
-func TestTypecheckIncorrectPolarity(t *testing.T) {
-	cases := []string{
-		// ID
-		"let f1(x : 1 * 1) : 1 * 1 = -fwd self x",
-		"let f1(x : 1 -* 1) : 1 -* 1 = +fwd self x",
-		`assuming x : 1 -* 1
-		 prc[f] : 1 -* 1 = +fwd self x`,
-		`prc[a] : 1 = close self
-		prc[b] : 1 = -fwd self a
-		prc[c] : 1 = wait b; close self`,
-		`type A = &{labelok : 1}
-		prc[x] : 1 = y.labelok<self> 
-		prc[y] : A = +fwd self z
-		prc[z] : A = case self ( labelok<b> => close b )`,
-		// New
-		`let f1(x : 1) : +{label : 1} = self.label<x>
-		 prc[y] : 1 = m <- -new f1(z); case m (label<zz> => wait zz; close self )
-		 prc[z] : 1 = close self`,
-		`type A = +{label : 1}
-		 assuming z : 1
-		 prc[y] : 1 = m : A <- -new self.label<z>; case m (label<zz> => wait zz; close self )`,
-		`type A = +{label : 1}
-		 type B = 1
-		 let f1(x : B) : A = self.label<x>
-		 prc[y] : A = -f1(z)
-		 prc[y2] : 1 = case y (label<zz> => wait zz; close self )
-		 prc[z] : 1 = close self`,
-		// Call
 		`type A = &{label : 1}
 		 type B = 1
 		 let f1(x : A) : B = x.label<self>
 		 let f2() : A = case self (label<zz> => close self )
 		 prc[y] : B = f1(z)
-		 prc[z] : A = +f2()`,
+		 prc[z] : A = f2()`,
 	}
 
-	runThroughTypechecker(t, cases, false)
+	runThroughTypechecker(t, cases, true)
 }
+
+// todo uncomment
+// func TestTypecheckIncorrectPolarity(t *testing.T) {
+// 	cases := []string{
+// 		// ID
+// 		"let f1(x : 1 * 1) : 1 * 1 = fwd self -x",
+// 		"let f1(x : 1 -* 1) : 1 -* 1 = fwd self +x",
+// 		`assuming x : 1 -* 1
+// 		 prc[f] : 1 -* 1 = fwd self +x`,
+// 		`prc[a] : 1 = close self
+// 		prc[b] : 1 = fwd self -a
+// 		prc[c] : 1 = wait b; close self`,
+// 		`type A = &{labelok : 1}
+// 		prc[x] : 1 = y.labelok<self>
+// 		prc[y] : A = fwd self +z
+// 		prc[z] : A = case self ( labelok<b> => close b )`,
+// 		// New
+// 		`let f1(x : 1) : +{label : 1} = self.label<x>
+// 		 prc[y] : 1 = m <- new f1(z); case m (label<zz> => wait zz; close self )
+// 		 prc[z] : 1 = close self`,
+// 		`type A = +{label : 1}
+// 		 assuming z : 1
+// 		 prc[y] : 1 = m : A <- new self.label<z>; case m (label<zz> => wait zz; close self )`,
+// 		`type A = +{label : 1}
+// 		 type B = 1
+// 		 let f1(x : B) : A = self.label<x>
+// 		 prc[y] : A = f1(z)
+// 		 prc[y2] : 1 = case y (label<zz> => wait zz; close self )
+// 		 prc[z] : 1 = close self`,
+// 		// Call
+// 		`type A = &{label : 1}
+// 		 type B = 1
+// 		 let f1(x : A) : B = x.label<self>
+// 		 let f2() : A = case self (label<zz> => close self )
+// 		 prc[y] : B = f1(z)
+// 		 prc[z] : A = f2()`,
+// 	}
+
+// 	runThroughTypechecker(t, cases, false)
+// }

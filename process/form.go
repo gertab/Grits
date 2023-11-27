@@ -372,20 +372,18 @@ func (p *CaseForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment
 
 // New: continuation_c <- new (body); continuation_e
 type NewForm struct {
-	continuation_c          Name
-	body                    Form
-	continuation_e          Form
-	continuation_e_polarity types.Polarity // todo remove user inputted polarity [used as an alternative when types are omitted]
-	derivedFromMacro        bool
+	continuation_c   Name
+	body             Form
+	continuation_e   Form
+	derivedFromMacro bool
 }
 
-func NewNew(continuation_c Name, body, continuation_e Form, continuation_e_polarity types.Polarity) *NewForm {
+func NewNew(continuation_c Name, body, continuation_e Form) *NewForm {
 	return &NewForm{
-		continuation_c:          continuation_c,
-		body:                    body,
-		continuation_e:          continuation_e,
-		continuation_e_polarity: continuation_e_polarity,
-		derivedFromMacro:        false,
+		continuation_c:   continuation_c,
+		body:             body,
+		continuation_e:   continuation_e,
+		derivedFromMacro: false,
 	}
 }
 
@@ -468,13 +466,12 @@ func (p *CloseForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironmen
 
 // Forward: fwd to_c from_c
 type ForwardForm struct {
-	to_c     Name
-	from_c   Name
-	polarity types.Polarity
+	to_c   Name
+	from_c Name
 }
 
-func NewForward(to_c, from_c Name, polarity types.Polarity) *ForwardForm {
-	return &ForwardForm{to_c: to_c, from_c: from_c, polarity: polarity}
+func NewForward(to_c, from_c Name) *ForwardForm {
+	return &ForwardForm{to_c: to_c, from_c: from_c}
 }
 
 func (p *ForwardForm) String() string {
@@ -521,16 +518,14 @@ type SplitForm struct {
 	channel_two    Name
 	from_c         Name
 	continuation_e Form
-	polarity       types.Polarity // todo remove
 }
 
-func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form, polarity types.Polarity) *SplitForm {
+func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form) *SplitForm {
 	return &SplitForm{
 		channel_one:    channel_one,
 		channel_two:    channel_two,
 		from_c:         from_c,
-		continuation_e: continuation_e,
-		polarity:       polarity}
+		continuation_e: continuation_e}
 }
 func (p *SplitForm) String() string {
 	var buf bytes.Buffer
@@ -585,14 +580,13 @@ type CallForm struct {
 	functionName string
 	parameters   []Name
 	ProviderType types.SessionType
-	polarity     types.Polarity // todo (!!!) remove
 }
 
-func NewCall(functionName string, parameters []Name, polarity types.Polarity) *CallForm {
+func NewCall(functionName string, parameters []Name) *CallForm {
 	return &CallForm{
 		functionName: functionName,
 		parameters:   parameters,
-		polarity:     polarity}
+	}
 }
 
 func (p *CallForm) String() string {
@@ -1090,25 +1084,25 @@ func CopyForm(orig Form) Form {
 		if ok {
 			body := CopyForm(p.body)
 			cont := CopyForm(p.continuation_e)
-			return NewNew(p.continuation_c, body, cont, p.continuation_e_polarity)
+			return NewNew(p.continuation_c, body, cont)
 		}
 	case *ForwardForm:
 		p, ok := orig.(*ForwardForm)
 		if ok {
-			return NewForward(p.to_c, p.from_c, p.polarity)
+			return NewForward(p.to_c, p.from_c)
 		}
 	case *SplitForm:
 		p, ok := orig.(*SplitForm)
 		if ok {
 			cont := CopyForm(p.continuation_e)
-			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont, p.polarity)
+			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont)
 		}
 	case *CallForm:
 		p, ok := orig.(*CallForm)
 		if ok {
 			copiedParameters := make([]Name, len(p.parameters))
 			copy(copiedParameters, p.parameters)
-			return NewCall(p.functionName, copiedParameters, p.polarity)
+			return NewCall(p.functionName, copiedParameters)
 		}
 	case *WaitForm:
 		p, ok := orig.(*WaitForm)

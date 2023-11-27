@@ -99,27 +99,17 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   | /* Case */ CASE name LPAREN branches RPAREN 
 		   			{ $$ = process.NewCase($2, $4) }
 		   | /* New */ name LEFT_ARROW NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew($1, $4, $6,  types.UNKNOWN) } 
+					{ $$ = process.NewNew($1, $4, $6) } 
 		   | /* New */ LABEL COLON session_type LEFT_ARROW NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8,  types.UNKNOWN) } 		   
-		 /*  |  New (polarity) name LEFT_ARROW polarity NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew($1, $5, $7, $3) } 
-		   | New (polarity) LABEL COLON session_type LEFT_ARROW polarity NEW expression SEQUENCE expression 
-					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $7, $9, $5) }  */
+					{ $$ = process.NewNew(process.Name{Ident: $1, Type: $3, IsSelf: false}, $6, $8) } 		   
 		   | /* Call */ LABEL LPAREN optional_names RPAREN
-		   			{ $$ = process.NewCall($1, $3,  types.UNKNOWN) }
-		  /* |  Call (polarity)  polarity LABEL LPAREN optional_names RPAREN 
-		   			{ $$ = process.NewCall($2, $4, $1) } */
+		   			{ $$ = process.NewCall($1, $3) }
 		   | /* Close */ CLOSE name
 		   			{ $$ = process.NewClose($2) }
-		   | /* Forward (without explicit polarities) */ FORWARD name name
-				{ $$ = process.NewForward($2, $3,  types.UNKNOWN) } 
-		  /* |  Forward (polarity)  polarity FORWARD name name
-		   			{ $$ = process.NewForward($3, $4, $1) } */
-		   | /* Split (without explicit polarities) */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
-		   			{ $$ = process.NewSplit($2, $4, $8, $10,  types.UNKNOWN) }
-		  /* |  Split (polarity)  LANGLE name COMMA name RANGLE LEFT_ARROW polarity SPLIT name SEQUENCE expression
-		   			{ $$ = process.NewSplit($2, $4, $9, $11, $7) } */
+		   | /* Forward */ FORWARD name name
+				{ $$ = process.NewForward($2, $3) } 
+		   | /* Split */ LANGLE name COMMA name RANGLE LEFT_ARROW SPLIT name SEQUENCE expression
+		   			{ $$ = process.NewSplit($2, $4, $8, $10) }
 		   | /* Wait */ WAIT name SEQUENCE expression
 		   			{ $$ = process.NewWait($2, $4) }
 		   | /* Cast */ CAST name LANGLE name RANGLE  
@@ -137,29 +127,28 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
  
 branches :   /* empty */         										 { $$ = nil }
          |               LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = []*process.BranchForm{process.NewBranch(process.Label{L: $1}, $3, $6)} }
-         | branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = append($1, process.NewBranch(process.Label{L: $3}, $5, $8)) }
-         ;
+         | branches PIPE LABEL LANGLE name RANGLE RIGHT_ARROW expression { $$ = append($1, process.NewBranch(process.Label{L: $3}, $5, $8)) };
 
 names : name { $$ = []process.Name{$1} }
- 	  | name COMMA names { $$ = append([]process.Name{$1}, $3...) }
+ 	  | name COMMA names { $$ = append([]process.Name{$1}, $3...) };
 
 optional_names : /* empty */ { $$ = nil }
 		| name { $$ = []process.Name{$1} }
-		| name COMMA names { $$ = append([]process.Name{$1}, $3...) }
+		| name COMMA names { $$ = append([]process.Name{$1}, $3...) };
 
 optional_names_with_type_ann : 
 			/* empty */ { $$ = nil }
 		| name_with_type_ann { $$ = []process.Name{$1} }
-		| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) }
+		| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) };
 
 comma_optional_names_with_type_ann : 
 			/* empty */ { $$ = nil }
-		| COMMA optional_names_with_type_ann { $$ = $2 }
+		| COMMA optional_names_with_type_ann { $$ = $2 };
 
 
 names_with_type_ann : 
 	name_with_type_ann { $$ = []process.Name{$1} }
-	| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) }
+	| name_with_type_ann COMMA names_with_type_ann { $$ = append([]process.Name{$1}, $3...) };
 
 name_with_type_ann : 
 			/* without type - todo remove option to force types */
@@ -169,8 +158,13 @@ name_with_type_ann :
 			 		{ $$ = process.Name{Ident: $1, Type: $3, IsSelf: false} };
 
 name : SELF { $$ = process.Name{IsSelf: true} }
-	 | LABEL { $$ = process.Name{Ident: $1, IsSelf: false} };
-
+	 | polarity SELF  
+		{ pol := $1
+		  $$ = process.Name{IsSelf: true, ExplicitPolarity: &pol} }
+	 | LABEL { $$ = process.Name{Ident: $1, IsSelf: false} }
+	 | polarity LABEL
+		{ pol := $1
+		  $$ = process.Name{Ident: $2, IsSelf: false, ExplicitPolarity: &pol} };
 
 assuming_def : ASSUMING names_with_type_ann
 			{ $$ = unexpandedProcessOrFunction{kind: ASSUMING_DEF, assumedFreeNameTypes: $2} };
@@ -234,11 +228,7 @@ polarity : PLUS { $$ = types.POSITIVE }
 exec_def : EXEC LABEL LPAREN RPAREN
 			{ $$ = unexpandedProcessOrFunction{
 				kind: EXEC_DEF, 
-				proc: incompleteProcess{Body: process.NewCall($2, []process.Name{},  types.UNKNOWN)}}}
-		 | EXEC polarity LABEL LPAREN RPAREN
-		 	{ $$ = unexpandedProcessOrFunction{
-		 			kind: EXEC_DEF, 
-		 			proc: incompleteProcess{Body: process.NewCall($3, []process.Name{}, $2)}}}
+				proc: incompleteProcess{Body: process.NewCall($2, []process.Name{})}}};
 
 %%
 

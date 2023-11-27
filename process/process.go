@@ -5,8 +5,6 @@ import (
 	"phi/types"
 )
 
-const printTypes = false
-
 // A 'Process' contains the body of the process and the channel it is providing on.
 type Process struct {
 	Body      Form

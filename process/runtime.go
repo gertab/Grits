@@ -191,7 +191,13 @@ func (re *RuntimeEnvironment) CreateFreshChannel(ident string) Name {
 		// Not needed in the case of NORMAL_ASYNC or NORMAL_SYNC
 	}
 
-	return Name{Ident: ident, Channel: mChan, ChannelID: re.debugChannelCounter, ControlChannel: cmChan, IsSelf: false}
+	return Name{
+		Ident:          ident,
+		Channel:        mChan,
+		ChannelID:      re.debugChannelCounter,
+		ControlChannel: cmChan,
+		IsSelf:         false,
+	}
 }
 
 func (re *RuntimeEnvironment) InitializeMonitor(startedWg *sync.WaitGroup, subscriber *SubscriberInfo) {

@@ -12,15 +12,24 @@ import (
 /* ignore sample programs -- used for development*/
 
 const program = `
-assuming pid3 : 1, pid4 : 1
 
-prc[pid1] : 1 = <pid2_first, pid2_second> <- split pid2; /* split gets its polarity from the types */
-				k : 1 <- new send pid2_first<pid3, self>;
-				wait k;
-				send pid2_second<pid4, self>
-prc[pid2] : 1 -* 1 = <a, b> <- recv self; 
-					 drop a; 
-					 close self
+type A = +{label1 : B}
+type B = 1
+prc[y] : 1 = case ff (label1<cont> => wait cont; close self)
+prc[ff] : A = fwd self +z
+prc[z] : A = self.label1<x>
+prc[x] : B = close self
+
+
+// assuming pid3 : 1, pid4 : 1
+
+// prc[pid1] : 1 = <pid2_first, pid2_second> <- split pid2; /* split gets its polarity from the types */
+// 				k : 1 <- new send pid2_first<pid3, self>;
+// 				wait k;
+// 				send pid2_second<pid4, self>
+// prc[pid2] : 1 -* 1 = <a, b> <- recv self; 
+// 					 drop a; 
+// 					 close self
 
 // // Positive fwd
 // type A = +{label1 : B}

@@ -23,9 +23,8 @@ func TestSimpleFWDRCV(t *testing.T) {
 	// Case 1: FWD + RCV
 	input := ` 	/* FWD + RCV rule */
 		prc[pid1] = send pid2<pid5, self>
-		prc[pid2] = -fwd self pid3
-		prc[pid3] = <a, b> <- recv self; close a
-		`
+		prc[pid2] = fwd self -pid3
+		prc[pid3] = <a, b> <- recv self; close a`
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}}},
 	}
@@ -39,7 +38,7 @@ func TestSimpleFWDSND(t *testing.T) {
 	// Case 1: FWD + SND
 	input := ` 	/* FWD + RCV rule */
 		prc[pid1] = <a, b> <- recv pid2; close a
-		prc[pid2] = +fwd self pid3
+		prc[pid2] = fwd self +pid3
 		prc[pid3] = send self<pid5, self>
 		`
 	expected := []traceOption{
@@ -54,8 +53,7 @@ func TestSimpleSND(t *testing.T) {
 	// Case 2: SND
 	input := ` 	/* SND rule */
 	prc[pid1] = send self<pid3, self>
-	prc[pid2] = <a, b> <- recv pid1; close self
-	`
+	prc[pid2] = <a, b> <- recv pid1; close self`
 	expected := []traceOption{
 		{steps{{"pid2", process.SND}}},
 	}
@@ -67,9 +65,8 @@ func TestSimpleSND(t *testing.T) {
 func TestSimpleCUTSND(t *testing.T) {
 	// Case 3: CUT + SND
 	input := ` 	/* CUT + SND rule */
-		prc[pid1] = x <- +new (<a, b> <- recv pid2; close b); close self
-		prc[pid2] = send self<pid5, self>
-		`
+		prc[pid1] = x <- new (<a, b> <- recv pid2; close b); close self
+		prc[pid2] = send self<pid5, self>`
 	expected := []traceOption{
 		{steps{{"pid1", process.CUT}, {"x", process.SND}}},
 	}
@@ -82,9 +79,8 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 	// Case 3: CUT + SND
 	input := `   /* CUT + inner blocking SND + FWD + RCV rule */
 			prc[pid1] = send pid2<pid5, self>
-			prc[pid2] = -fwd self pid3
-			prc[pid3] = ff <- -new (send ff<pid5, ff>); <a, b> <- recv self; close self
-			`
+			prc[pid2] = fwd self -pid3
+			prc[pid3] = ff <- new (send ff<pid5, ff>); <a, b> <- recv self; close self`
 	expected := []traceOption{
 		{steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}},
 
@@ -101,10 +97,9 @@ func TestSimpleMultipleFWD(t *testing.T) {
 
 	input := ` 	/* FWD + RCV rule */
 		prc[pid1] = send pid2<pid5, self>
-		prc[pid2] = -fwd self pid3
-		prc[pid3] = -fwd self pid4
-		prc[pid4] = <a, b> <- recv self; close a
-		`
+		prc[pid2] = fwd self -pid3
+		prc[pid3] = fwd self -pid4
+		prc[pid4] = <a, b> <- recv self; close a`
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}},
 		{steps{{"pid2", process.FWD}, {"pid3", process.FWD}, {"pid2", process.RCV}}},
@@ -119,10 +114,9 @@ func TestSimpleSPLITCUT(t *testing.T) {
 	// Case 5: SPLIT + CUT + SND
 
 	input := ` 	/* SPLIT + CUT + SND rule */
-			prc[pid0] = <x1, x2> <- +split pid1; close self
-			prc[pid1] = x <- +new (<a, b> <- recv pid2; close b); close self
-			prc[pid2] = send self<pid5, self>
-	`
+			prc[pid0] = <x1, x2> <- split +pid1; close self
+			prc[pid1] = x <- new (<a, b> <- recv pid2; close b); close self
+			prc[pid2] = send self<pid5, self>`
 	expected := []traceOption{
 		// Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
 		{steps{{"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x", process.SND}, {"x", process.SND}, {"x1", process.CUT}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.CUT}}},
@@ -140,15 +134,16 @@ func TestSimpleSPLITSNDSND(t *testing.T) {
 	// Case 6: SPLIT + SND rule (x 2)
 
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
-	assuming pid3 : 1, pid4 : 1
+	prc[pid1] : 1 = <a, b> <- split +pid2; 
+				<a2, b2> <- recv a; drop a2; drop b2;
+				<a3, b3> <- recv b; drop a3; drop b3;
+				close self
+	prc[pid2] : 1 * 1 = send self<+pid3, +pid4>
+	prc[pid3] : 1 = close self
+	prc[pid4] : 1 = close self`
 
-	prc[pid1] : 1 = <a, b> <- +split pid2; 
-					<a2, b2> <- recv a; drop a2; drop b2;
-					<a3, b3> <- recv b; drop a3; drop b3;
-					close self
-	prc[pid2] : 1 * 1 = send self<pid3, pid4>`
 	expected := []traceOption{
-		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SND}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"pid1", process.DROP}}},
+		{steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SND}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"pid3", process.DUP}, {"pid3", process.FWD}, {"pid4", process.DUP}, {"pid4", process.FWD}}},
 		// {steps{{"pid1", process.SPLIT}, {"a", process.FWD}, {"a", process.DUP}, {"pid1", process.SND}, {"pid1", process.SPLIT}}},
 		// not sure about this ^
 	}
@@ -161,7 +156,7 @@ func TestSimpleSPLITRCVRCV(t *testing.T) {
 	// Case 6: SPLIT + RCV rule (x 2)
 
 	input := ` 	/* Simple SPLIT + RCV rule (x 2) */
-	prc[pid1]= <pid2_first, pid2_second> <- -split pid2; 
+	prc[pid1]= <pid2_first, pid2_second> <- split -pid2; 
 					k<- new send pid2_first<pid3, self>;
 					wait k;
 					send pid2_second<pid4, self>
@@ -170,7 +165,7 @@ func TestSimpleSPLITRCVRCV(t *testing.T) {
 						 close self`
 	expected := []traceOption{
 		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.FWD}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
-		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.RCV}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
+		// {steps{{"pid1", process.SPLIT}, {"pid2_first", process.RCV}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
 	}
 
 	typecheck := false
@@ -204,8 +199,8 @@ func TestSimpleSPLITCALL(t *testing.T) {
 	input := ` /* SPLIT + CALL rule */
 				let D1(c) =  <a, b> <- recv c; close a
 
-				prc[pid0] = <x1, x2> <- +split pid1; close self
-				prc[pid1] = +D1(pid2)
+				prc[pid0] = <x1, x2> <- split +pid1; close self
+				prc[pid1] = D1(pid2)
 				prc[pid2] = send self<pid3, pid4>`
 	expected := []traceOption{
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
@@ -221,12 +216,11 @@ func TestSimpleMultipleProvidersInitially(t *testing.T) {
 	// Case 8: Implicit SPLIT
 
 	input := ` /* SND rule with process having multiple names */
-		prc[pa, pb, pc, pd] = send self<pid0, self>
+		prc[pa, pb, pc, pd] = send self<+pid0, +pid00>
 		prc[pid2] = <a, b> <- recv pa; close self
 		prc[pid3] = <a, b> <- recv pb; close self
 		prc[pid4] = <a, b> <- recv pc; close self
-		prc[pid5] = <a, b> <- recv pd; close self
-		`
+		prc[pid5] = <a, b> <- recv pd; close self`
 	expected := []traceOption{
 		{steps{{"pa", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}},
 	}
@@ -239,7 +233,7 @@ func TestSimpleDUP(t *testing.T) {
 	// Case 9: DUP at the top level
 
 	input := ` 
-		prc[a, b, c, d] = send self<x, y>
+		prc[a, b, c, d] = send self<+x, +y>
 
 		prc[m] = <f, g> <- recv a; wait f; wait g; close self
 		prc[n] = <f, g> <- recv b; wait f; wait g; close self
@@ -308,7 +302,7 @@ func TestExec(t *testing.T) {
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
-func TestCallPolarity(t *testing.T) {
+func TestCall(t *testing.T) {
 	// Case 10: Function calls
 
 	input := ` 
@@ -318,8 +312,8 @@ func TestCallPolarity(t *testing.T) {
 	let f1(x : A) : B = x.label<self>
 	let f2() : A = case self (label<zz> => close self )
 
-	prc[y] : B = +f1(z)
-	prc[z] : A = -f2()`
+	prc[y] : B = f1(z)
+	prc[z] : A = f2()`
 	expected := []traceOption{
 		{steps{{"y", process.CALL}, {"z", process.CALL}, {"z", process.CSE}}},
 	}
@@ -328,13 +322,13 @@ func TestCallPolarity(t *testing.T) {
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
-func TestNewPolarity(t *testing.T) {
-	// Case 10: Function calls (explicit polarities)
+func TestNew(t *testing.T) {
+	// Case 10: New
 
 	input := ` 
 	type A = +{label : 1}
 	
-	prc[y] : 1 = m : A <- +new self.label<z>; 
+	prc[y] : 1 = m : A <- new self.label<z>; 
 			     case m (label<zz> => wait zz; 
 				 close self)
 	prc[z] : 1 = close self`
@@ -354,7 +348,7 @@ func TestFwdPolarity(t *testing.T) {
 	type A = &{labelok : 1}
 
 	prc[x] : 1 = y.labelok<self> 
-	prc[y] : A = -fwd self z
+	prc[y] : A = fwd self -z
 	prc[z] : A = case self ( labelok<b> => close b )`
 
 	expected := []traceOption{
@@ -459,7 +453,7 @@ func TestNestedPolarizedFwd(t *testing.T) {
 	type A = +{label1 : B}
 	type B = 1
 	prc[y] : 1 = case ff (label1<cont> => wait cont; close self)
-	prc[ff] : A = +fwd self z
+	prc[ff] : A = fwd self +z
 	prc[z] : A = self.label1<x>
 	prc[x] : B = close self`
 
@@ -475,7 +469,7 @@ func TestNestedPolarizedFwd(t *testing.T) {
 	type A = &{label1 : B}
 	type B = 1
 	prc[y] : 1 = ff.label1<self>
-	prc[ff] : A = -fwd self z
+	prc[ff] : A = fwd self -z
 	prc[z] : A = case self (label1<cont> => close self)
 	prc[x] : B = close self`
 

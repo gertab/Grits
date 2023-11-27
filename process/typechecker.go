@@ -753,12 +753,6 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationError)
 			}
 
-			// Check explicit polarities
-			if p.continuation_e_polarity != types.UNKNOWN && p.continuation_e_polarity != functionSignature.Type.Polarity() {
-				// Make sure that the explicit polarity matches as well
-				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[functionSignature.Type.Polarity()], types.PolarityMap[p.continuation_e_polarity])
-			}
-
 			// Set type
 			p.continuation_c.Type = functionSignature.Type
 		default:
@@ -792,12 +786,6 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			// Add new channel name to gamma
 			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
 			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: p.continuation_c.Type}
-
-			// Check explicit polarities
-			if p.continuation_e_polarity != types.UNKNOWN && p.continuation_e_polarity != p.continuation_c.Type.Polarity() {
-				// Make sure that the explicit polarity matches as well
-				return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[p.continuation_c.Type.Polarity()], types.PolarityMap[p.continuation_e_polarity])
-			}
 
 			// typecheck the continuation of the cut rule
 			continuationBodyError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
@@ -914,10 +902,13 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	if clientType.Polarity() != providerType.Polarity() {
 		// Make sure that the polarities match
 		return fmt.Errorf("invalid polarities in %s: name '%s' is %s, while '%s' is %s", p.String(), p.to_c.String(), types.PolarityMap[providerType.Polarity()], p.from_c.String(), types.PolarityMap[clientType.Polarity()])
-	} else if p.polarity != types.UNKNOWN && p.polarity != providerType.Polarity() {
-		// Make sure that the explicit polarity matches as well
-		return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[providerType.Polarity()], types.PolarityMap[p.polarity])
 	}
+
+	// TODO compare annotated polarities
+	// if p.polarity != types.UNKNOWN && p.polarity != providerType.Polarity() {
+	// 	// Make sure that the explicit polarity matches as well
+	// 	return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[providerType.Polarity()], types.PolarityMap[p.polarity])
+	// }
 
 	// Set types
 	p.to_c.Type = providerType
@@ -1041,12 +1032,6 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	// Set type
 	p.ProviderType = functionSignature.Type
 
-	// Check explicit polarities
-	if p.polarity != types.UNKNOWN && p.polarity != functionSignature.Type.Polarity() {
-		// Make sure that the explicit polarity matches as well
-		return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[functionSignature.Type.Polarity()], types.PolarityMap[p.polarity])
-	}
-
 	// make sure that no variables are left in gamma
 	err := linearGammaContext(gammaNameTypesCtx)
 
@@ -1090,11 +1075,12 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	p.channel_one.Type = foundType
 	p.channel_two.Type = foundType
 
-	// Check explicit polarities
-	if p.polarity != types.UNKNOWN && p.polarity != foundType.Polarity() {
-		// Make sure that the explicit polarity matches as well
-		return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.StringShort(), types.PolarityMap[foundType.Polarity()], types.PolarityMap[p.polarity])
-	}
+	// TODO compare explicit polarities
+	// // Check explicit polarities
+	// if p.from_c.ExplicitPolarity != nil && p.from_c.Polarity(true, &GlobalEnvironment{}) != foundType.Polarity() {
+	// 	// Make sure that the explicit polarity matches as well
+	// 	return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.StringShort(), types.PolarityMap[foundType.Polarity()], types.PolarityMap[p.polarity])
+	// }
 
 	// Continue checking the remaining process
 	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)

@@ -146,7 +146,7 @@ const phiEofCode = 1
 const phiErrCode = 2
 const phiInitialStackSize = 16
 
-//line parser/parser.y:243
+//line parser/parser.y:233
 
 // Parse is the entry point to the parser.
 func Parse(r io.Reader) (allEnvironment, error) {
@@ -172,62 +172,65 @@ var phiExca = [...]int8{
 
 const phiPrivate = 57344
 
-const phiLast = 238
+const phiLast = 270
 
 var phiAct = [...]uint8{
-	3, 127, 64, 138, 108, 52, 51, 78, 25, 24,
-	95, 152, 150, 23, 180, 96, 41, 9, 98, 130,
-	97, 124, 168, 62, 164, 15, 26, 27, 178, 6,
-	140, 61, 5, 7, 8, 10, 12, 13, 94, 28,
-	30, 185, 33, 14, 36, 37, 38, 39, 40, 162,
-	42, 65, 95, 95, 11, 22, 16, 96, 96, 69,
-	163, 95, 90, 95, 54, 95, 96, 165, 96, 71,
-	96, 72, 99, 29, 102, 121, 104, 123, 105, 95,
-	122, 161, 79, 144, 96, 111, 109, 113, 132, 117,
-	112, 67, 87, 88, 68, 66, 91, 89, 125, 126,
-	129, 74, 58, 182, 56, 57, 158, 106, 103, 131,
-	4, 22, 80, 48, 81, 135, 141, 136, 114, 100,
-	145, 146, 76, 118, 34, 149, 35, 115, 43, 44,
-	45, 46, 47, 85, 153, 79, 63, 154, 139, 140,
-	155, 79, 159, 156, 157, 160, 109, 137, 133, 116,
-	142, 134, 184, 107, 167, 101, 169, 148, 83, 170,
-	59, 151, 84, 172, 183, 166, 120, 177, 119, 179,
-	77, 75, 181, 73, 189, 32, 171, 186, 31, 82,
-	187, 188, 192, 176, 190, 191, 143, 9, 128, 53,
-	193, 147, 110, 194, 93, 15, 173, 174, 175, 6,
-	86, 60, 5, 50, 8, 10, 12, 13, 49, 2,
-	1, 55, 92, 14, 70, 21, 20, 19, 25, 24,
-	18, 17, 0, 23, 11, 22, 16, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 26, 27,
+	3, 127, 66, 138, 109, 57, 56, 80, 26, 25,
+	96, 179, 167, 24, 99, 97, 44, 177, 140, 95,
+	151, 130, 149, 67, 98, 64, 27, 28, 124, 161,
+	52, 71, 7, 63, 184, 164, 163, 121, 31, 33,
+	162, 36, 122, 39, 40, 41, 42, 43, 160, 45,
+	96, 96, 96, 96, 96, 97, 97, 97, 97, 97,
+	96, 143, 132, 69, 91, 97, 70, 68, 51, 117,
+	123, 73, 90, 74, 100, 76, 103, 32, 105, 60,
+	106, 181, 157, 107, 4, 53, 81, 112, 110, 114,
+	136, 115, 113, 88, 89, 101, 82, 92, 83, 125,
+	126, 129, 46, 47, 48, 49, 50, 78, 87, 104,
+	131, 37, 65, 38, 137, 22, 135, 29, 30, 154,
+	144, 145, 155, 118, 116, 148, 139, 140, 133, 108,
+	102, 134, 183, 85, 152, 81, 61, 153, 150, 86,
+	182, 81, 158, 165, 156, 159, 110, 120, 119, 141,
+	79, 77, 75, 166, 35, 168, 147, 34, 169, 188,
+	170, 84, 171, 191, 175, 142, 176, 128, 178, 58,
+	146, 180, 111, 94, 62, 59, 185, 55, 54, 186,
+	187, 2, 1, 189, 190, 9, 23, 93, 72, 192,
+	21, 20, 193, 15, 172, 173, 174, 6, 19, 18,
+	5, 17, 8, 10, 12, 13, 0, 0, 0, 0,
+	0, 14, 0, 0, 0, 0, 26, 25, 0, 0,
+	0, 24, 11, 22, 16, 29, 30, 0, 9, 0,
+	0, 0, 0, 0, 27, 28, 15, 0, 0, 0,
+	6, 0, 0, 5, 0, 8, 10, 12, 13, 0,
+	0, 0, 0, 0, 14, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 11, 22, 16, 29, 30,
 }
 
 var phiPact = [...]int16{
-	183, -1000, -1000, -1000, -1000, 69, 69, 170, 69, 114,
-	69, 69, 69, 69, 69, 13, 69, -27, -27, -27,
-	-27, -27, -1000, 99, 204, 199, 185, 60, 86, -1000,
-	149, 197, -2, 124, 47, 69, -1000, 69, 164, 85,
-	162, 109, 161, -1000, -1000, -1000, -1000, -1000, 69, 100,
-	172, -1000, 147, 152, 121, 196, -1000, -1000, 69, 69,
-	81, 13, 69, 190, 33, -1000, -1000, -29, -31, 47,
-	106, 144, -1000, 13, 69, 13, -1000, 13, 92, 142,
-	185, 188, 47, 185, 47, 105, 115, 138, 72, 69,
-	159, 157, 62, 61, -12, 47, 47, 184, 184, 6,
-	-1000, 69, -1000, 71, -1000, -1000, 141, 69, 104, 136,
-	128, -36, -1000, -36, -1000, 103, 69, 181, 66, 13,
-	13, -1000, 187, 69, 13, -36, -36, -38, 151, -39,
-	-1000, -1000, -1000, 13, 47, -1000, 133, 185, 91, 47,
-	185, -1000, 64, 29, -1000, -1000, -1000, 8, 50, 156,
-	-1000, 47, -1000, -1000, 15, 13, 47, -1000, 169, 19,
-	-1000, -1000, 69, 69, 69, 177, 13, 17, 13, -1000,
-	7, 13, 88, 155, 143, 24, 13, -1000, 184, -1000,
-	13, -1000, 167, 13, 13, 176, -1000, -1000, -1000, 13,
-	-1000, -1000, 13, -1000, -1000,
+	181, -1000, -1000, -1000, -1000, 73, 73, 149, 73, 101,
+	73, 73, 73, 73, 73, 224, 73, -27, -27, -27,
+	-27, -27, -1000, 26, 71, 174, 173, 165, 171, -1000,
+	-1000, 63, -1000, 125, 170, 0, 100, 19, 73, -1000,
+	73, 143, 59, 142, 94, 141, -1000, -1000, -1000, -1000,
+	-1000, -1000, -1000, 73, 84, 154, -1000, 122, 129, 96,
+	73, 73, 56, 224, 73, 169, 14, -1000, -1000, -25,
+	-35, 19, 82, 119, -1000, 224, 73, 224, -1000, 224,
+	68, 118, 165, 168, 19, 165, 19, 78, 113, 52,
+	73, 139, 138, 24, 54, -5, 19, 19, 163, 163,
+	8, -1000, 73, -1000, 45, -1000, -1000, 121, 73, 77,
+	103, 116, -36, -1000, -36, -1000, 73, 160, 44, 224,
+	224, -1000, 166, 73, 224, -36, -36, -28, 128, -30,
+	-1000, -1000, -1000, 224, 19, -1000, 112, 165, 67, 19,
+	165, 31, 9, -1000, -1000, -1000, 20, 18, 134, -1000,
+	19, -1000, -1000, 5, 224, 19, -1000, 153, 7, -1000,
+	-1000, 73, 73, 73, 158, 224, 6, 224, -1000, 4,
+	224, 66, 131, 123, 17, 224, -1000, 163, -1000, 224,
+	-1000, 152, 224, 224, 157, -1000, -1000, -1000, 224, -1000,
+	-1000, 224, -1000, -1000,
 }
 
 var phiPgo = [...]uint8{
-	0, 110, 221, 220, 217, 216, 215, 0, 33, 5,
-	7, 214, 4, 3, 6, 212, 2, 1, 211, 210,
-	209,
+	0, 84, 201, 199, 198, 191, 190, 0, 32, 5,
+	7, 188, 4, 3, 6, 187, 2, 1, 186, 182,
+	181,
 }
 
 var phiR1 = [...]int8{
@@ -236,8 +239,9 @@ var phiR1 = [...]int8{
 	7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
 	7, 7, 15, 15, 15, 10, 10, 11, 11, 11,
 	12, 12, 12, 13, 13, 14, 14, 9, 9, 8,
-	8, 5, 3, 3, 3, 3, 4, 16, 16, 16,
-	16, 16, 16, 16, 17, 17, 18, 18, 6, 6,
+	8, 8, 8, 5, 3, 3, 3, 3, 4, 16,
+	16, 16, 16, 16, 16, 16, 17, 17, 18, 18,
+	6,
 }
 
 var phiR2 = [...]int8{
@@ -246,54 +250,55 @@ var phiR2 = [...]int8{
 	6, 8, 4, 2, 3, 10, 4, 5, 6, 4,
 	3, 4, 0, 6, 8, 1, 3, 0, 1, 3,
 	0, 1, 3, 0, 2, 1, 3, 1, 3, 1,
-	1, 2, 7, 9, 8, 10, 4, 1, 1, 4,
-	4, 3, 3, 3, 3, 5, 1, 1, 4, 5,
+	2, 1, 2, 2, 7, 9, 8, 10, 4, 1,
+	1, 4, 4, 3, 3, 3, 3, 5, 1, 1,
+	4,
 }
 
 var phiChk = [...]int16{
 	-1000, -19, -20, -7, -1, 19, 16, -8, 21, 4,
 	22, 41, 23, 24, 30, 12, 43, -2, -3, -4,
-	-5, -6, 42, 40, 36, 35, 53, 54, -8, 4,
-	-8, 8, 5, -8, 10, 12, -8, -8, -8, -8,
-	-8, -7, -8, -1, -1, -1, -1, -1, 14, 4,
-	4, -14, -9, 4, 4, -18, 44, 45, 16, 11,
-	4, 33, 25, 12, -16, 4, 48, 44, 47, 12,
-	-11, -8, -8, 9, 16, 9, 13, 9, -10, -8,
-	12, 14, 7, 11, 10, 12, 4, -8, -8, 16,
-	-7, -8, -15, 4, 5, 46, 51, 49, 49, -16,
-	13, 11, -7, -8, -7, -7, 15, 11, -12, -9,
-	4, -16, -14, -16, 13, 12, 11, 17, -8, 9,
+	-5, -6, 42, -18, 40, 36, 35, 53, 54, 44,
+	45, -8, 4, -8, 8, 5, -8, 10, 12, -8,
+	-8, -8, -8, -8, -7, -8, -1, -1, -1, -1,
+	-1, 42, 4, 14, 4, 4, -14, -9, 4, 4,
+	16, 11, 4, 33, 25, 12, -16, 4, 48, 44,
+	47, 12, -11, -8, -8, 9, 16, 9, 13, 9,
+	-10, -8, 12, 14, 7, 11, 10, 12, -8, -8,
+	16, -7, -8, -15, 4, 5, 46, 51, 49, 49,
+	-16, 13, 11, -7, -8, -7, -7, 15, 11, -12,
+	-9, 4, -16, -14, -16, 13, 11, 17, -8, 9,
 	9, 13, 18, 16, 33, -16, -16, -17, 4, -17,
 	13, -10, 17, 7, 10, -10, 13, 11, -13, 10,
-	11, 13, -8, 5, 17, -7, -7, 4, -8, -7,
-	50, 10, 50, -7, -16, 7, 10, -14, 15, -16,
-	-12, 17, 20, 31, 16, 17, 9, -16, 7, -7,
-	-16, 7, -13, -8, -8, -8, 6, -7, 11, -7,
-	7, -7, 15, 9, 9, 17, -7, -17, -7, 7,
-	-7, -7, 6, -7, -7,
+	11, -8, 5, 17, -7, -7, 4, -8, -7, 50,
+	10, 50, -7, -16, 7, 10, -14, 15, -16, -12,
+	17, 20, 31, 16, 17, 9, -16, 7, -7, -16,
+	7, -13, -8, -8, -8, 6, -7, 11, -7, 7,
+	-7, 15, 9, 9, 17, -7, -17, -7, 7, -7,
+	-7, 6, -7, -7,
 }
 
 var phiDef = [...]int8{
-	0, -2, 1, 2, 3, 0, 0, 0, 0, 50,
+	0, -2, 1, 2, 3, 0, 0, 0, 0, 51,
 	0, 0, 0, 0, 0, 0, 0, 4, 6, 8,
-	10, 12, 49, 0, 0, 0, 0, 0, 0, 50,
-	0, 0, 0, 0, 0, 37, 23, 0, 0, 0,
-	0, 0, 0, 5, 7, 9, 11, 13, 0, 0,
-	0, 51, 45, 47, 0, 0, 66, 67, 0, 0,
-	0, 0, 0, 32, 0, 57, 58, 0, 0, 0,
-	0, 38, 24, 0, 0, 0, 30, 0, 0, 35,
-	40, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	10, 12, 49, 0, 0, 0, 0, 0, 0, 68,
+	69, 0, 51, 0, 0, 0, 0, 0, 37, 23,
+	0, 0, 0, 0, 0, 0, 5, 7, 9, 11,
+	13, 50, 52, 0, 0, 0, 53, 45, 47, 0,
+	0, 0, 0, 0, 0, 32, 0, 59, 60, 0,
+	0, 0, 0, 38, 24, 0, 0, 0, 30, 0,
+	0, 35, 40, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	22, 0, 26, 0, 29, 31, 0, 0, 0, 41,
-	43, 56, 46, 48, 68, 0, 0, 0, 0, 0,
-	0, 19, 0, 0, 0, 61, 62, 0, 0, 0,
-	63, 39, 27, 0, 0, 36, 0, 0, 0, 0,
-	40, 69, 0, 0, 18, 20, 28, 0, 0, 0,
-	59, 0, 60, 14, 0, 0, 0, 42, 0, 43,
-	44, 16, 0, 0, 0, 0, 0, 64, 0, 52,
-	0, 0, 0, 0, 0, 0, 0, 21, 0, 15,
-	0, 54, 0, 0, 0, 0, 33, 65, 53, 0,
-	17, 25, 0, 55, 34,
+	0, 22, 0, 26, 0, 29, 31, 0, 0, 0,
+	41, 43, 58, 46, 48, 70, 0, 0, 0, 0,
+	0, 19, 0, 0, 0, 63, 64, 0, 0, 0,
+	65, 39, 27, 0, 0, 36, 0, 0, 0, 0,
+	40, 0, 0, 18, 20, 28, 0, 0, 0, 61,
+	0, 62, 14, 0, 0, 0, 42, 0, 43, 44,
+	16, 0, 0, 0, 0, 0, 66, 0, 54, 0,
+	0, 0, 0, 0, 0, 0, 21, 0, 15, 0,
+	56, 0, 0, 0, 0, 33, 67, 55, 0, 17,
+	25, 0, 57, 34,
 }
 
 var phiTok1 = [...]int8{
@@ -767,209 +772,223 @@ phidefault:
 		phiDollar = phiS[phipt-6 : phipt+1]
 //line parser/parser.y:102
 		{
-			phiVAL.form = process.NewNew(phiDollar[1].name, phiDollar[4].form, phiDollar[6].form, types.UNKNOWN)
+			phiVAL.form = process.NewNew(phiDollar[1].name, phiDollar[4].form, phiDollar[6].form)
 		}
 	case 21:
 		phiDollar = phiS[phipt-8 : phipt+1]
 //line parser/parser.y:104
 		{
-			phiVAL.form = process.NewNew(process.Name{Ident: phiDollar[1].strval, Type: phiDollar[3].sessionType, IsSelf: false}, phiDollar[6].form, phiDollar[8].form, types.UNKNOWN)
+			phiVAL.form = process.NewNew(process.Name{Ident: phiDollar[1].strval, Type: phiDollar[3].sessionType, IsSelf: false}, phiDollar[6].form, phiDollar[8].form)
 		}
 	case 22:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:110
+//line parser/parser.y:106
 		{
-			phiVAL.form = process.NewCall(phiDollar[1].strval, phiDollar[3].names, types.UNKNOWN)
+			phiVAL.form = process.NewCall(phiDollar[1].strval, phiDollar[3].names)
 		}
 	case 23:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:114
+//line parser/parser.y:108
 		{
 			phiVAL.form = process.NewClose(phiDollar[2].name)
 		}
 	case 24:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:116
+//line parser/parser.y:110
 		{
-			phiVAL.form = process.NewForward(phiDollar[2].name, phiDollar[3].name, types.UNKNOWN)
+			phiVAL.form = process.NewForward(phiDollar[2].name, phiDollar[3].name)
 		}
 	case 25:
 		phiDollar = phiS[phipt-10 : phipt+1]
-//line parser/parser.y:120
+//line parser/parser.y:112
 		{
-			phiVAL.form = process.NewSplit(phiDollar[2].name, phiDollar[4].name, phiDollar[8].name, phiDollar[10].form, types.UNKNOWN)
+			phiVAL.form = process.NewSplit(phiDollar[2].name, phiDollar[4].name, phiDollar[8].name, phiDollar[10].form)
 		}
 	case 26:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:124
+//line parser/parser.y:114
 		{
 			phiVAL.form = process.NewWait(phiDollar[2].name, phiDollar[4].form)
 		}
 	case 27:
 		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:126
+//line parser/parser.y:116
 		{
 			phiVAL.form = process.NewCast(phiDollar[2].name, phiDollar[4].name)
 		}
 	case 28:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:128
+//line parser/parser.y:118
 		{
 			phiVAL.form = process.NewShift(phiDollar[1].name, phiDollar[4].name, phiDollar[6].form)
 		}
 	case 29:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:130
+//line parser/parser.y:120
 		{
 			phiVAL.form = process.NewDrop(phiDollar[2].name, phiDollar[4].form)
 		}
 	case 30:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:132
+//line parser/parser.y:122
 		{
 			phiVAL.form = phiDollar[2].form
 		}
 	case 31:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:134
+//line parser/parser.y:124
 		{
 			phiVAL.form = process.NewPrint(phiDollar[2].name, phiDollar[4].form)
 		}
 	case 32:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:138
+//line parser/parser.y:128
 		{
 			phiVAL.branches = nil
 		}
 	case 33:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:139
+//line parser/parser.y:129
 		{
 			phiVAL.branches = []*process.BranchForm{process.NewBranch(process.Label{L: phiDollar[1].strval}, phiDollar[3].name, phiDollar[6].form)}
 		}
 	case 34:
 		phiDollar = phiS[phipt-8 : phipt+1]
-//line parser/parser.y:140
+//line parser/parser.y:130
 		{
 			phiVAL.branches = append(phiDollar[1].branches, process.NewBranch(process.Label{L: phiDollar[3].strval}, phiDollar[5].name, phiDollar[8].form))
 		}
 	case 35:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:143
+//line parser/parser.y:132
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 36:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:144
+//line parser/parser.y:133
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 37:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:146
+//line parser/parser.y:135
 		{
 			phiVAL.names = nil
 		}
 	case 38:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:147
+//line parser/parser.y:136
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 39:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:148
+//line parser/parser.y:137
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 40:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:151
+//line parser/parser.y:140
 		{
 			phiVAL.names = nil
 		}
 	case 41:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:152
+//line parser/parser.y:141
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 42:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:153
+//line parser/parser.y:142
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 43:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:156
+//line parser/parser.y:145
 		{
 			phiVAL.names = nil
 		}
 	case 44:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:157
+//line parser/parser.y:146
 		{
 			phiVAL.names = phiDollar[2].names
 		}
 	case 45:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:161
+//line parser/parser.y:150
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 46:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:162
+//line parser/parser.y:151
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 47:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:167
+//line parser/parser.y:156
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval, IsSelf: false}
 		}
 	case 48:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:169
+//line parser/parser.y:158
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval, Type: phiDollar[3].sessionType, IsSelf: false}
 		}
 	case 49:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:171
+//line parser/parser.y:160
 		{
 			phiVAL.name = process.Name{IsSelf: true}
 		}
 	case 50:
+		phiDollar = phiS[phipt-2 : phipt+1]
+//line parser/parser.y:162
+		{
+			pol := phiDollar[1].polarity
+			phiVAL.name = process.Name{IsSelf: true, ExplicitPolarity: &pol}
+		}
+	case 51:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:172
+//line parser/parser.y:164
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval, IsSelf: false}
 		}
-	case 51:
+	case 52:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:176
+//line parser/parser.y:166
+		{
+			pol := phiDollar[1].polarity
+			phiVAL.name = process.Name{Ident: phiDollar[2].strval, IsSelf: false, ExplicitPolarity: &pol}
+		}
+	case 53:
+		phiDollar = phiS[phipt-2 : phipt+1]
+//line parser/parser.y:170
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: ASSUMING_DEF, assumedFreeNameTypes: phiDollar[2].names}
 		}
-	case 52:
+	case 54:
 		phiDollar = phiS[phipt-7 : phipt+1]
-//line parser/parser.y:181
+//line parser/parser.y:175
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: phiDollar[2].strval, Parameters: phiDollar[4].names, Body: phiDollar[7].form, UsesExplicitProvider: false}}
 		}
-	case 53:
+	case 55:
 		phiDollar = phiS[phipt-9 : phipt+1]
-//line parser/parser.y:183
+//line parser/parser.y:177
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: phiDollar[2].strval, Parameters: phiDollar[4].names, Body: phiDollar[9].form, Type: phiDollar[7].sessionType, UsesExplicitProvider: false}}
 		}
-	case 54:
+	case 56:
 		phiDollar = phiS[phipt-8 : phipt+1]
-//line parser/parser.y:186
+//line parser/parser.y:180
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{
 				FunctionName:         phiDollar[2].strval,
@@ -980,9 +999,9 @@ phidefault:
 				// Type: $6,
 			}}
 		}
-	case 55:
+	case 57:
 		phiDollar = phiS[phipt-10 : phipt+1]
-//line parser/parser.y:197
+//line parser/parser.y:191
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{
 				FunctionName:         phiDollar[2].strval,
@@ -992,93 +1011,85 @@ phidefault:
 				ExplicitProvider:     process.Name{Ident: phiDollar[4].strval, IsSelf: true},
 				Type:                 phiDollar[6].sessionType}}
 		}
-	case 56:
+	case 58:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:207
+//line parser/parser.y:201
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: phiDollar[2].strval, SessionType: phiDollar[4].sessionType}}
 		}
-	case 57:
+	case 59:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:211
+//line parser/parser.y:205
 		{
 			phiVAL.sessionType = types.NewLabelType(phiDollar[1].strval)
 		}
-	case 58:
+	case 60:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:213
+//line parser/parser.y:207
 		{
 			phiVAL.sessionType = types.NewUnitType()
 		}
-	case 59:
+	case 61:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:215
+//line parser/parser.y:209
 		{
 			phiVAL.sessionType = types.NewSelectType(phiDollar[3].sessionTypeAlt)
 		}
-	case 60:
+	case 62:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:217
+//line parser/parser.y:211
 		{
 			phiVAL.sessionType = types.NewBranchCaseType(phiDollar[3].sessionTypeAlt)
 		}
-	case 61:
+	case 63:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:219
+//line parser/parser.y:213
 		{
 			phiVAL.sessionType = types.NewSendType(phiDollar[1].sessionType, phiDollar[3].sessionType)
 		}
-	case 62:
+	case 64:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:221
+//line parser/parser.y:215
 		{
 			phiVAL.sessionType = types.NewReceiveType(phiDollar[1].sessionType, phiDollar[3].sessionType)
 		}
-	case 63:
+	case 65:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:223
+//line parser/parser.y:217
 		{
 			phiVAL.sessionType = phiDollar[2].sessionType
 		}
-	case 64:
+	case 66:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:226
+//line parser/parser.y:220
 		{
 			phiVAL.sessionTypeAlt = []types.BranchOption{*types.NewBranchOption(phiDollar[1].strval, phiDollar[3].sessionType)}
 		}
-	case 65:
+	case 67:
 		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:227
+//line parser/parser.y:221
 		{
 			phiVAL.sessionTypeAlt = append([]types.BranchOption{*types.NewBranchOption(phiDollar[1].strval, phiDollar[3].sessionType)}, phiDollar[5].sessionTypeAlt...)
 		}
-	case 66:
+	case 68:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:230
+//line parser/parser.y:224
 		{
 			phiVAL.polarity = types.POSITIVE
 		}
-	case 67:
+	case 69:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:231
+//line parser/parser.y:225
 		{
 			phiVAL.polarity = types.NEGATIVE
 		}
-	case 68:
+	case 70:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:235
+//line parser/parser.y:229
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{
 				kind: EXEC_DEF,
-				proc: incompleteProcess{Body: process.NewCall(phiDollar[2].strval, []process.Name{}, types.UNKNOWN)}}
-		}
-	case 69:
-		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:239
-		{
-			phiVAL.common_type = unexpandedProcessOrFunction{
-				kind: EXEC_DEF,
-				proc: incompleteProcess{Body: process.NewCall(phiDollar[3].strval, []process.Name{}, phiDollar[2].polarity)}}
+				proc: incompleteProcess{Body: process.NewCall(phiDollar[2].strval, []process.Name{})}}
 		}
 	}
 	goto phistack /* stack new state and value */

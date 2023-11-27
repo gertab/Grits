@@ -3,15 +3,15 @@ package types
 type Polarity int
 
 const (
-	POSITIVE Polarity = iota
-	NEGATIVE
-	UNKNOWN
+	POSITIVE Polarity = 5
+	NEGATIVE Polarity = 6
+	UNKNOWN  Polarity = 7
 )
 
 var PolarityMap = map[Polarity]string{
 	POSITIVE: "+ve",
 	NEGATIVE: "-ve",
-	UNKNOWN:  "Unknown",
+	UNKNOWN:  "?ve",
 }
 
 // Positive types: 1, *, +{...}, \/ (downshift)

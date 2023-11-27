@@ -34,7 +34,7 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 // Entry point for each process transition
 // todo maybe rename to process.Transition
 func (process *Process) transitionLoop(re *RuntimeEnvironment) {
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity(re.Typechecked, re.GlobalEnvironment)], process.Body.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
@@ -440,7 +440,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 					found = true
 					new_body = j.continuation_e
 					// Substitute the payload with 'self'
-					new_body.Substitute(j.payload_c, NewSelf(message.Channel1.Ident)) //todo check NewSelf
+					new_body.Substitute(j.payload_c, NewSelf(message.Channel1.Ident))
 					break
 				}
 			}
@@ -624,7 +624,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 			process.Body = NewClose(f.to_c)
 		case FWD:
 			re.logProcessf(LOGINFO, process, "oldProviders: %s, newProviders: %s\n", NamesToString(process.Providers), NamesToString(message.Providers))
-			process.Body = NewForward(f.to_c, message.Providers[0]) // todo make sure that message.Providers[0] has type
+			process.Body = NewForward(f.to_c, message.Providers[0])
 			process.Providers = message.Providers
 		case SEL:
 			process.Body = NewSelect(f.to_c, message.Label, message.Channel1)

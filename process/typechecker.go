@@ -28,7 +28,6 @@ func Typecheck(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalE
 
 func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
 	defer func() {
-		// todo replace with WG
 		doneChan <- true
 	}()
 
@@ -433,7 +432,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 		if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
 			nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
-			// Names are not fresh [todo check if needed]
+			// Names are not fresh
 			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names in %s", p.payload_c.String(), p.continuation_c.String(), p.String())
 		}
 

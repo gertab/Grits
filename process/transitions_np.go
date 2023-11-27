@@ -30,7 +30,7 @@ func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
 
 // Entry point for each process transition
 func (process *Process) transitionLoopNP(re *RuntimeEnvironment) {
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity(re.Typechecked, re.GlobalEnvironment)], process.Body.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
@@ -257,8 +257,7 @@ func (f *NewForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		// Create structure of new process
 		newProcessBody := f.body
 		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
-		innerSessionType := types.NewWIPType() /* todo proper type in CUT rule -- this needs to change! maybe we consider only spawning of functions def so that the type will be known precisely */
-		newProcess := NewProcess(newProcessBody, []Name{newChannel}, innerSessionType, LINEAR)
+		newProcess := NewProcess(newProcessBody, []Name{newChannel}, nil, LINEAR)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 
@@ -573,7 +572,7 @@ func (f *SplitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	newSplitNames := []Name{re.CreateFreshChannel(f.channel_one.Ident), re.CreateFreshChannel(f.channel_two.Ident)}
 
 	splitRule := func() {
-		// todo check that f.to_c == process.Provider
+		// todo check that f.from_c != process.Provider
 		re.logProcessf(LOGRULE, process, "[split, client] initiating split for %s into %s\n", f.from_c.String(), NamesToString(newSplitNames))
 
 		currentProcessBody := f.continuation_e
@@ -585,7 +584,7 @@ func (f *SplitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 		// Create structure of new forward process
 		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c)
-		fwdSessionType := f.from_c.Type /* todo fix -- I think this should be the type of f.from_c*/
+		fwdSessionType := f.from_c.Type
 		newProcess := NewProcess(newProcessBody, newSplitNames, fwdSessionType, LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 		// Spawn and initiate new forward process
@@ -660,7 +659,6 @@ func (process *Process) performDUPruleNP(re *RuntimeEnvironment) {
 	for i := range processFreeNames {
 		// Create structure of new forward process
 		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i])
-		/* todo ensure that the type is correct */
 		newProcess := NewProcess(newProcessBody, freshChannels[i], types.CopyType(processFreeNames[i].Type), LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process

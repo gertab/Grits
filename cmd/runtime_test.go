@@ -165,7 +165,7 @@ func TestSimpleSPLITRCVRCV(t *testing.T) {
 
 	input := ` 	/* Simple SPLIT + RCV rule (x 2) */
 	prc[pid1]= <pid2_first, pid2_second> <- split -pid2; 
-					k<- new send pid2_first<pid3, self>;
+					k <- new send pid2_first<pid3, self>;
 					wait k;
 					send pid2_second<pid4, self>
 	prc[pid2] = <a, b> <- recv self; 
@@ -173,7 +173,7 @@ func TestSimpleSPLITRCVRCV(t *testing.T) {
 						 close self`
 	expected := []traceOption{
 		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.FWD}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
-		// {steps{{"pid1", process.SPLIT}, {"pid2_first", process.RCV}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
+		{steps{{"pid1", process.SPLIT}, {"pid2_first", process.RCV}, {"pid2_first", process.DUP}, {"pid1", process.CUT}, {"pid1", process.CLS}, {"k", process.DROP}, {"pid1", process.DROP}, {"pid2_first", process.RCV}, {"pid2_second", process.RCV}}},
 	}
 
 	typecheck := false

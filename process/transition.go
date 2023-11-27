@@ -181,14 +181,14 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 	if f.from_c.IsSelf {
 		// RCV rule (provider, -ve)
 		//
-		// [send to_c <payload_c, self>]
+		// send to_c <payload_c, self>
 		//    |
 		//    |
 		//   \|/
-		// <...> <- recv self; ...
+		// [<...> <- recv self; ...]
 
 		rcvRule := func(message Message) {
-			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished sending on self")
+			re.logProcess(LOGRULEDETAILS, process, "[receive, provider] finished receiving on self")
 
 			if message.Rule != RCV {
 				re.errorf(process, "expected RCV, found %s\n", RuleString[message.Rule])
@@ -196,7 +196,7 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			new_body := f.continuation_e
 			new_body.Substitute(f.payload_c, message.Channel1)
-			new_body.Substitute(f.continuation_c, NewSelf(message.Channel1.Ident))
+			new_body.Substitute(f.continuation_c, NewSelf(message.Channel2.Ident))
 
 			process.finishedRule(RCV, "[receive, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being received
@@ -205,8 +205,8 @@ func (f *ReceiveForm) Transition(process *Process, re *RuntimeEnvironment) {
 			process.Body = new_body
 			process.Providers = []Name{message.Channel2}
 			// process.finishedRule(RCV, "[receive, provider]", "(p)", re)
-			process.processRenamed(re)
 
+			process.processRenamed(re)
 			process.transitionLoop(re)
 		}
 

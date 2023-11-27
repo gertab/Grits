@@ -172,7 +172,7 @@ func TestSubstitutions(t *testing.T) {
 	input2other.Substitute(cont_c, new_cont_c)
 	input2other.Substitute(pay_c, new_pay_c)
 	input2other.Substitute(self, new_self)
-	result2other := NewReceive(pay_c, cont_c, pay_c, new_end)
+	result2other := NewReceive(pay_c, cont_c, new_pay_c, new_end)
 	output = append(output, input2other)
 	expected = append(expected, result2other)
 

@@ -132,10 +132,9 @@ func (p *ReceiveForm) StringShort() string {
 }
 
 func (p *ReceiveForm) Substitute(old, new Name) {
-	if old != p.payload_c && old != p.continuation_c {
-		// payload_c: payload_c,
-		// continuation_c: continuation_c,
-		p.from_c.Substitute(old, new)
+	p.from_c.Substitute(old, new)
+
+	if !p.payload_c.Equal(old) && !p.continuation_c.Equal(old) {
 		p.continuation_e.Substitute(old, new)
 	}
 }
@@ -252,7 +251,7 @@ func (p *BranchForm) StringShort() string {
 
 func (p *BranchForm) Substitute(old, new Name) {
 	// payload_c is a bound variable
-	if old != p.payload_c {
+	if p.payload_c.Equal(old) {
 		p.continuation_e.Substitute(old, new)
 	}
 }
@@ -406,7 +405,8 @@ func (p *NewForm) StringShort() string {
 
 func (p *NewForm) Substitute(old, new Name) {
 	// continuation_c is a bound variable
-	if old != p.continuation_c {
+
+	if !p.continuation_c.Equal(old) {
 		p.body.Substitute(old, new)
 		p.continuation_e.Substitute(old, new)
 	}
@@ -553,10 +553,11 @@ func (p *SplitForm) StringShort() string {
 }
 
 func (p *SplitForm) Substitute(old, new Name) {
-	if old != p.channel_one && old != p.channel_two {
+	p.from_c.Substitute(old, new)
+
+	if p.channel_one.Equal(old) && p.channel_two.Equal(old) {
 		// channel_one: channel_one,
 		// channel_two: channel_two,
-		p.from_c.Substitute(old, new)
 		p.continuation_e.Substitute(old, new)
 	}
 }
@@ -770,9 +771,10 @@ func (p *ShiftForm) StringShort() string {
 }
 
 func (p *ShiftForm) Substitute(old, new Name) {
-	if old != p.continuation_c {
+	p.from_c.Substitute(old, new)
+
+	if !p.continuation_c.Equal(old) {
 		// continuation_c: continuation_c,
-		p.from_c.Substitute(old, new)
 		p.continuation_e.Substitute(old, new)
 	}
 }

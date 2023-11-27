@@ -15,16 +15,17 @@ const monitorTimeout = 40 * time.Millisecond
 
 // Invalidate all cache
 // go clean -testcache
+// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
 
 // We compare only the process names and rules (i.e. the steps) without comparing the order
 func TestSimpleFWDRCV(t *testing.T) {
+	// FWD + RCV
 
-	// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
-	// Case 1: FWD + RCV
 	input := ` 	/* FWD + RCV rule */
 		prc[pid1] = send pid2<pid5, self>
 		prc[pid2] = fwd self -pid3
 		prc[pid3] = <a, b> <- recv self; close a`
+
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}}},
 	}
@@ -34,13 +35,12 @@ func TestSimpleFWDRCV(t *testing.T) {
 }
 
 func TestSimpleFWDSND(t *testing.T) {
-	// go test -timeout 30s -run ^TestSimpleFWDSND$ phi/cmd
-	// Case 1: FWD + SND
+	// FWD + SND
 	input := ` 	/* FWD + RCV rule */
 		prc[pid1] = <a, b> <- recv pid2; close a
 		prc[pid2] = fwd self +pid3
-		prc[pid3] = send self<pid5, self>
-		`
+		prc[pid3] = send self<pid5, self>`
+
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid1", process.SND}}},
 	}
@@ -50,10 +50,11 @@ func TestSimpleFWDSND(t *testing.T) {
 }
 
 func TestSimpleSND(t *testing.T) {
-	// Case 2: SND
+	// SND
 	input := ` 	/* SND rule */
 	prc[pid1] = send self<pid3, self>
 	prc[pid2] = <a, b> <- recv pid1; close self`
+
 	expected := []traceOption{
 		{steps{{"pid2", process.SND}}},
 	}
@@ -63,10 +64,11 @@ func TestSimpleSND(t *testing.T) {
 }
 
 func TestSimpleCUTSND(t *testing.T) {
-	// Case 3: CUT + SND
+	// CUT + SND
 	input := ` 	/* CUT + SND rule */
 		prc[pid1] = x <- new (<a, b> <- recv pid2; close b); close self
 		prc[pid2] = send self<pid5, self>`
+
 	expected := []traceOption{
 		{steps{{"pid1", process.CUT}, {"x", process.SND}}},
 	}
@@ -76,11 +78,12 @@ func TestSimpleCUTSND(t *testing.T) {
 }
 
 func TestSimpleCUTSNDFWDRCV(t *testing.T) {
-	// Case 3: CUT + SND
+	// CUT + SND
 	input := `   /* CUT + inner blocking SND + FWD + RCV rule */
 			prc[pid1] = send pid2<pid5, self>
 			prc[pid2] = fwd self -pid3
 			prc[pid3] = ff <- new (send ff<pid5, ff>); <a, b> <- recv self; close self`
+
 	expected := []traceOption{
 		{steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}},
 
@@ -93,13 +96,14 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 }
 
 func TestSimpleMultipleFWD(t *testing.T) {
-	// Case 4: FWD + FWD + RCV
+	// FWD + FWD + RCV
 
 	input := ` 	/* FWD + RCV rule */
 		prc[pid1] = send pid2<pid5, self>
 		prc[pid2] = fwd self -pid3
 		prc[pid3] = fwd self -pid4
 		prc[pid4] = <a, b> <- recv self; close a`
+
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}},
 		{steps{{"pid2", process.FWD}, {"pid3", process.FWD}, {"pid2", process.RCV}}},
@@ -111,12 +115,13 @@ func TestSimpleMultipleFWD(t *testing.T) {
 }
 
 func TestSimpleSPLITCUT(t *testing.T) {
-	// Case 5: SPLIT + CUT + SND
+	// SPLIT + CUT + SND
 
 	input := ` 	/* SPLIT + CUT + SND rule */
 			prc[pid0] = <x1, x2> <- split +pid1; close self
 			prc[pid1] = x <- new (<a, b> <- recv pid2; close b); close self
 			prc[pid2] = send self<pid5, self>`
+
 	expected := []traceOption{
 		// Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
 		{steps{{"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x", process.SND}, {"x", process.SND}, {"x1", process.CUT}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.CUT}}},
@@ -131,7 +136,7 @@ func TestSimpleSPLITCUT(t *testing.T) {
 }
 
 func TestSimpleSPLITSNDSND(t *testing.T) {
-	// Case 6: SPLIT + SND rule (x 2)
+	// SPLIT + SND rule (x 2)
 
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
 	prc[pid1] : 1 = <a, b> <- split +pid2; 
@@ -150,10 +155,13 @@ func TestSimpleSPLITSNDSND(t *testing.T) {
 
 	typecheck := false
 	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = true
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestSimpleSPLITRCVRCV(t *testing.T) {
-	// Case 6: SPLIT + RCV rule (x 2)
+	// SPLIT + RCV rule (x 2)
 
 	input := ` 	/* Simple SPLIT + RCV rule (x 2) */
 	prc[pid1]= <pid2_first, pid2_second> <- split -pid2; 
@@ -173,7 +181,7 @@ func TestSimpleSPLITRCVRCV(t *testing.T) {
 }
 
 func TestSimpleSPLITRCVRCVWithTyping(t *testing.T) {
-	// Case 6: SPLIT + RCV rule (x 2) (needs types)
+	// SPLIT + RCV rule (x 2) (needs types)
 
 	input := ` 	/* Simple SPLIT + RCV rule (x 2) */
 	assuming pid3 : 1, pid4 : 1
@@ -194,7 +202,7 @@ func TestSimpleSPLITRCVRCVWithTyping(t *testing.T) {
 }
 
 func TestSimpleSPLITCALL(t *testing.T) {
-	// Case 7: SPLIT + CALL
+	// SPLIT + CALL
 
 	input := ` /* SPLIT + CALL rule */
 				let D1(c) =  <a, b> <- recv c; close a
@@ -202,6 +210,7 @@ func TestSimpleSPLITCALL(t *testing.T) {
 				prc[pid0] = <x1, x2> <- split +pid1; close self
 				prc[pid1] = D1(pid2)
 				prc[pid2] = send self<pid3, pid4>`
+
 	expected := []traceOption{
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}}},
@@ -221,6 +230,7 @@ func TestSimpleMultipleProvidersInitially(t *testing.T) {
 		prc[pid3] = <a, b> <- recv pb; close self
 		prc[pid4] = <a, b> <- recv pc; close self
 		prc[pid5] = <a, b> <- recv pd; close self`
+
 	expected := []traceOption{
 		{steps{{"pa", process.DUP}, {"pid2", process.SND}, {"pid3", process.SND}, {"pid4", process.SND}, {"pid5", process.SND}}},
 	}
@@ -242,6 +252,7 @@ func TestSimpleDUP(t *testing.T) {
 
 		prc[x] = close self
 		prc[y] = close self`
+
 	expected := []traceOption{
 		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
 	}
@@ -250,8 +261,33 @@ func TestSimpleDUP(t *testing.T) {
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
+func TestSimpleDUPTyping(t *testing.T) {
+	// DUP at the top level
+
+	input := ` 
+		type A = 1
+		type B = 1
+		
+		prc[a, b, c, d] : A * B = send self<x, y>
+		
+		prc[m] : 1 = <f, g> <- recv a; wait f; wait g; close self
+		prc[n] : 1 = <f, g> <- recv b; wait f; wait g; close self
+		prc[o] : 1 = <f, g> <- recv c; wait f; wait g; close self
+		prc[p] : 1 = <f, g> <- recv d; wait f; wait g; close self
+		
+		prc[x] : A = close self
+		prc[y] : B = close self`
+
+	expected := []traceOption{
+		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
 func TestSimpleFunctionCalls(t *testing.T) {
-	// Case 9: Function calls, with and without explicit self passed
+	// Function calls, with and without explicit self passed
 
 	input := ` 
 		let f(x,y) = send x<y, self>
@@ -284,14 +320,14 @@ func TestSimpleFunctionCalls(t *testing.T) {
 }
 
 func TestExec(t *testing.T) {
-	// Case 9: Function calls, with and without explicit self passed
+	// Function calls, with and without explicit self passed
 
 	input := ` 
 	type A = 1
 
 	let f() : A = x : A <- new close x; 
-					wait x; 
-					close self
+				  wait x; 
+				  close self
 	
 	exec f()`
 	expected := []traceOption{
@@ -300,10 +336,13 @@ func TestExec(t *testing.T) {
 
 	typecheck := true
 	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestCall(t *testing.T) {
-	// Case 10: Function calls
+	// Function calls
 
 	input := ` 
 	type A = &{label : 1}
@@ -320,10 +359,13 @@ func TestCall(t *testing.T) {
 
 	typecheck := false
 	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = true
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestNew(t *testing.T) {
-	// Case 10: New
+	// New
 
 	input := ` 
 	type A = +{label : 1}
@@ -339,10 +381,13 @@ func TestNew(t *testing.T) {
 
 	typecheck := true
 	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestFwdPolarity(t *testing.T) {
-	// Case 10: Forwards (explicit polarities)
+	// Forwards (explicit polarities)
 
 	input := ` 
 	type A = &{labelok : 1}
@@ -356,6 +401,9 @@ func TestFwdPolarity(t *testing.T) {
 	}
 
 	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = true
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
@@ -417,10 +465,12 @@ func TestNestedSelectWithTyping(t *testing.T) {
 
 	typecheck := true
 	checkInputRepeatedly(t, input, expected, typecheck)
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestNestedReceiveWithTyping(t *testing.T) {
-	// Case 10: Nested receive/send
+	// Nested receive/send
 
 	input := ` 
 	type A = 1 -* (1 -* (1 * 1))
@@ -443,10 +493,12 @@ func TestNestedReceiveWithTyping(t *testing.T) {
 
 	typecheck := true
 	checkInputRepeatedly(t, input, expected, typecheck)
+	// typecheck = false
+	// checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 func TestNestedPolarizedFwd(t *testing.T) {
-	// Case 10: Nested receive/send
+	// Nested receive/send
 
 	input := ` 
 	// Positive fwd

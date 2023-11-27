@@ -13,12 +13,19 @@ import (
 
 const program = `
 
-type A = +{label1 : B}
-type B = 1
-prc[y] : 1 = case ff (label1<cont> => wait cont; close self)
-prc[ff] : A = fwd self +z
-prc[z] : A = self.label1<x>
-prc[x] : B = close self
+type A = 1 -* (1 -* (1 * 1))
+prc[x1] : 1 -* (1 * 1) = send z<yy, self>
+prc[x2] : 1 * 1 = send x1<xx, self>
+prc[z] : A = <x, yyyyyyy> <- recv self; 
+			 <xx, yyyyyyy> <- recv yyyyyyy; 
+			 send yyyyyyy<x, xx>
+prc[xx] : 1 = close self
+prc[yy] : 1 = close self
+
+prc[final] : 1 = <g1, g2> <- recv x2;
+				 drop g1;
+				 drop g2;
+				 close self
 
 
 // assuming pid3 : 1, pid4 : 1

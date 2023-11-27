@@ -447,6 +447,11 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		p.payload_c.Type = newLeftType
 		p.continuation_c.Type = newRightType
 
+		polarityError := checkExplicitPolarityValidity(p, p.from_c, p.payload_c, p.continuation_c)
+		if polarityError != nil {
+			return polarityError
+		}
+
 		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, newRightType, labelledTypesEnv, sigma)
 
 		return continuationError
@@ -499,6 +504,11 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		p.payload_c.Type = newLeftType
 		p.continuation_c.Type = newRightType
 
+		polarityError := checkExplicitPolarityValidity(p, p.from_c, p.payload_c, p.continuation_c)
+		if polarityError != nil {
+			return polarityError
+		}
+
 		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
 		return continuationError
@@ -536,7 +546,6 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 
 			p.to_c.Type = providerSelectLabelType
 			p.continuation_c.Type = continuationType
-			// return nil
 		} else {
 			return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), providerSelectLabelType.String())
 		}
@@ -584,8 +593,14 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 		return fmt.Errorf("expected '%s' to either receive or send label on 'self', e.g. self.%s<%s> or %s.%s<self>", p.String(), p.label.String(), p.to_c.String(), p.continuation_c.String(), p.label.String())
 	}
 
+	// Ensure correct explicit polarities (if used)
+	err := checkExplicitPolarityValidity(p, p.to_c, p.continuation_c)
+	if err != nil {
+		return err
+	}
+
 	// make sure that no variables are left in gamma
-	err := linearGammaContext(gammaNameTypesCtx)
+	err = linearGammaContext(gammaNameTypesCtx)
 
 	return err
 }
@@ -620,6 +635,11 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			// Set type
 			curBranchForm.payload_c.Type = expectedBranchType.Session_type
+
+			polarityError := checkExplicitPolarityValidity(p, curBranchForm.payload_c)
+			if polarityError != nil {
+				return polarityError
+			}
 
 			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, &curBranchForm.payload_c, expectedBranchType.Session_type, labelledTypesEnv, sigma)
 
@@ -673,6 +693,11 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			// Set type
 			curBranchForm.payload_c.Type = expectedBranchType.Session_type
 
+			polarityError := checkExplicitPolarityValidity(p, curBranchForm.payload_c)
+			if polarityError != nil {
+				return polarityError
+			}
+
 			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
 			if continuationError != nil {
@@ -688,6 +713,11 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		// Set type of case
 		p.from_c.Type = clientSelectLabelType
+	}
+
+	polarityError := checkExplicitPolarityValidity(p, p.from_c)
+	if polarityError != nil {
+		return polarityError
 	}
 
 	return nil
@@ -755,6 +785,11 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 			// Set type
 			p.continuation_c.Type = functionSignature.Type
+
+			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
+			if polarityError != nil {
+				return polarityError
+			}
 		default:
 			// The type of p.continuation_c has to be provided by the user
 			fmt.Println("cut -> something else")
@@ -787,6 +822,11 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
 			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: p.continuation_c.Type}
 
+			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
+			if polarityError != nil {
+				return polarityError
+			}
+
 			// typecheck the continuation of the cut rule
 			continuationBodyError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
@@ -817,6 +857,11 @@ func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 		}
 
 		p.from_c.Type = providerUnitType
+
+		polarityError := checkExplicitPolarityValidity(p, p.from_c)
+		if polarityError != nil {
+			return polarityError
+		}
 	} else {
 		// Closing on the wrong name
 		_, unitTypeOk := providerType.(*types.UnitType)
@@ -865,6 +910,11 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		// Set type
 		p.to_c.Type = clientUnitType
 
+		polarityError := checkExplicitPolarityValidity(p, p.to_c)
+		if polarityError != nil {
+			return polarityError
+		}
+
 		// Continue checking the remaining process
 		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
 
@@ -901,18 +951,18 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	providerType = types.Unfold(providerType, labelledTypesEnv)
 	if clientType.Polarity() != providerType.Polarity() {
 		// Make sure that the polarities match
-		return fmt.Errorf("invalid polarities in %s: name '%s' is %s, while '%s' is %s", p.String(), p.to_c.String(), types.PolarityMap[providerType.Polarity()], p.from_c.String(), types.PolarityMap[clientType.Polarity()])
+		return fmt.Errorf("invalid polarities in %s: name '%s' is %s, while '%s' is %s", p.StringShort(), p.to_c.String(), types.PolarityMap[providerType.Polarity()], p.from_c.String(), types.PolarityMap[clientType.Polarity()])
 	}
-
-	// TODO compare annotated polarities
-	// if p.polarity != types.UNKNOWN && p.polarity != providerType.Polarity() {
-	// 	// Make sure that the explicit polarity matches as well
-	// 	return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[providerType.Polarity()], types.PolarityMap[p.polarity])
-	// }
 
 	// Set types
 	p.to_c.Type = providerType
 	p.from_c.Type = clientType
+
+	// compare annotated polarities
+	polarityError := checkExplicitPolarityValidity(p, p.to_c, p.from_c)
+	if polarityError != nil {
+		return polarityError
+	}
 
 	// make sure that no variables are left in gamma
 	err := linearGammaContext(gammaNameTypesCtx)
@@ -935,6 +985,12 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		if types.IsWeakenable(clientType) {
 			// Set type
 			p.client_c.Type = clientType
+
+			// compare annotated polarities
+			polarityError := checkExplicitPolarityValidity(p, p.client_c)
+			if polarityError != nil {
+				return polarityError
+			}
 
 			// Continue checking the remaining process
 			continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
@@ -993,6 +1049,12 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			// Set types
 			p.parameters[i].Type = foundParamType
+
+			// compare annotated polarities
+			polarityError := checkExplicitPolarityValidity(p, p.parameters[i])
+			if polarityError != nil {
+				return polarityError
+			}
 		}
 	} else if len(functionSignature.Parameters) == len(p.parameters) {
 		// 'self' is not included in the parameters
@@ -1023,6 +1085,12 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			// Set types
 			p.parameters[i].Type = foundParamType
+
+			// compare annotated polarities
+			polarityError := checkExplicitPolarityValidity(p, p.parameters[i])
+			if polarityError != nil {
+				return polarityError
+			}
 		}
 	} else {
 		// Wrong number of parameters
@@ -1075,12 +1143,11 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	p.channel_one.Type = foundType
 	p.channel_two.Type = foundType
 
-	// TODO compare explicit polarities
-	// // Check explicit polarities
-	// if p.from_c.ExplicitPolarity != nil && p.from_c.Polarity(true, &GlobalEnvironment{}) != foundType.Polarity() {
-	// 	// Make sure that the explicit polarity matches as well
-	// 	return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.StringShort(), types.PolarityMap[foundType.Polarity()], types.PolarityMap[p.polarity])
-	// }
+	// compare annotated polarities
+	polarityError := checkExplicitPolarityValidity(p, p.from_c, p.channel_one, p.channel_two)
+	if polarityError != nil {
+		return polarityError
+	}
 
 	// Continue checking the remaining process
 	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma)
@@ -1322,6 +1389,18 @@ func getFreeNameTypes(process *Process, processes []*Process, assumedFreeNames [
 	}
 
 	return result
+}
+
+// Compare annotated polarity to the (more precise) polarities inferred from the type
+func checkExplicitPolarityValidity(p Form, names ...Name) error {
+
+	for _, name := range names {
+		if !name.ExplicitPolarityValid() {
+			return fmt.Errorf("invalid polarities in %s, expected %s, but found %s", p.String(), types.PolarityMap[name.Type.Polarity()], types.PolarityMap[*name.ExplicitPolarity])
+		}
+	}
+
+	return nil
 }
 
 func logRule(s string) {

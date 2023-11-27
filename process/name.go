@@ -38,6 +38,9 @@ func (n *Name) String() string {
 
 	if n.Ident != "" {
 		buffer.WriteString(n.Ident)
+		if n.IsSelf {
+			buffer.WriteString("|self")
+		}
 	} else if n.IsSelf {
 		buffer.WriteString("self")
 	} else {
@@ -80,7 +83,7 @@ func NewSelf(Ident string) Name {
 	return Name{
 		Ident:  Ident,
 		IsSelf: true,
-		// todo add polarity
+		// todo add polarity (?)
 	}
 }
 
@@ -93,6 +96,15 @@ func (n *Name) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) ty
 	}
 
 	return types.UNKNOWN
+}
+
+// Checks whether the explicit polarity (set by the user), matches the (more precise) polarity inferred from the type
+func (n *Name) ExplicitPolarityValid() bool {
+	if n.ExplicitPolarity != nil && n.Type != nil {
+		return *n.ExplicitPolarity == n.Type.Polarity()
+	}
+
+	return true
 }
 
 // Check whether n is in names
@@ -108,12 +120,19 @@ func (n *Name) ContainedIn(names []Name) bool {
 
 // Create fresh name copy
 func (n *Name) Copy() *Name {
+	pol := n.ExplicitPolarity
+	var new_pol types.Polarity
+	if pol != nil {
+		new_pol = *pol
+	}
+
 	return &Name{
-		Ident:          n.Ident,
-		Channel:        n.Channel,
-		ChannelID:      n.ChannelID,
-		IsSelf:         n.IsSelf,
-		ControlChannel: n.ControlChannel,
+		Ident:            n.Ident,
+		Channel:          n.Channel,
+		ChannelID:        n.ChannelID,
+		IsSelf:           n.IsSelf,
+		ControlChannel:   n.ControlChannel,
+		ExplicitPolarity: &new_pol,
 	}
 }
 

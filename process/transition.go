@@ -34,7 +34,7 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 // Entry point for each process transition
 // todo maybe rename to process.Transition
 func (process *Process) transitionLoop(re *RuntimeEnvironment) {
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity()], process.Body.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity(re.Typechecked, re.GlobalEnvironment)], process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
@@ -262,8 +262,8 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		// Create structure of new process
 		newProcessBody := f.body
-		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
-		innerSessionType := types.NewWIPType() /* todo proper type in CUT rule -- this needs to change! maybe we consider only spawning of functions def so that the type will be known precisely */
+		innerSessionType := types.CopyType(f.continuation_c.Type)
+		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true, Ident: f.continuation_c.Ident, Type: innerSessionType}) // todo include polarity in name f.continuation_c.Polarity()
 		newProcess := NewProcess(newProcessBody, []Name{newChannel}, innerSessionType, LINEAR)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
@@ -440,7 +440,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 					found = true
 					new_body = j.continuation_e
 					// Substitute the payload with 'self'
-					new_body.Substitute(j.payload_c, NewSelf(message.Channel1.Ident))
+					new_body.Substitute(j.payload_c, NewSelf(message.Channel1.Ident)) //todo check NewSelf
 					break
 				}
 			}
@@ -570,7 +570,18 @@ func (f *DropForm) Transition(process *Process, re *RuntimeEnvironment) {
 	TransitionInternally(process, dropRule, re)
 }
 
-// Special cases: Forward and Split
+func GetPolarity(f Form, re *RuntimeEnvironment) types.Polarity {
+	// if re.Typechecked {
+
+	// } else {
+
+	// }
+
+	// return types.UNKNOWN
+	return f.Polarity(re.Typechecked, re.GlobalEnvironment)
+}
+
+// Special case: Forward
 func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of forward: %s\n", f.String())
 
@@ -578,7 +589,9 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		re.error(process, "should forward on self")
 	}
 
-	if f.Polarity() == types.NEGATIVE {
+	polarity := GetPolarity(f, re)
+
+	if polarity == types.NEGATIVE {
 		// -ve
 		// least problematic
 		// ACTIVE
@@ -590,7 +603,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// todo check if this is needed: process.finishedRule(FWD, "[forward, client]", "", re)
 		process.terminateForward(re)
 
-	} else if f.Polarity() == types.POSITIVE {
+	} else if polarity == types.POSITIVE {
 		// +ve
 		// problematic
 		// PASSIVE: wait before acting
@@ -611,15 +624,12 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 			process.Body = NewClose(f.to_c)
 		case FWD:
 			re.logProcessf(LOGINFO, process, "oldProviders: %s, newProviders: %s\n", NamesToString(process.Providers), NamesToString(message.Providers))
-			process.Body = NewForward(f.to_c, message.Providers[0], f.Polarity())
+			process.Body = NewForward(f.to_c, message.Providers[0], types.POSITIVE)
 			process.Providers = message.Providers
 		case SEL:
 			process.Body = NewSelect(f.to_c, message.Label, message.Channel1)
-			panic("todo check if ok")
 		case CST:
 			process.Body = NewCast(f.to_c, message.Channel1)
-			panic("todo check if ok")
-
 			// The following are not possible: e.g. a receive does not send anything
 		case RCV:
 			re.error(process, "a positive forward should never receive RCV messages")
@@ -637,7 +647,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		process.finishedRule(FWD, "[fwd]", "(+ve)", re)
 		process.transitionLoop(re)
-	} else if f.Polarity() == types.UNKNOWN {
+	} else if polarity == types.UNKNOWN {
 		re.error(process, "forward has an unknown polarity")
 	}
 }
@@ -667,9 +677,10 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		process.finishedRule(SPLIT, "[split, client]", "(c)", re)
 
 		// Create structure of new forward process
-		// todo not sure which polarity the forward process should take: the split's or the continuation_e's polarity
-		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, f.Polarity())
-		fwdSessionType := f.from_c.Type /* todo fix -- I think this should be the type of f.from_c*/
+		fwdSessionType := types.CopyType(f.from_c.Type)
+		polarity := f.from_c.Polarity(re.Typechecked, re.GlobalEnvironment)
+		// TODO maybe use NewSelf
+		newProcessBody := NewForward(Name{IsSelf: true, Ident: f.from_c.Ident, Type: fwdSessionType}, f.from_c, polarity) // todo todo (!) include also the polarity in the NAME NOT PROCESS
 		newProcess := NewProcess(newProcessBody, newSplitNames, fwdSessionType, LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 		// Spawn and initiate new forward process
@@ -709,6 +720,8 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 
 		for j := range newProcessNames {
 			freshChannels[i][j] = re.CreateFreshChannel(processFreeNames[i].Ident)
+			freshChannels[i][j].Type = types.CopyType(processFreeNames[i].Type)
+			// todo check if the freshChannels have the correct types
 		}
 	}
 
@@ -729,7 +742,7 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 
 		// Create and spawn the new processes
 		// Set its provider to the channel received in the DUP request
-		dupSessionType := types.CopyType(process.Type)
+		dupSessionType := types.CopyType(process.Type) // todo may be wrong type (maybe )
 		newDuplicatedProcess := NewProcess(newDuplicatedProcessBody, []Name{newProcessNames[i]}, dupSessionType, process.Shape)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] creating new process (%d): %s\n", i, newDuplicatedProcess.String())
@@ -745,9 +758,10 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 	// Create and launch the forward processes to connect the free names (which will implicitly force a chain of further duplications)
 	for i := range processFreeNames {
 		// Create structure of new forward process
-		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i], process.Body.Polarity())
-		/* todo ensure that the type is correct */
-		newProcess := NewProcess(newProcessBody, freshChannels[i], types.CopyType(processFreeNames[i].Type), LINEAR)
+		fwdProcessType := types.CopyType(processFreeNames[i].Type)
+		polarity := processFreeNames[i].Polarity(re.Typechecked, re.GlobalEnvironment)
+		newProcessBody := NewForward(Name{IsSelf: true, Ident: processFreeNames[i].Ident, Type: fwdProcessType}, processFreeNames[i], polarity) // todo todo (!) include also the polarity in the NAME NOT PROCESS
+		newProcess := NewProcess(newProcessBody, freshChannels[i], fwdProcessType, LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process
 		newProcess.SpawnThenTransition(re)

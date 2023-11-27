@@ -288,6 +288,8 @@ func (c *Client) handleRequest(message string) {
 			return
 		}
 
+		// use explicit re to set typecheck property, ...
+
 		process.InitializeProcesses(processes, globalEnv, c.subscriberInfo, nil)
 	} else {
 		c.sendError("Invalid request type")

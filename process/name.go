@@ -14,6 +14,8 @@ type Name struct {
 	Type types.SessionType
 	// If IsSelf, then this channel should reference the the channel from the provider
 	IsSelf bool
+	// ExplicitPolarity
+	ExplicitPolarity *types.Polarity
 	// One a channel is initialized (i.e. Channel != nil), the Channel becomes more important than Ident
 	Channel chan Message
 	// Polarity used in NORMAL_[A]SYNC
@@ -55,7 +57,19 @@ func NewSelf(Ident string) Name {
 	return Name{
 		Ident:  Ident,
 		IsSelf: true,
+		// todo add polarity
 	}
+}
+
+func (n *Name) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	// Fetch the polarity either directly from the type, or the user inputted polarity
+	if fromTypes {
+		return n.Type.Polarity()
+	} else if n.ExplicitPolarity != nil {
+		return *n.ExplicitPolarity
+	}
+
+	return types.UNKNOWN
 }
 
 // Check whether n is in names
@@ -67,6 +81,26 @@ func (n *Name) ContainedIn(names []Name) bool {
 	}
 
 	return false
+}
+
+// Create fresh name copy
+func (n *Name) Copy() *Name {
+	return &Name{
+		Ident:          n.Ident,
+		Channel:        n.Channel,
+		ChannelID:      n.ChannelID,
+		IsSelf:         n.IsSelf,
+		ControlChannel: n.ControlChannel,
+	}
+}
+
+// Compare two names for equality: equality is check by the initialized unique channel or by the name
+func (name1 *Name) Equal(name2 Name) bool {
+	if name1.Initialized() && name2.Initialized() {
+		// If the channel is initialized, then only compare the actual channel reference
+		return name1.Channel == name2.Channel
+	}
+	return name1.Ident == name2.Ident && name1.Initialized() == name2.Initialized()
 }
 
 func NamesToString(names []Name) string {
@@ -188,14 +222,7 @@ func SetTypesToNames(names []Name, t types.SessionType) {
 	}
 }
 
-func (name1 *Name) Equal(name2 Name) bool {
-	if name1.Initialized() && name2.Initialized() {
-		// If the channel is initialized, then only compare the actual channel reference
-		return name1.Channel == name2.Channel
-	}
-	return name1.Ident == name2.Ident && name1.Initialized() == name2.Initialized()
-}
-
+// If the checked name matches with the old name, then replace it with the new name
 func (n *Name) Substitute(old, new Name) {
 	if n.Initialized() && n.Channel == old.Channel {
 		// If a channel is initialized, then compare using the channel value
@@ -217,24 +244,5 @@ func (n *Name) Substitute(old, new Name) {
 			n.ControlChannel = new.ControlChannel
 			// n.Type = new.Type
 		}
-	}
-}
-
-func (n *Name) ElementOf(names []Name) bool {
-	for _, j := range names {
-		if n.Equal(j) {
-			return true
-		}
-	}
-
-	return false
-}
-func (n *Name) Copy() *Name {
-	return &Name{
-		Ident:          n.Ident,
-		Channel:        n.Channel,
-		ChannelID:      n.ChannelID,
-		IsSelf:         n.IsSelf,
-		ControlChannel: n.ControlChannel,
 	}
 }

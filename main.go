@@ -12,16 +12,49 @@ import (
 /* ignore sample programs -- used for development*/
 
 const program = `
+assuming pid3 : 1, pid4 : 1
+
+prc[pid1] : 1 = <pid2_first, pid2_second> <- split pid2; /* split gets its polarity from the types */
+				k : 1 <- new send pid2_first<pid3, self>;
+				wait k;
+				send pid2_second<pid4, self>
+prc[pid2] : 1 -* 1 = <a, b> <- recv self; 
+					 drop a; 
+					 close self
+
+// // Positive fwd
+// type A = +{label1 : B}
+// type B = 1
+// prc[y] : 1 = case ff (label1<cont> => print cont; wait cont; close self)
+// prc[ff] : A = +fwd self z
+// prc[z] : A = self.label1<x>
+// prc[x] : B = close self
+
+// // Positive fwd
+// type A = +{label1 : B}
+// type B = 1
+// prc[y1] : 1 = case z1 (label1<cont> => print cont; wait cont; close self)
+// prc[y2] : 1 = case z2 (label1<cont> => print cont; wait cont; close self)
+// prc[z1, z2] : A = z : A <- new (self.label1<x>); +fwd self z
+// prc[x] : B = close self
+
+// // Positive fwd
+// type A = &{label1 : B}
+// type B = 1
+// prc[y1] : 1 = z1.label1<self>
+// prc[y2] : 1 = z2.label1<self>
+// prc[z1, z2] : A = z : A <- new (case self (label1<cont> => print cont; close self)); +fwd self z
+// prc[x] : B = close self
 
 
-type A = &{label : +{next : 1}}
-let f1(x : A) : +{next : 1} = x.label<self>
-let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
 
-prc[x] : +{next : 1} = f1(z)
-prc[z] : A = f2(y)
-prc[y] : 1 = close self
-prc[final] : 1 = case x (next<z> => print z; drop z; close self)
+// type A = &{label : +{next : 1}}
+// let f1(x : A) : +{next : 1} = x.label<self>
+// let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
+// prc[x] : +{next : 1} = f1(z)
+// prc[z] : A = f2(y)
+// prc[y] : 1 = close self
+// prc[final] : 1 = case x (next<z> => print z; drop z; close self)
 
 
 // type A = 1 -* (1 -* (1 * 1))
@@ -393,7 +426,8 @@ func main() {
 			Debug:             true,
 			Color:             true,
 			LogLevels:         generateLogLevel(*logLevel),
-			ExecutionVersion:  process.NON_POLARIZED_SYNC,
+			ExecutionVersion:  process.NORMAL_ASYNC,
+			Typechecked:       typecheckRes,
 		}
 
 		process.InitializeProcesses(processes, nil, nil, re)

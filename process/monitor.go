@@ -157,7 +157,7 @@ func (m *Monitor) updateSubscriberProcesses() {
 				providers = append(providers, provider.String())
 			}
 
-			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String(), Polarity: types.PolarityMap[value.Body.Polarity()]})
+			v = append(v, ProcessInfo{ID: strconv.Itoa(id), Providers: providers, Body: value.Body.String(), Polarity: types.PolarityMap[value.Body.Polarity(m.re.Typechecked, m.re.GlobalEnvironment)]})
 		}
 
 		// Prepare list of links between processes

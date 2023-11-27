@@ -47,6 +47,8 @@ type RuntimeEnvironment struct {
 	errorChan chan error
 	// Chooses how the transitions are performed ([non-]polarized [a]synchronous)
 	ExecutionVersion Execution_Version
+	// Flag to see whether the typechecker was used or not (i.e. if true, then all names have types)
+	Typechecked bool
 }
 
 type Execution_Version int
@@ -70,6 +72,7 @@ func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvi
 		debugChannelCounter: 0,
 		processCount:        0,
 		errorChan:           make(chan error),
+		Typechecked:         false,
 	}
 }
 
@@ -90,7 +93,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 			LogLevels:        l,
 			Delay:            1000 * time.Millisecond,
 			ExecutionVersion: NORMAL_ASYNC,
-			// Delay: 0,
+			Typechecked:      false,
 		}
 	}
 

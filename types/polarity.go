@@ -18,6 +18,7 @@ var PolarityMap = map[Polarity]string{
 // Negative types:   -*, &{...}, /\ (upshift)
 
 func (q *LabelType) Polarity() Polarity {
+	// todo change to pass labelled environments
 	panic("unfold type before checking for polarity")
 	// return UNKNOWN
 }

@@ -12,7 +12,7 @@ import (
 type Form interface {
 	String() string
 	StringShort() string
-	Polarity() types.Polarity
+	Polarity(bool, *GlobalEnvironment) types.Polarity
 	FreeNames() []Name
 	Substitute(Name, Name)
 
@@ -72,18 +72,22 @@ func (p *SendForm) FreeNames() []Name {
 	return fn
 }
 
+// Polarity works by performing an ast traversal until a 'self' is reached
 // Polarity of a send process can be inferred directly from itself
-func (p *SendForm) Polarity() types.Polarity {
-	if p.to_c.Type != nil {
-		// Get polarity from the type
-		return p.to_c.Type.Polarity()
-	}
-
+func (p *SendForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	if p.to_c.IsSelf {
 		return types.POSITIVE
-	} else {
-		return types.NEGATIVE
 	}
+
+	// Type from continuation channel
+	return p.continuation_c.Polarity(fromTypes, globalEnvironment)
+
+	// if fromTypes {
+	// 	// Get polarity from the type
+	// 	return p.continuation_c.Type.Polarity()
+	// }
+
+	// return types.UNKNOWN
 }
 
 // Receive: <payload_c, continuation_c> <- recv from_c; P
@@ -146,17 +150,13 @@ func (p *ReceiveForm) FreeNames() []Name {
 }
 
 // Polarity of a receive process can be inferred directly from itself
-func (p *ReceiveForm) Polarity() types.Polarity {
-	if p.from_c.Type != nil {
-		// Get polarity from the type
-		return p.from_c.Type.Polarity()
-	}
-
+func (p *ReceiveForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	if p.from_c.IsSelf {
 		return types.NEGATIVE
-	} else {
-		return types.POSITIVE
 	}
+
+	// Fetch polarity from the continuation
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Select: to_c.label<continuation_c>
@@ -201,17 +201,19 @@ func (p *SelectForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *SelectForm) Polarity() types.Polarity {
-	if p.to_c.Type != nil {
-		// Get polarity from the type
-		return p.to_c.Type.Polarity()
-	}
-
+func (p *SelectForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	if p.to_c.IsSelf {
 		return types.POSITIVE
-	} else {
-		return types.NEGATIVE
 	}
+
+	return p.continuation_c.Polarity(fromTypes, globalEnvironment)
+
+	// if fromTypes {
+	// 	// Get polarity from the type
+	// 	return p.continuation_c.Type.Polarity()
+	// }
+
+	// return types.UNKNOWN
 }
 
 // Branch: label<payload_c> => continuation_e
@@ -220,7 +222,6 @@ type BranchForm struct {
 	label          Label
 	payload_c      Name
 	continuation_e Form
-	polarity       types.Polarity
 }
 
 func NewBranch(label Label, payload_c Name, continuation_e Form) *BranchForm {
@@ -289,17 +290,10 @@ func (p *BranchForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *BranchForm) Polarity() types.Polarity {
-	if p.payload_c.Type != nil {
-		// Get polarity from the type
-		return p.payload_c.Type.Polarity()
-	}
-
-	return p.polarity
-}
-
-func (p *BranchForm) SetPolarity(polarity types.Polarity) {
-	p.polarity = polarity
+// This refers to the polarity from the continuations of the branch
+// (because if there is a case on self, then polarity analysis stops before checking each branch)
+func (p *BranchForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Case: case from_c ( branches )
@@ -309,19 +303,6 @@ type CaseForm struct {
 }
 
 func NewCase(from_c Name, branches []*BranchForm) *CaseForm {
-	// Set polarity of the branches to match the case construct
-	polarity := types.UNKNOWN
-
-	if from_c.IsSelf {
-		polarity = types.NEGATIVE
-	} else {
-		polarity = types.POSITIVE
-	}
-
-	for i := range branches {
-		branches[i].SetPolarity(polarity)
-	}
-
 	return &CaseForm{
 		from_c:   from_c,
 		branches: branches}
@@ -364,17 +345,29 @@ func (p *CaseForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *CaseForm) Polarity() types.Polarity {
-	if p.from_c.Type != nil {
-		// Get polarity from the type
-		return p.from_c.Type.Polarity()
-	}
-
+func (p *CaseForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	if p.from_c.IsSelf {
 		return types.NEGATIVE
-	} else {
-		return types.POSITIVE
 	}
+
+	// Get polarity from the continuations
+	polarity := types.UNKNOWN
+
+	for i := range p.branches {
+		branchPolarity := p.branches[i].Polarity(fromTypes, globalEnvironment)
+
+		if branchPolarity != types.UNKNOWN {
+			if polarity == types.UNKNOWN {
+				// set common polarity to the current branch's polarity
+				polarity = branchPolarity
+			} else if polarity != branchPolarity {
+				// mismatching branch polarities
+				return types.UNKNOWN
+			}
+		}
+	}
+
+	return polarity
 }
 
 // New: continuation_c <- new (body); continuation_e
@@ -382,7 +375,7 @@ type NewForm struct {
 	continuation_c          Name
 	body                    Form
 	continuation_e          Form
-	continuation_e_polarity types.Polarity // user inputted polarity [used as an alternative when types are omitted]
+	continuation_e_polarity types.Polarity // todo remove user inputted polarity [used as an alternative when types are omitted]
 	derivedFromMacro        bool
 }
 
@@ -430,14 +423,8 @@ func (p *NewForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *NewForm) Polarity() types.Polarity {
-	// might be more accurate if you take the polarity of continuation_e
-	if p.continuation_c.Type != nil {
-		// Get polarity from the type
-		return p.continuation_c.Type.Polarity()
-	}
-
-	return p.continuation_e_polarity
+func (p *NewForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Close: close from_c
@@ -470,13 +457,13 @@ func (p *CloseForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *CloseForm) Polarity() types.Polarity {
-	if p.from_c.Type != nil {
-		// Get polarity from the type
-		return p.from_c.Type.Polarity()
+func (p *CloseForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	if p.from_c.IsSelf {
+		return types.POSITIVE
 	}
+	// return p.from_c.Type.Polarity()
 
-	return types.POSITIVE
+	return types.UNKNOWN
 }
 
 // Forward: fwd to_c from_c
@@ -515,13 +502,17 @@ func (p *ForwardForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *ForwardForm) Polarity() types.Polarity {
-	if p.to_c.Type != nil {
-		// Get polarity from the type
-		return p.to_c.Type.Polarity()
-	}
+func (p *ForwardForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	return p.from_c.Polarity(fromTypes, globalEnvironment)
 
-	return p.polarity
+	// if fromTypes {
+	// 	// Get polarity from the type
+	// }
+
+	// // if p.from_c.
+	// // todo check for annotated polarity of from_c
+
+	// return types.UNKNOWN
 }
 
 // Split: <channel_one, channel_two> <- split from_c; P
@@ -530,7 +521,7 @@ type SplitForm struct {
 	channel_two    Name
 	from_c         Name
 	continuation_e Form
-	polarity       types.Polarity
+	polarity       types.Polarity // todo remove
 }
 
 func NewSplit(channel_one, channel_two, from_c Name, continuation_e Form, polarity types.Polarity) *SplitForm {
@@ -584,13 +575,9 @@ func (p *SplitForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *SplitForm) Polarity() types.Polarity {
-	if p.from_c.Type != nil {
-		// Get polarity from the type
-		return p.from_c.Type.Polarity()
-	}
-
-	return p.polarity
+func (p *SplitForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	// Get polarity from continuation
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Call: func(param1, ...)
@@ -598,7 +585,7 @@ type CallForm struct {
 	functionName string
 	parameters   []Name
 	ProviderType types.SessionType
-	polarity     types.Polarity
+	polarity     types.Polarity // todo (!!!) remove
 }
 
 func NewCall(functionName string, parameters []Name, polarity types.Polarity) *CallForm {
@@ -635,14 +622,26 @@ func (p *CallForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *CallForm) Polarity() types.Polarity {
-	// todo ProviderType
-	if p.ProviderType != nil {
-		// Get polarity from the type
+func (p *CallForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	if fromTypes {
+		// Get polarity from the provider type
 		return p.ProviderType.Polarity()
 	}
 
-	return p.polarity
+	// Else, check the function's body
+	// Fetch function by name and arity
+	functionCall := GetFunctionByNameArity(*globalEnvironment.FunctionDefinitions, p.functionName, len(p.parameters))
+
+	if functionCall != nil {
+		if fromTypes {
+			// If there are types, get the polarity from the type directly
+			return functionCall.Type.Polarity()
+		} else {
+			return functionCall.Body.Polarity(fromTypes, globalEnvironment)
+		}
+	}
+
+	return types.UNKNOWN
 }
 
 func (p *CallForm) FunctionName() string {
@@ -690,13 +689,8 @@ func (p *WaitForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *WaitForm) Polarity() types.Polarity {
-	if p.to_c.Type != nil {
-		// Get polarity from the type
-		return p.to_c.Type.Polarity()
-	}
-
-	return types.POSITIVE
+func (p *WaitForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Cast: cast to_c<continuation_c>
@@ -739,17 +733,13 @@ func (p *CastForm) FreeNames() []Name {
 }
 
 // Polarity of a send process can be inferred directly from itself
-func (p *CastForm) Polarity() types.Polarity {
-	if p.to_c.Type != nil {
-		// Get polarity from the type
-		return p.to_c.Type.Polarity()
-	}
-
+func (p *CastForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	if p.to_c.IsSelf {
 		return types.POSITIVE
-	} else {
-		return types.NEGATIVE
 	}
+
+	// Type from continuation channel
+	return p.continuation_c.Polarity(fromTypes, globalEnvironment)
 }
 
 // Shift: continuation_c <- shift from_c; P
@@ -803,17 +793,13 @@ func (p *ShiftForm) FreeNames() []Name {
 }
 
 // Polarity of a receive process can be inferred directly from itself
-func (p *ShiftForm) Polarity() types.Polarity {
-	if p.from_c.Type != nil {
-		// Get polarity from the type
-		return p.from_c.Type.Polarity()
-	}
-
+func (p *ShiftForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	if p.from_c.IsSelf {
 		return types.NEGATIVE
-	} else {
-		return types.POSITIVE
 	}
+
+	// Lookup polarity from the continuation
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Drop: drop client_c; P
@@ -857,13 +843,14 @@ func (p *DropForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *DropForm) Polarity() types.Polarity {
-	if p.client_c.Type != nil {
-		// Get polarity from the type
-		return p.client_c.Type.Polarity()
+func (p *DropForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	if p.client_c.IsSelf {
+		// Shouldn't be self
+		return types.UNKNOWN
 	}
 
-	return types.POSITIVE
+	// Lookup polarity from the continuation
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Print: print name_c
@@ -909,13 +896,9 @@ func (p *PrintForm) FreeNames() []Name {
 	return fn
 }
 
-func (p *PrintForm) Polarity() types.Polarity {
-	if p.name_c.Type != nil {
-		// Get polarity from the type
-		return p.name_c.Type.Polarity()
-	}
-
-	return types.UNKNOWN
+func (p *PrintForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	// Lookup polarity from the continuation
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
 // Check equality between different forms

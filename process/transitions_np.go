@@ -30,7 +30,7 @@ func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
 
 // Entry point for each process transition
 func (process *Process) transitionLoopNP(re *RuntimeEnvironment) {
-	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity()], process.Body.String())
+	re.logProcessf(LOGPROCESSING, process, "Process transitioning [%s]: %s\n", types.PolarityMap[process.Body.Polarity(re.Typechecked, re.GlobalEnvironment)], process.Body.String())
 
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
@@ -584,7 +584,7 @@ func (f *SplitForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		process.finishedRule(SPLIT, "[split, client]", "(c)", re)
 
 		// Create structure of new forward process
-		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, f.Polarity())
+		newProcessBody := NewForward(Name{IsSelf: true}, f.from_c, f.Polarity(re.Typechecked, re.GlobalEnvironment))
 		fwdSessionType := f.from_c.Type /* todo fix -- I think this should be the type of f.from_c*/
 		newProcess := NewProcess(newProcessBody, newSplitNames, fwdSessionType, LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
@@ -659,7 +659,7 @@ func (process *Process) performDUPruleNP(re *RuntimeEnvironment) {
 	// Create and launch the forward processes to connect the free names (which will implicitly force a chain of further duplications)
 	for i := range processFreeNames {
 		// Create structure of new forward process
-		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i], process.Body.Polarity())
+		newProcessBody := NewForward(Name{IsSelf: true}, processFreeNames[i], process.Body.Polarity(re.Typechecked, re.GlobalEnvironment))
 		/* todo ensure that the type is correct */
 		newProcess := NewProcess(newProcessBody, freshChannels[i], types.CopyType(processFreeNames[i].Type), LINEAR)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())

@@ -11,7 +11,7 @@ import (
 )
 
 const numberOfIterations = 30
-const monitorTimeout = 30 * time.Millisecond
+const monitorTimeout = 40 * time.Millisecond
 
 // Invalidate all cache
 // go clean -testcache
@@ -451,6 +451,41 @@ func TestNestedReceiveWithTyping(t *testing.T) {
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
+func TestNestedPolarizedFwd(t *testing.T) {
+	// Case 10: Nested receive/send
+
+	input := ` 
+	// Positive fwd
+	type A = +{label1 : B}
+	type B = 1
+	prc[y] : 1 = case ff (label1<cont> => wait cont; close self)
+	prc[ff] : A = +fwd self z
+	prc[z] : A = self.label1<x>
+	prc[x] : B = close self`
+
+	expected := []traceOption{
+		{steps{{"ff", process.FWD}, {"y", process.CLS}, {"y", process.SEL}}},
+	}
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+	input = ` 
+	// Positive fwd
+	type A = &{label1 : B}
+	type B = 1
+	prc[y] : 1 = ff.label1<self>
+	prc[ff] : A = -fwd self z
+	prc[z] : A = case self (label1<cont> => close self)
+	prc[x] : B = close self`
+
+	expected = []traceOption{
+		{steps{{"ff", process.FWD}, {"ff", process.CSE}}},
+	}
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+}
+
 type step struct {
 	processName string
 	rule        process.Rule
@@ -512,7 +547,7 @@ func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *s
 			}
 		}
 
-		deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv, execVersion)
+		deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv, execVersion, typecheck)
 		stepsGot := convertRulesLog(rulesLog)
 
 		if len(stepsGot) == 0 {
@@ -592,7 +627,7 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 	return log
 }
 
-func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment, execVersion process.Execution_Version) ([]process.Process, []process.MonitorRulesLog, uint64) {
+func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment, execVersion process.Execution_Version, typechecked bool) ([]process.Process, []process.MonitorRulesLog, uint64) {
 
 	l := []process.LogLevel{}
 
@@ -604,7 +639,9 @@ func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnviro
 		Color:             true,
 		LogLevels:         l,
 		Delay:             0,
-		ExecutionVersion:  execVersion}
+		ExecutionVersion:  execVersion,
+		Typechecked:       typechecked,
+	}
 
 	channels := re.CreateChannelForEachProcess(processes)
 

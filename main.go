@@ -13,19 +13,19 @@ import (
 
 const program = `
 
-type A = 1 -* (1 -* (1 * 1))
-prc[x1] : 1 -* (1 * 1) = send z<yy, self>
-prc[x2] : 1 * 1 = send x1<xx, self>
-prc[z] : A = <x, yyyyyyy> <- recv self; 
-			 <xx, yyyyyyy> <- recv yyyyyyy; 
-			 send yyyyyyy<x, xx>
-prc[xx] : 1 = close self
-prc[yy] : 1 = close self
+// type A = 1 -* (1 -* (1 * 1))
+// prc[x1] : 1 -* (1 * 1) = send z<yy, self>
+// prc[x2] : 1 * 1 = send x1<xx, self>
+// prc[z] : A = <x, yy> <- recv self; 
+// 			 <xx, yy> <- recv yy; 
+// 			 send yy<x, xx>
+// prc[xx] : 1 = close self
+// prc[yy] : 1 = close self
 
-prc[final] : 1 = <g1, g2> <- recv x2;
-				 drop g1;
-				 drop g2;
-				 close self
+// prc[final] : 1 = <g1, g2> <- recv x2;
+// 				 drop g1;
+// 				 drop g2;
+// 				 close self
 
 
 // assuming pid3 : 1, pid4 : 1
@@ -64,13 +64,20 @@ prc[final] : 1 = <g1, g2> <- recv x2;
 
 
 
-// type A = &{label : +{next : 1}}
-// let f1(x : A) : +{next : 1} = x.label<self>
-// let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
-// prc[x] : +{next : 1} = f1(z)
-// prc[z] : A = f2(y)
-// prc[y] : 1 = close self
-// prc[final] : 1 = case x (next<z> => print z; drop z; close self)
+
+
+type A = &{label : +{next : 1}}
+
+let f1(x : A) : +{next : 1} = x.label<self>
+let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
+
+prc[x] : +{next : 1} = f1(z)
+prc[z] : A = f2(y)
+prc[y] : 1 = close self
+prc[final] : 1 = case x (next<z> => print z; drop z; close self)
+
+
+
 
 
 // type A = 1 -* (1 -* (1 * 1))

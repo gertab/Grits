@@ -245,6 +245,8 @@ func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 		gammaNameTypesCtx := produceNameTypesCtx(funcDef.Parameters)
 		providerType := funcDef.Type
 
+		globalEnv.logf(LOGPROCESSING, "typechecking function definition %s\n", funcDef.String())
+
 		err := funcDef.Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv, globalEnv)
 		if err != nil {
 			return fmt.Errorf("typechecking error in function %s; %s", funcDef.String(), err)
@@ -267,6 +269,8 @@ func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv
 		freeNames := getFreeNameTypes(processes[i], processes, assumedFreeNames)
 		gammaNameTypesCtx := produceNameTypesCtx(freeNames)
 		providerType := processes[i].Type
+
+		globalEnv.logf(LOGPROCESSING, "typechecking process %s\n", processes[i].OutlineString())
 
 		// Run the typechecker
 		// might be a good idea to set the shadowProvider name to processes[i].Providers[0] (when there is only one provider)

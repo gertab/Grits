@@ -40,52 +40,66 @@ After building the project (using `go  build .`), you can use the CLI version...
 ```text
 <prog> ::= <statement>*
 
-<statement> ::= type <label> = <type>                               // labelled session type       
-              | let <label> ( [<param>] ) : <type> = <term>         // function declaration
-              | let <label> '[' <param> ']' = <term>                // function declaration with explicit provider name
-              | assuming <param>                                    // add name type assumptions
-              | prc '[' <name> ']' : <type> = <term>                // create processes
-              | exec <label> ( )                                    // todo/execute function
+<statement> ::= type <label> = <type>                           // labelled session type       
+              | let <label> ( [<param>] ) : <type> = <term>     // function declaration
+              | let <label> '[' <param> ']' = <term>            // function declaration with explicit provider name
+              | assuming <param>                                // add name type assumptions
+              | prc '[' <name> ']' : <type> = <term>            // create processes
+              | exec <label> ( )                                // execute function
 
-<param> ::= <name> : <type> [ , <param> ]                           // typed variable names
+<param> ::= <name> : <type> [ , <param> ]                       // typed variable names
 
-<type> ::= <label>                                                  // session type label
-         | 1                                                        // unit type
-         | + { <branch_type> }                                      // internal choice
-         | & { <branch_type> }                                      // external choice
-         | <type> * <type>                                          // send
-         | <type> -* <type>                                         // receive
-         | ( <type> )
+<type> ::= '[' <modality> '] <type_i>                           // session type with modality
+         | <type_i>                                             // session type
 
-<branch_type> ::= <label> : <type> [ , <branch_type> ]              // labelled branches
+<type_i> ::= <label>                                            // session type label
+           | 1                                                  // unit type
+           | + { <branch_type> }                                // internal choice
+           | & { <branch_type> }                                // external choice
+           | <type_i> * <type_i>                                // send
+           | <type_i> -* <type_i>                               // receive
+           | <madality> /\ <madality> <type_i>                  // upshift
+           | <madality> \/ <madality> <type_i>                  // downshift
+           | ( <type_i> ) 
 
-<term> ::= send <name> '<' <name> , <name> '>'                      // send names
-        | '<' <name> , <name> '>' <- recv <name> ; <term>           // receive names
-        | <name> . <label> '<' <name> '>'                           // send label
-        | case <name> ( <branches> )                                // receive label
-        | <name> [ : <type> ] <- [<pol>] new <term>; <term>                 // spawn new process
-        | [<pol>] <label> ( [<names>] )                             // function call
-        | [<pol>] fwd <name> <name>                               // forward name
-        | '<' <name> , <name> '>' <- [<pol>] split <name> ; <term>  // split name
-        | close <name>                                              // close name
-        | wait <name> ; term                                        // wait for name to close
-        | cast <name> '<' <name> '>'                                // send shift
-        | <name> <- shift <name> ; <term>                           // receive shift
-        | ( <term> )
+<branch_type> ::= <label> : <type_i> [ , <branch_type> ]        // labelled branches
 
-<pol> ::= +                                                         // positive polarity
-        | -                                                         // negative polarity
+<modality> ::= u | unrestricted                                 // unresticted mode
+             | r | replicable                                   // replicable mode
+             | a | affine                                       // affine mode
+             | l | linear                                       // linear mode
 
-<branches> ::= <label> '<' <name> => term [ '|' <branches> ]        // term branches
+<term> ::= send <name> '<' <name> , <name> '>'                  // send names
+        | '<' <name> , <name> '>' <- recv <name> ; <term>       // receive names
+        | <name> . <label> '<' <name> '>'                       // send label
+        | case <name> ( <branches> )                            // receive label
+        | <name> [ : <type> ] <- new <term>; <term>             // spawn new process
+        | <label> ( [<names>] )                                 // function call
+        | fwd <name> <name>                                     // forward name
+        | '<' <name> , <name> '>' <- split <name> ; <term>      // split name
+        | close <name>                                          // close name
+        | wait <name> ; term                                    // wait for name to close
+        | cast <name> '<' <name> '>'                            // send shift
+        | <name> <- shift <name> ; <term>                       // receive shift
+        | ( <term> ) 
 
-<names> ::= <name> [ ',' <names> ]                                  // list of names
+<branches> ::= <label> '<' <name> '> => term [ '|' <branches> ] // term branches
+
+<names> ::= <name> [ ',' <names> ]                              // list of names
+
+<name> ::= 'self'                                               // provider channel[s]
+         | <label>                                              // channel name
+         | <polarity> label                                     // channel with explicit polarity
+
+<polarity> ::= +                                                // positive polarity
+             | -                                                // negative polarity
 
 Others:
-    <name> and <label> are any alpha-numeric label, where name represents a channel and label represents a labelled choice
+    <name> refers to a channel
+    <label> ia an alpha-numeric combination, representing a choice option
     // Single line comments
     /* Multi line comments */
     whitespace is ignored
-
 ```
 
 ## Some examples

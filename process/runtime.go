@@ -84,9 +84,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	if globalEnv != nil {
 		re.GlobalEnvironment = globalEnv
 	} else {
-		re.GlobalEnvironment = &GlobalEnvironment{
-			LogLevels: l,
-		}
+		re.GlobalEnvironment.LogLevels = l
 	}
 
 	re.processCount = 0

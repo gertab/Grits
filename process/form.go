@@ -20,7 +20,7 @@ type Form interface {
 	Transition(*Process, *RuntimeEnvironment)
 	TransitionNP(*Process, *RuntimeEnvironment)
 	// Main typing judgement
-	typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, a types.LabelledTypesEnv, sigma FunctionTypesEnv) error
+	typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, a types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error
 }
 
 ///////////////////////////////

@@ -428,6 +428,8 @@ func main() {
 		return
 	}
 
+	globalEnv.LogLevels = generateLogLevel(*logLevel)
+
 	if typecheckRes {
 		err = process.Typecheck(processes, assumedFreeNames, globalEnv)
 		if err != nil {
@@ -441,7 +443,6 @@ func main() {
 			GlobalEnvironment: globalEnv,
 			Debug:             true,
 			Color:             true,
-			LogLevels:         generateLogLevel(*logLevel),
 			ExecutionVersion:  process.NORMAL_ASYNC,
 			Typechecked:       typecheckRes,
 		}

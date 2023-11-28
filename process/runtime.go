@@ -4,24 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"phi/types"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"golang.org/x/exp/slices"
 )
-
-// A RuntimeEnvironmentOption sets an option on a RuntimeEnvironment.
-type RuntimeEnvironmentOption func(*RuntimeEnvironment)
-
-type GlobalEnvironment struct {
-	// Contains all the functions definitions
-	FunctionDefinitions *[]FunctionDefinition
-
-	// Contains all the type definitions
-	Types *[]types.SessionTypeDefinition
-}
 
 // RuntimeEnvironment provides the instance instance for processes to be initialized and executed
 type RuntimeEnvironment struct {
@@ -31,8 +19,6 @@ type RuntimeEnvironment struct {
 
 	// Keeps count of how many processes were spawned (only for debug info)
 	processCount uint64
-	// Logging levels
-	LogLevels []LogLevel
 	// Debugging info
 	Debug bool
 	// Colored output
@@ -63,11 +49,10 @@ const (
 	// NON_POLARIZED_ASYNC /* problematic */
 )
 
-func NewRuntimeEnvironment(l []LogLevel, debug, coloredOutput bool) *RuntimeEnvironment {
+func NewRuntimeEnvironment(debug, coloredOutput bool) *RuntimeEnvironment {
 	return &RuntimeEnvironment{
 		Debug:               true,
 		Color:               true,
-		LogLevels:           l,
 		ExecutionVersion:    NORMAL_ASYNC,
 		debugChannelCounter: 0,
 		processCount:        0,
@@ -90,7 +75,6 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 		re = &RuntimeEnvironment{
 			Debug:            true,
 			Color:            true,
-			LogLevels:        l,
 			Delay:            1000 * time.Millisecond,
 			ExecutionVersion: NORMAL_ASYNC,
 			Typechecked:      false,
@@ -99,6 +83,10 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 
 	if globalEnv != nil {
 		re.GlobalEnvironment = globalEnv
+	} else {
+		re.GlobalEnvironment = &GlobalEnvironment{
+			LogLevels: l,
+		}
 	}
 
 	re.processCount = 0
@@ -333,20 +321,19 @@ const (
 	LOGINFO                        // information
 	LOGRULEDETAILS                 // rule while processing
 	LOGPROCESSING                  // process info
-	// LOGERROR
 	LOGMONITOR
 )
 
 // Similar to Println
 func (re *RuntimeEnvironment) log(level LogLevel, message string) {
-	if slices.Contains(re.LogLevels, level) {
+	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		fmt.Println(message)
 	}
 }
 
 // Similar to Printf
 func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...interface{}) {
-	if slices.Contains(re.LogLevels, level) {
+	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		fmt.Printf(message, args...)
 	}
 }
@@ -362,7 +349,7 @@ const resetColor = "\033[0m"
 
 // Similar to Println
 func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, message string) {
-	if slices.Contains(re.LogLevels, level) {
+	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		var buffer bytes.Buffer
 
 		if re.Color {
@@ -391,7 +378,7 @@ func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, messa
 
 // Similar to Printf
 func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, message string, args ...interface{}) {
-	if slices.Contains(re.LogLevels, level) {
+	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		var buffer bytes.Buffer
 
 		if re.Color {
@@ -458,7 +445,7 @@ func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, mess
 // }
 
 func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {
-	if slices.Contains(re.LogLevels, LOGMONITOR) {
+	if slices.Contains(re.GlobalEnvironment.LogLevels, LOGMONITOR) {
 
 		var buf bytes.Buffer
 		if re.monitor.re.Color {

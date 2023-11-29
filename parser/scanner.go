@@ -13,45 +13,6 @@ const (
 
 // 	LABEL // letters/digits/_
 
-// 	LEFT_ARROW  // <-
-// 	RIGHT_ARROW // =>
-// 	EQUALS      // =
-// 	DOT         // .
-// 	SEQUENCE    // ;
-// 	COLON       // :
-// 	COMMA       // ,
-// 	LPAREN      // (
-// 	RPAREN      // )
-// 	LSBRACK     // [
-// 	RSBRACK     // ]
-// 	LANGLE      // <
-// 	RANGLE      // >
-// 	PIPE        // |
-
-// 	// KEYWORDS
-// 	SEND
-// 	RECEIVE
-// 	CASE
-// 	CLOSE
-// 	WAIT
-// 	CAST
-// 	SHIFT
-// 	ACCEPT
-// 	ACQUIRE
-// 	DETACH
-// 	RELEASE
-// 	DROP
-// 	SPLIT
-// 	PUSH
-// 	NEW
-// 	SNEW
-// 	LET
-// 	IN
-// 	END
-// 	SPRC
-// 	PRC
-// 	FORWARD
-
 // scanner is a lexical scanner.
 type scanner struct {
 	r   *bufio.Reader

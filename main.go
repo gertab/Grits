@@ -12,6 +12,14 @@ import (
 /* ignore sample programs -- used for development*/
 
 const program = `
+// let f2(a : &{a : 1}, b : &{b : 1}) : &{a : 1} * 1 = send self<a, b>
+
+// let f(a : 1 -* 1, b : 1) : 1 * 1 = send self<a, b>
+
+
+type A = +{label : 1}
+		 assuming z : 1
+		 prc[y] : 1 = m : A <- new self.label< -z >; case m (label<zz> => wait zz; close self )
 
 // type A = 1 -* (1 -* (1 * 1))
 // prc[x1] : 1 -* (1 * 1) = send z<yy, self>
@@ -66,15 +74,16 @@ const program = `
 
 
 
-type A = &{label : +{next : 1}}
+// type A = &{label : +{next : 1}}
 
-let f1(x : A) : +{next : 1} = x.label<self>
-let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
+// let f1(x : A) : +{next : 1} = x.label<self>
+// let f2(y : 1) : A = case self (label<zz> => zz.next<y> )
 
-prc[x] : +{next : 1} = f1(z)
-prc[z] : A = f2(y)
-prc[y] : 1 = close self
-prc[final] : 1 = case x (next<z> => print z; drop z; close self)
+// prc[x] : +{next : 1} = f1(z)
+
+// prc[z] : A = f2(y)
+// prc[y] : 1 = close self
+// prc[final] : 1 = case x (next<z> => print z; drop z; close self)
 
 
 

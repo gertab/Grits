@@ -5,6 +5,7 @@ package parser
 import (
 	"fmt"
 	"io"
+	"phi/position"
 )
 
 // Generated from goyacc
@@ -27,8 +28,11 @@ func newLexer(r io.Reader) *lexer {
 
 // Lex is provided for yacc-compatible parser.
 func (l *lexer) Lex(yylval *phiSymType) int {
-	var token tok
-	token, yylval.strval, _, _ = l.scanner.Scan()
+	token, strval, startPos, _ := l.scanner.Scan()
+
+	yylval.currPosition = position.Position{StartLine: len(startPos.Lines) + 1, StartPos: startPos.Char}
+	yylval.strval = strval
+
 	return int(token)
 }
 

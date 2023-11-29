@@ -100,7 +100,7 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 		// Check for duplicate function names
 		exists := unique[f.FunctionName]
 		if exists {
-			return fmt.Errorf("function %s uses a duplicate function name", f.String())
+			return fmt.Errorf("(%s) function %s uses a duplicate function name", f.Position.String(), f.String())
 		}
 		unique[f.FunctionName] = true
 
@@ -108,7 +108,7 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 		if f.Type != nil {
 			typesToCheck = append(typesToCheck, f.Type)
 		} else {
-			return fmt.Errorf("function %s has a missing type of provider", f.String())
+			return fmt.Errorf("(%s) function %s has a missing type of provider", f.Position.String(), f.String())
 		}
 
 		// Check parameters
@@ -116,18 +116,18 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 			if p.Type != nil {
 				typesToCheck = append(typesToCheck, p.Type)
 			} else {
-				return fmt.Errorf("in function definition %s, parameter %s has a missing type", f.String(), p.String())
+				return fmt.Errorf("(%s) in function definition %s, parameter %s has a missing type", f.Position.String(), f.String(), p.String())
 			}
 		}
 
 		// Ensure unique parameter names
 		if !AllNamesUnique(f.Parameters) {
-			return fmt.Errorf("in function definition %s, parameter/s %s are defined more than once", f.String(), NamesToString(DuplicateNames(f.Parameters)))
+			return fmt.Errorf("(%s) in function definition %s, parameter/s %s are defined more than once", f.Position.String(), f.String(), NamesToString(DuplicateNames(f.Parameters)))
 		}
 
 		// Run the actual checks on the types
 		if err := types.SanityChecksType(typesToCheck, *globalEnv.Types); err != nil {
-			return fmt.Errorf("type error in function definition %s; %s", f.String(), err)
+			return fmt.Errorf("(%s) type error in function definition %s; %s", f.Position.String(), f.String(), err)
 		}
 	}
 
@@ -166,13 +166,13 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 	for i := range processes {
 		// Check for uniqueness of provider name within the local process definition
 		if !AllNamesUnique(processes[i].Providers) {
-			return fmt.Errorf("in process definition %s, the providers contain duplicate names (%s)", processes[i].OutlineString(), NamesToString(DuplicateNames(processes[i].Providers)))
+			return fmt.Errorf("(%s) in process definition %s, the providers contain duplicate names (%s)", processes[i].Position.String(), processes[i].OutlineString(), NamesToString(DuplicateNames(processes[i].Providers)))
 		}
 
 		// Check for uniqueness of provider names compared to all processes
 		for _, provider := range processes[i].Providers {
 			if allProcessNames[provider.Ident] {
-				return fmt.Errorf("in process definition %s, the provider used (%s) is already in use by other processes. Please use a different name", processes[i].OutlineString(), provider.Ident)
+				return fmt.Errorf("(%s) in process definition %s, the provider used (%s) is already in use by other processes. Please use a different name", processes[i].Position.String(), processes[i].OutlineString(), provider.Ident)
 			}
 			allProcessNames[provider.Ident] = true
 		}
@@ -193,12 +193,12 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 		if processes[i].Type != nil {
 			typesToCheck = append(typesToCheck, processes[i].Type)
 		} else {
-			return fmt.Errorf("process %s has a missing type of provider", processes[i].OutlineString())
+			return fmt.Errorf("(%s) process %s has a missing type of provider", processes[i].Position.String(), processes[i].OutlineString())
 		}
 
 		// Run the checks
 		if err := types.SanityChecksType(typesToCheck, *globalEnv.Types); err != nil {
-			return fmt.Errorf("type error in process %s; %s", processes[i].OutlineString(), err)
+			return fmt.Errorf("(%s) type error in process %s; %s", processes[i].Position.String(), processes[i].OutlineString(), err)
 		}
 
 		// Check also that the free names being used exist either as one of the other provider names, or as an assumed free name
@@ -211,19 +211,19 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 			processNameCanBeUsed, foundInProcessNames := allProcessNames[fn.Ident]
 
 			if !foundInAssumed && !foundInProcessNames {
-				return fmt.Errorf("in process definition %s, the name %s is not defined. Use 'assume %s : T'", processes[i].OutlineString(), fn.Ident, fn.Ident)
+				return fmt.Errorf("(%s) in process definition %s, the name %s is not defined. Use 'assume %s : T'", processes[i].Position.String(), processes[i].OutlineString(), fn.Ident, fn.Ident)
 			} else if foundInAssumed && assumedNameCanBeUsed {
 				// Referring to an assumed free name
 				remainingAssumedFreeNames[fn.Ident] = false
 			} else if foundInAssumed && !assumedNameCanBeUsed {
 				// Referring to assumed name however it is already used
-				return fmt.Errorf("in process definition %s, the assumed name %s is already used elsewhere", processes[i].OutlineString(), fn.Ident)
+				return fmt.Errorf("(%s) in process definition %s, the assumed name %s is already used elsewhere", processes[i].Position.String(), processes[i].OutlineString(), fn.Ident)
 			} else if foundInProcessNames && processNameCanBeUsed {
 				// Referring to a process name
 				allProcessNames[fn.Ident] = false
 			} else if foundInProcessNames && !processNameCanBeUsed {
 				// Referring to process provider name however it is already used
-				return fmt.Errorf("in process definition %s, the process name %s is already used elsewhere", processes[i].OutlineString(), fn.Ident)
+				return fmt.Errorf("(%s) in process definition %s, the process name %s is already used elsewhere", processes[i].Position.String(), processes[i].OutlineString(), fn.Ident)
 			}
 		}
 	}
@@ -245,11 +245,11 @@ func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 		gammaNameTypesCtx := produceNameTypesCtx(funcDef.Parameters)
 		providerType := funcDef.Type
 
-		globalEnv.logf(LOGPROCESSING, "typechecking function definition %s\n", funcDef.String())
+		globalEnv.logf(LOGPROCESSING, "(%s)typechecking function definition %s\n", funcDef.Position.String(), funcDef.String())
 
 		err := funcDef.Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv, globalEnv)
 		if err != nil {
-			return fmt.Errorf("typechecking error in function %s; %s", funcDef.String(), err)
+			return fmt.Errorf("(%s) typechecking error in function %s; %s", funcDef.Position.String(), funcDef.String(), err)
 		}
 	}
 
@@ -276,7 +276,7 @@ func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv
 		// might be a good idea to set the shadowProvider name to processes[i].Providers[0] (when there is only one provider)
 		err := processes[i].Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv, globalEnv)
 		if err != nil {
-			return fmt.Errorf("typechecking error in process '%s'; %s", processes[i].OutlineString(), err)
+			return fmt.Errorf("(%s) typechecking error in process '%s'; %s", processes[i].Position.String(), processes[i].OutlineString(), err)
 		}
 	}
 

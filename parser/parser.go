@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"os"
+	"phi/position"
 	"phi/process"
 	"phi/types"
 	"strings"
@@ -18,6 +19,7 @@ type unexpandedProcessOrFunction struct {
 	function             process.FunctionDefinition
 	session_type         types.SessionTypeDefinition
 	assumedFreeNameTypes []process.Name
+	position             position.Position
 }
 
 // Different kinds of statements
@@ -104,15 +106,21 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 				p.function.Body.Substitute(p.function.ExplicitProvider, p.function.ExplicitProvider)
 			}
 
+			// Set position
+			p.function.Position = p.position
+
 			functions = append(functions, p.function)
 		} else if p.kind == TYPE_DEF {
+			// Set position
+			p.session_type.Position = p.position
+
 			types = append(types, p.session_type)
 		} else if p.kind == PROCESS_DEF {
 			// Processes may have multiple provider names:
 			// 		e.g. prc[a, b, c, d]: send self<...>
 
 			// Define process
-			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, p.proc.Type, process.LINEAR)
+			new_p := process.NewProcess(p.proc.Body, p.proc.Providers, p.proc.Type, process.LINEAR, p.position)
 
 			if len(new_p.Providers) == 1 {
 				// Set IsSelf to true for the explicit provider
@@ -149,7 +157,7 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 			if function == nil {
 				return nil, nil, nil, fmt.Errorf("invalid calling exec on %s()", functionName)
 			}
-			new_p := process.NewProcess(p.proc.Body, []process.Name{{Ident: fmt.Sprintf("exec%d", execCount), IsSelf: true}}, function.Type, process.LINEAR)
+			new_p := process.NewProcess(p.proc.Body, []process.Name{{Ident: fmt.Sprintf("exec%d", execCount), IsSelf: true}}, function.Type, process.LINEAR, p.position)
 			processes = append(processes, new_p)
 		}
 	}

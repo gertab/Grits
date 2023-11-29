@@ -264,7 +264,7 @@ func (f *NewForm) Transition(process *Process, re *RuntimeEnvironment) {
 		newProcessBody := f.body
 		innerSessionType := types.CopyType(f.continuation_c.Type)
 		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true, Ident: f.continuation_c.Ident, Type: innerSessionType}) // todo include polarity in name f.continuation_c.Polarity()
-		newProcess := NewProcess(newProcessBody, []Name{newChannel}, innerSessionType, LINEAR)
+		newProcess := NewProcess(newProcessBody, []Name{newChannel}, innerSessionType, LINEAR, process.Position)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())
 
@@ -689,7 +689,7 @@ func (f *SplitForm) Transition(process *Process, re *RuntimeEnvironment) {
 		fwdSessionType := types.CopyType(f.from_c.Type)
 		// TODO maybe use NewSelf
 		newProcessBody := NewForward(Name{IsSelf: true, Ident: f.from_c.Ident, Type: fwdSessionType, ExplicitPolarity: f.from_c.ExplicitPolarity}, f.from_c)
-		newProcess := NewProcess(newProcessBody, newSplitNames, fwdSessionType, LINEAR)
+		newProcess := NewProcess(newProcessBody, newSplitNames, fwdSessionType, LINEAR, process.Position)
 		re.logProcessf(LOGRULEDETAILS, process, "[split, client] will create new forward process providing on %s\n", NamesToString(newSplitNames))
 		// Spawn and initiate new forward process
 		newProcess.SpawnThenTransition(re)
@@ -752,7 +752,7 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 		// Create and spawn the new processes
 		// Set its provider to the channel received in the DUP request
 		dupSessionType := types.CopyType(process.Type) // todo may be wrong type (maybe )
-		newDuplicatedProcess := NewProcess(newDuplicatedProcessBody, []Name{newProcessNames[i]}, dupSessionType, process.Shape)
+		newDuplicatedProcess := NewProcess(newDuplicatedProcessBody, []Name{newProcessNames[i]}, dupSessionType, process.Shape, process.Position)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] creating new process (%d): %s\n", i, newDuplicatedProcess.String())
 
@@ -769,8 +769,8 @@ func (process *Process) performDUPrule(re *RuntimeEnvironment) {
 		// Create structure of new forward process
 		fwdProcessType := types.CopyType(processFreeNames[i].Type)
 		// polarity := processFreeNames[i].Polarity(re.Typechecked, re.GlobalEnvironment)
-		newProcessBody := NewForward(Name{IsSelf: true, Ident: processFreeNames[i].Ident, Type: fwdProcessType}, processFreeNames[i]) // todo todo (!) include also the polarity in the NAME NOT PROCESS
-		newProcess := NewProcess(newProcessBody, freshChannels[i], fwdProcessType, LINEAR)
+		newProcessBody := NewForward(Name{IsSelf: true, Ident: processFreeNames[i].Ident, Type: fwdProcessType}, processFreeNames[i]) // includes the polarity of the name not the process
+		newProcess := NewProcess(newProcessBody, freshChannels[i], fwdProcessType, LINEAR, process.Position)
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] will create new forward process %s\n", newProcess.String())
 		// Spawn and initiate new forward process
 		newProcess.SpawnThenTransition(re)

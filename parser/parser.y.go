@@ -12,14 +12,16 @@ import __yyfmt__ "fmt"
 
 import (
 	"io"
+	"phi/position"
 	"phi/process"
 	"phi/types"
 )
 
-//line parser/parser.y:14
+//line parser/parser.y:15
 type phiSymType struct {
 	yys                   int
 	strval                string
+	currPosition          position.Position
 	common_type           unexpandedProcessOrFunction
 	statements            []unexpandedProcessOrFunction
 	name                  process.Name
@@ -151,7 +153,7 @@ const phiEofCode = 1
 const phiErrCode = 2
 const phiInitialStackSize = 16
 
-//line parser/parser.y:255
+//line parser/parser.y:261
 
 // Parse is the entry point to the parser.
 func Parse(r io.Reader) (allEnvironment, error) {
@@ -674,338 +676,338 @@ phidefault:
 
 	case 1:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:56
+//line parser/parser.y:58
 		{
 		}
 	case 2:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:62
+//line parser/parser.y:64
 		{
-			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body: phiDollar[1].form, Providers: []process.Name{{Ident: "root", IsSelf: false}}}})
+			philex.(*lexer).processesOrFunctionsRes = append(philex.(*lexer).processesOrFunctionsRes, unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body: phiDollar[1].form, Providers: []process.Name{{Ident: "root", IsSelf: false}}}, position: phiVAL.currPosition})
 		}
 	case 3:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:66
+//line parser/parser.y:68
 		{
 			philex.(*lexer).processesOrFunctionsRes = phiDollar[1].statements
 		}
 	case 4:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:72
+//line parser/parser.y:74
 		{
 			phiVAL.statements = []unexpandedProcessOrFunction{phiDollar[1].common_type}
 		}
 	case 5:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:73
+//line parser/parser.y:75
 		{
 			phiVAL.statements = append([]unexpandedProcessOrFunction{phiDollar[1].common_type}, phiDollar[2].statements...)
 		}
 	case 6:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:74
+//line parser/parser.y:76
 		{
 			phiVAL.statements = []unexpandedProcessOrFunction{phiDollar[1].common_type}
 		}
 	case 7:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:75
+//line parser/parser.y:77
 		{
 			phiVAL.statements = append([]unexpandedProcessOrFunction{phiDollar[1].common_type}, phiDollar[2].statements...)
 		}
 	case 8:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:76
+//line parser/parser.y:78
 		{
 			phiVAL.statements = []unexpandedProcessOrFunction{phiDollar[1].common_type}
 		}
 	case 9:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:77
+//line parser/parser.y:79
 		{
 			phiVAL.statements = append([]unexpandedProcessOrFunction{phiDollar[1].common_type}, phiDollar[2].statements...)
 		}
 	case 10:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:78
+//line parser/parser.y:80
 		{
 			phiVAL.statements = []unexpandedProcessOrFunction{phiDollar[1].common_type}
 		}
 	case 11:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:79
+//line parser/parser.y:81
 		{
 			phiVAL.statements = append([]unexpandedProcessOrFunction{phiDollar[1].common_type}, phiDollar[2].statements...)
 		}
 	case 12:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:80
+//line parser/parser.y:82
 		{
 			phiVAL.statements = []unexpandedProcessOrFunction{phiDollar[1].common_type}
 		}
 	case 13:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:81
+//line parser/parser.y:83
 		{
 			phiVAL.statements = append([]unexpandedProcessOrFunction{phiDollar[1].common_type}, phiDollar[2].statements...)
 		}
 	case 14:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:87
+//line parser/parser.y:89
 		{
-			phiVAL.common_type = unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body: phiDollar[6].form, Providers: phiDollar[3].names}}
+			phiVAL.common_type = unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body: phiDollar[6].form, Providers: phiDollar[3].names}, position: phiVAL.currPosition}
 		}
 	case 15:
 		phiDollar = phiS[phipt-8 : phipt+1]
-//line parser/parser.y:89
+//line parser/parser.y:91
 		{
-			phiVAL.common_type = unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body: phiDollar[8].form, Type: phiDollar[6].sessionType, Providers: phiDollar[3].names}}
+			phiVAL.common_type = unexpandedProcessOrFunction{kind: PROCESS_DEF, proc: incompleteProcess{Body: phiDollar[8].form, Type: phiDollar[6].sessionType, Providers: phiDollar[3].names}, position: phiVAL.currPosition}
 		}
 	case 16:
 		phiDollar = phiS[phipt-7 : phipt+1]
-//line parser/parser.y:95
+//line parser/parser.y:97
 		{
 			phiVAL.form = process.NewSend(phiDollar[2].name, phiDollar[4].name, phiDollar[6].name)
 		}
 	case 17:
 		phiDollar = phiS[phipt-10 : phipt+1]
-//line parser/parser.y:99
+//line parser/parser.y:101
 		{
 			phiVAL.form = process.NewReceive(phiDollar[2].name, phiDollar[4].name, phiDollar[8].name, phiDollar[10].form)
 		}
 	case 18:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:101
+//line parser/parser.y:103
 		{
 			phiVAL.form = process.NewSelect(phiDollar[1].name, process.Label{L: phiDollar[3].strval}, phiDollar[5].name)
 		}
 	case 19:
 		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:103
+//line parser/parser.y:105
 		{
 			phiVAL.form = process.NewCase(phiDollar[2].name, phiDollar[4].branches)
 		}
 	case 20:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:105
+//line parser/parser.y:107
 		{
 			phiVAL.form = process.NewNew(phiDollar[1].name, phiDollar[4].form, phiDollar[6].form)
 		}
 	case 21:
 		phiDollar = phiS[phipt-8 : phipt+1]
-//line parser/parser.y:107
+//line parser/parser.y:109
 		{
 			phiVAL.form = process.NewNew(process.Name{Ident: phiDollar[1].strval, Type: phiDollar[3].sessionType, IsSelf: false}, phiDollar[6].form, phiDollar[8].form)
 		}
 	case 22:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:109
+//line parser/parser.y:111
 		{
 			phiVAL.form = process.NewCall(phiDollar[1].strval, phiDollar[3].names)
 		}
 	case 23:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:111
+//line parser/parser.y:113
 		{
 			phiVAL.form = process.NewClose(phiDollar[2].name)
 		}
 	case 24:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:113
+//line parser/parser.y:115
 		{
 			phiVAL.form = process.NewForward(phiDollar[2].name, phiDollar[3].name)
 		}
 	case 25:
 		phiDollar = phiS[phipt-10 : phipt+1]
-//line parser/parser.y:115
+//line parser/parser.y:117
 		{
 			phiVAL.form = process.NewSplit(phiDollar[2].name, phiDollar[4].name, phiDollar[8].name, phiDollar[10].form)
 		}
 	case 26:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:117
+//line parser/parser.y:119
 		{
 			phiVAL.form = process.NewWait(phiDollar[2].name, phiDollar[4].form)
 		}
 	case 27:
 		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:119
+//line parser/parser.y:121
 		{
 			phiVAL.form = process.NewCast(phiDollar[2].name, phiDollar[4].name)
 		}
 	case 28:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:121
+//line parser/parser.y:123
 		{
 			phiVAL.form = process.NewShift(phiDollar[1].name, phiDollar[4].name, phiDollar[6].form)
 		}
 	case 29:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:123
+//line parser/parser.y:125
 		{
 			phiVAL.form = process.NewDrop(phiDollar[2].name, phiDollar[4].form)
 		}
 	case 30:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:125
+//line parser/parser.y:127
 		{
 			phiVAL.form = phiDollar[2].form
 		}
 	case 31:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:127
+//line parser/parser.y:129
 		{
 			phiVAL.form = process.NewPrint(phiDollar[2].name, phiDollar[4].form)
 		}
 	case 32:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:131
+//line parser/parser.y:133
 		{
 			phiVAL.branches = nil
 		}
 	case 33:
 		phiDollar = phiS[phipt-6 : phipt+1]
-//line parser/parser.y:132
+//line parser/parser.y:134
 		{
 			phiVAL.branches = []*process.BranchForm{process.NewBranch(process.Label{L: phiDollar[1].strval}, phiDollar[3].name, phiDollar[6].form)}
 		}
 	case 34:
 		phiDollar = phiS[phipt-8 : phipt+1]
-//line parser/parser.y:133
+//line parser/parser.y:135
 		{
 			phiVAL.branches = append(phiDollar[1].branches, process.NewBranch(process.Label{L: phiDollar[3].strval}, phiDollar[5].name, phiDollar[8].form))
 		}
 	case 35:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:135
+//line parser/parser.y:137
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 36:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:136
+//line parser/parser.y:138
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 37:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:138
+//line parser/parser.y:140
 		{
 			phiVAL.names = nil
 		}
 	case 38:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:139
+//line parser/parser.y:141
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 39:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:140
+//line parser/parser.y:142
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 40:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:143
+//line parser/parser.y:145
 		{
 			phiVAL.names = nil
 		}
 	case 41:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:144
+//line parser/parser.y:146
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 42:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:145
+//line parser/parser.y:147
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 43:
 		phiDollar = phiS[phipt-0 : phipt+1]
-//line parser/parser.y:148
+//line parser/parser.y:150
 		{
 			phiVAL.names = nil
 		}
 	case 44:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:149
+//line parser/parser.y:151
 		{
 			phiVAL.names = phiDollar[2].names
 		}
 	case 45:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:153
+//line parser/parser.y:155
 		{
 			phiVAL.names = []process.Name{phiDollar[1].name}
 		}
 	case 46:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:154
+//line parser/parser.y:156
 		{
 			phiVAL.names = append([]process.Name{phiDollar[1].name}, phiDollar[3].names...)
 		}
 	case 47:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:159
+//line parser/parser.y:161
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval, IsSelf: false}
 		}
 	case 48:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:161
+//line parser/parser.y:163
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval, Type: phiDollar[3].sessionType, IsSelf: false}
 		}
 	case 49:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:163
+//line parser/parser.y:165
 		{
 			phiVAL.name = process.Name{IsSelf: true}
 		}
 	case 50:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:165
+//line parser/parser.y:167
 		{
 			pol := phiDollar[1].polarity
 			phiVAL.name = process.Name{IsSelf: true, ExplicitPolarity: &pol}
 		}
 	case 51:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:167
+//line parser/parser.y:169
 		{
 			phiVAL.name = process.Name{Ident: phiDollar[1].strval, IsSelf: false}
 		}
 	case 52:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:169
+//line parser/parser.y:171
 		{
 			pol := phiDollar[1].polarity
 			phiVAL.name = process.Name{Ident: phiDollar[2].strval, IsSelf: false, ExplicitPolarity: &pol}
 		}
 	case 53:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:173
+//line parser/parser.y:175
 		{
-			phiVAL.common_type = unexpandedProcessOrFunction{kind: ASSUMING_DEF, assumedFreeNameTypes: phiDollar[2].names}
+			phiVAL.common_type = unexpandedProcessOrFunction{kind: ASSUMING_DEF, assumedFreeNameTypes: phiDollar[2].names, position: phiVAL.currPosition}
 		}
 	case 54:
 		phiDollar = phiS[phipt-7 : phipt+1]
-//line parser/parser.y:178
+//line parser/parser.y:180
 		{
-			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: phiDollar[2].strval, Parameters: phiDollar[4].names, Body: phiDollar[7].form, UsesExplicitProvider: false}}
+			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: phiDollar[2].strval, Parameters: phiDollar[4].names, Body: phiDollar[7].form, UsesExplicitProvider: false}, position: phiVAL.currPosition}
 		}
 	case 55:
 		phiDollar = phiS[phipt-9 : phipt+1]
-//line parser/parser.y:180
+//line parser/parser.y:182
 		{
-			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: phiDollar[2].strval, Parameters: phiDollar[4].names, Body: phiDollar[9].form, Type: phiDollar[7].sessionType, UsesExplicitProvider: false}}
+			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{FunctionName: phiDollar[2].strval, Parameters: phiDollar[4].names, Body: phiDollar[9].form, Type: phiDollar[7].sessionType, UsesExplicitProvider: false}, position: phiVAL.currPosition}
 		}
 	case 56:
 		phiDollar = phiS[phipt-8 : phipt+1]
-//line parser/parser.y:183
+//line parser/parser.y:185
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{
 				FunctionName:         phiDollar[2].strval,
@@ -1014,11 +1016,11 @@ phidefault:
 				UsesExplicitProvider: true,
 				ExplicitProvider:     process.Name{Ident: phiDollar[4].strval, IsSelf: true},
 				// Type: $6,
-			}}
+			}, position: phiVAL.currPosition}
 		}
 	case 57:
 		phiDollar = phiS[phipt-10 : phipt+1]
-//line parser/parser.y:194
+//line parser/parser.y:196
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{kind: FUNCTION_DEF, function: process.FunctionDefinition{
 				FunctionName:         phiDollar[2].strval,
@@ -1026,72 +1028,75 @@ phidefault:
 				Body:                 phiDollar[10].form,
 				UsesExplicitProvider: true,
 				ExplicitProvider:     process.Name{Ident: phiDollar[4].strval, IsSelf: true},
-				Type:                 phiDollar[6].sessionType}}
+				Type:                 phiDollar[6].sessionType}, position: phiVAL.currPosition}
 		}
 	case 58:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:204
+//line parser/parser.y:206
 		{
-			phiVAL.common_type = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: phiDollar[2].strval, SessionType: phiDollar[4].sessionType}}
+			phiVAL.common_type = unexpandedProcessOrFunction{
+				kind:         TYPE_DEF,
+				session_type: types.SessionTypeDefinition{Name: phiDollar[2].strval, SessionType: phiDollar[4].sessionType},
+				position:     phiVAL.currPosition}
 		}
 	case 59:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:208
+//line parser/parser.y:213
 		{
 			phiVAL.sessionType = types.ConvertSessionTypeInitialToSessionType(phiDollar[1].sessionTypeInitial)
 		}
 	case 60:
 		phiDollar = phiS[phipt-2 : phipt+1]
-//line parser/parser.y:210
+//line parser/parser.y:215
 		{
 			mode := types.StringToMode(phiDollar[1].strval)
 			phiVAL.sessionType = types.ConvertSessionTypeInitialToSessionType(types.NewExplicitModeTypeInitial(mode, phiDollar[2].sessionTypeInitial))
 		}
 	case 61:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:216
+//line parser/parser.y:221
 		{
 			phiVAL.sessionTypeInitial = types.NewLabelTypeInitial(phiDollar[1].strval)
 		}
 	case 62:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:218
+//line parser/parser.y:223
 		{
 			phiVAL.sessionTypeInitial = types.NewUnitTypeInitial()
 		}
 	case 63:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:220
+//line parser/parser.y:225
 		{
 			phiVAL.sessionTypeInitial = types.NewSelectLabelTypeInitial(phiDollar[3].sessionTypeAltInitial)
 		}
 	case 64:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:222
+//line parser/parser.y:227
 		{
 			phiVAL.sessionTypeInitial = types.NewBranchCaseTypeInitial(phiDollar[3].sessionTypeAltInitial)
 		}
 	case 65:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:224
+//line parser/parser.y:229
 		{
 			phiVAL.sessionTypeInitial = types.NewSendTypeInitial(phiDollar[1].sessionTypeInitial, phiDollar[3].sessionTypeInitial)
 		}
 	case 66:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:226
+//line parser/parser.y:231
 		{
 			phiVAL.sessionTypeInitial = types.NewReceiveTypeInitial(phiDollar[1].sessionTypeInitial, phiDollar[3].sessionTypeInitial)
 		}
 	case 67:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:228
+//line parser/parser.y:233
 		{
 			phiVAL.sessionTypeInitial = phiDollar[2].sessionTypeInitial
 		}
 	case 68:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:230
+//line parser/parser.y:235
 		{
 			modeFrom := types.StringToMode(phiDollar[1].strval)
 			modeTo := types.StringToMode(phiDollar[3].strval)
@@ -1099,7 +1104,7 @@ phidefault:
 		}
 	case 69:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:234
+//line parser/parser.y:239
 		{
 			modeFrom := types.StringToMode(phiDollar[1].strval)
 			modeTo := types.StringToMode(phiDollar[3].strval)
@@ -1107,41 +1112,42 @@ phidefault:
 		}
 	case 70:
 		phiDollar = phiS[phipt-3 : phipt+1]
-//line parser/parser.y:240
+//line parser/parser.y:245
 		{
 			phiVAL.sessionTypeAltInitial = []types.OptionInitial{*types.NewOptionInitial(phiDollar[1].strval, phiDollar[3].sessionTypeInitial)}
 		}
 	case 71:
 		phiDollar = phiS[phipt-5 : phipt+1]
-//line parser/parser.y:242
+//line parser/parser.y:247
 		{
 			phiVAL.sessionTypeAltInitial = append([]types.OptionInitial{*types.NewOptionInitial(phiDollar[1].strval, phiDollar[3].sessionTypeInitial)}, phiDollar[5].sessionTypeAltInitial...)
 		}
 	case 72:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:244
+//line parser/parser.y:249
 		{
 			phiVAL.strval = phiDollar[1].strval
 		}
 	case 73:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:246
+//line parser/parser.y:251
 		{
 			phiVAL.polarity = types.POSITIVE
 		}
 	case 74:
 		phiDollar = phiS[phipt-1 : phipt+1]
-//line parser/parser.y:247
+//line parser/parser.y:252
 		{
 			phiVAL.polarity = types.NEGATIVE
 		}
 	case 75:
 		phiDollar = phiS[phipt-4 : phipt+1]
-//line parser/parser.y:251
+//line parser/parser.y:256
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{
-				kind: EXEC_DEF,
-				proc: incompleteProcess{Body: process.NewCall(phiDollar[2].strval, []process.Name{})}}
+				kind:     EXEC_DEF,
+				proc:     incompleteProcess{Body: process.NewCall(phiDollar[2].strval, []process.Name{})},
+				position: phiVAL.currPosition}
 		}
 	}
 	goto phistack /* stack new state and value */

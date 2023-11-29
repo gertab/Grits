@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"phi/position"
 	"phi/types"
 )
 
@@ -11,14 +12,16 @@ type Process struct {
 	Providers []Name
 	Shape     Shape
 	Type      types.SessionType
+	Position  position.Position
 }
 
-func NewProcess(body Form, providers []Name, session_type types.SessionType, shape Shape) *Process {
+func NewProcess(body Form, providers []Name, session_type types.SessionType, shape Shape, position position.Position) *Process {
 	return &Process{
 		Body:      body,
 		Providers: providers,
 		Shape:     shape,
 		Type:      session_type,
+		Position:  position,
 	}
 }
 
@@ -48,6 +51,7 @@ type FunctionDefinition struct {
 	Type                 types.SessionType // Session type for 'self'
 	ExplicitProvider     Name              // Optional name to be used instead of 'self'
 	UsesExplicitProvider bool              // ExplicitProvider set or not
+	Position             position.Position // Line and character position where function is first defined
 }
 
 func (function *FunctionDefinition) Arity() int {

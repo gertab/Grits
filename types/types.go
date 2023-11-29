@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"phi/position"
 	"reflect"
 
 	"golang.org/x/exp/slices"
@@ -11,6 +12,7 @@ import (
 type SessionTypeDefinition struct {
 	SessionType SessionType
 	Name        string
+	Position    position.Position
 }
 
 type SessionType interface {

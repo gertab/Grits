@@ -476,14 +476,14 @@ func LabelledTypedExists(labelledTypesEnv LabelledTypesEnv, key string) bool {
 // Weaenable types allow for channels to be dropped
 func IsWeakenable(sessionType SessionType) bool {
 	// todo implement
-	fmt.Println("todo: IsWeakenable")
+	// fmt.Println("todo: IsWeakenable")
 
 	return true
 }
 
 func IsContractable(sessionType SessionType) bool {
 	// todo implement
-	fmt.Println("todo: IsContractable")
+	// fmt.Println("todo: IsContractable")
 
 	return true
 }

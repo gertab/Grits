@@ -204,7 +204,8 @@ func TestEqualType(t *testing.T) {
 		type C = +{a : D}
 		type D = 1 * C
 		type E = F // these should be avoided
-		type F = E`
+		type F = E
+		//type G = linear +{a : 1}`
 
 	// Ensures that input1 and input2 are equivalent
 	cases := []struct {
@@ -221,6 +222,7 @@ func TestEqualType(t *testing.T) {
 		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "1 * C"},
 		{"E", "F"},
 		{"&{a : (1 -* 1), b : 1}", "&{b : 1, a : (1 -* 1)}"},
+		{"linear +{a : 1}", "G"},
 	}
 
 	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types
@@ -243,7 +245,8 @@ func TestNotEqualType(t *testing.T) {
 		`type A = 1 -* 1
 		type B = &{a : A}
 		type C = +{a : D}
-		type D = 1 * C`
+		type D = 1 * C
+		//type E = linear +{a : 1}`
 
 	cases := []struct {
 		input1 string
@@ -252,6 +255,7 @@ func TestNotEqualType(t *testing.T) {
 		{"abc", "dd"},
 		{"1 * +{a : D}", "C"},
 		{"1 * +{a : C}", "D"},
+		{"affine +{a : 1}", "E"},
 	}
 
 	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types

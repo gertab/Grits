@@ -257,6 +257,8 @@ func (q *LinearMode) Equals(other Modality) bool {
 	return same
 }
 
+// Special Modes: Invalid & Unset
+
 // Invalid
 type InvalidMode struct {
 	mode string
@@ -292,6 +294,42 @@ func (q *InvalidMode) CanBeDownshiftedTo(toMode Modality) bool {
 
 func (q *InvalidMode) Equals(other Modality) bool {
 	_, same := other.(*InvalidMode)
+	return same
+}
+
+// Unset
+type UnsetMode struct{}
+
+func NewUnsetMode() *UnsetMode {
+	return &UnsetMode{}
+}
+
+func (q *UnsetMode) String() string {
+	return ""
+}
+
+func (q *UnsetMode) Copy() Modality {
+	return NewUnsetMode()
+}
+
+func (q *UnsetMode) AllowsContraction() bool {
+	return false
+}
+
+func (q *UnsetMode) AllowsWeakening() bool {
+	return false
+}
+
+func (q *UnsetMode) CanBeUpshiftedTo(toMode Modality) bool {
+	panic("mode is not set: couldn't shift")
+}
+
+func (q *UnsetMode) CanBeDownshiftedTo(toMode Modality) bool {
+	panic("mode is not set: couldn't shift")
+}
+
+func (q *UnsetMode) Equals(other Modality) bool {
+	_, same := other.(*UnsetMode)
 	return same
 }
 

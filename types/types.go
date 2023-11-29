@@ -289,9 +289,14 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 
 	if isLabel1 || isLabel2 {
 		// Compare with existing snapshots
-		presentSnapshot := type1.String() + type1.Modality().String() + type2.String() + type2.Modality().String()
+		var presentSnapshot bytes.Buffer
+		presentSnapshot.WriteString(type1.String())
+		presentSnapshot.WriteString(type1.Modality().String())
+		presentSnapshot.WriteString("|")
+		presentSnapshot.WriteString(type2.String())
+		presentSnapshot.WriteString(type2.Modality().String())
 
-		_, exists := snapshots[presentSnapshot]
+		_, exists := snapshots[presentSnapshot.String()]
 		if exists {
 			return true
 		}
@@ -321,8 +326,13 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 		}
 
 		// Add new snapshot
-		newSnapshot := type1.String() + type2.String()
-		snapshots[newSnapshot] = true
+		var newSnapshot bytes.Buffer
+		newSnapshot.WriteString(type1.String())
+		newSnapshot.WriteString(type1.Modality().String())
+		newSnapshot.WriteString("|")
+		newSnapshot.WriteString(type2.String())
+		newSnapshot.WriteString(type2.Modality().String())
+		snapshots[newSnapshot.String()] = true
 
 		return innerEqualType(type1, type2, snapshots, labelledTypesEnv)
 	}
@@ -578,7 +588,7 @@ func FetchSelectBranch(branches []Option, label string) (SessionType, bool) {
 // SessionTypeInitial can be converted into a SessionType (as used by the typechecker), where modes are then inserted into each SessionType struct (rather than just one at the beginning).
 
 func ConvertSessionTypeInitialToSessionType(st SessionTypeInitial) SessionType {
-	defaultMode := NewUnrestrictedMode()
+	defaultMode := NewUnsetMode()
 	return st.toSessionType(defaultMode)
 }
 
@@ -595,9 +605,10 @@ type ExplicitModeTypeInitial struct {
 	Continuation SessionTypeInitial
 }
 
-func NewExplicitModeTypeInitial(modality Modality) *ExplicitModeTypeInitial {
+func NewExplicitModeTypeInitial(modality Modality, continuation SessionTypeInitial) *ExplicitModeTypeInitial {
 	return &ExplicitModeTypeInitial{
-		Modality: modality,
+		Modality:     modality,
+		Continuation: continuation,
 	}
 }
 

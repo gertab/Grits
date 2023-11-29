@@ -25,7 +25,7 @@ import (
 	polarity 		      types.Polarity
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
+%token LABEL LEFT_ARROW RIGHT_ARROW UP_ARROW DOWN_ARROW  EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
 %type <strval> LABEL
 %type <statements> statements 
 %type <common_type> process_def
@@ -41,6 +41,7 @@ import (
 %type <names> optional_names_with_type_ann
 %type <names> comma_optional_names_with_type_ann
 %type <names> names_with_type_ann
+%type <strval> modality
 %type <branches> branches
 %type <sessionType> session_type
 %type <sessionTypeAltInitial> session_type_options_init
@@ -48,7 +49,7 @@ import (
 %type <polarity> polarity
 
 %left SEQUENCE RANGLE
-%right TIMES LOLLI
+%right TIMES LOLLI UP_ARROW DOWN_ARROW
 
 %%
 
@@ -205,8 +206,9 @@ type_def : TYPE LABEL EQUALS session_type
 /* Returns a SessionType struct */
 session_type : /* no explicit mode */ session_type_init
 					{ $$ = types.ConvertSessionTypeInitialToSessionType($1)}
-			 | /* explicit mode */ LABEL session_type_init
-					{ $$ = types.ConvertSessionTypeInitialToSessionType(types.NewExplicitModeTypeInitialString($1))};
+			 | /* explicit mode */ modality session_type_init
+					{ mode := types.StringToMode($1)
+					  $$ = types.ConvertSessionTypeInitialToSessionType(types.NewExplicitModeTypeInitial(mode, $2))};
 
 /* Returns a SessionTypeInitial struct */
 session_type_init : 
@@ -223,7 +225,15 @@ session_type_init :
 		   | /* receive A -o B */ session_type_init LOLLI session_type_init
 		   		{ $$ = types.NewReceiveTypeInitial($1, $3) }
 		   | /* brackets (A) */ LPAREN session_type_init RPAREN
-		   		{ $$ = $2 };
+		   		{ $$ = $2 }
+		   | /* upshift mode /\ model type */ modality UP_ARROW modality session_type_init
+		   		{ modeFrom := types.StringToMode($1)
+				  modeTo := types.StringToMode($3)
+				  $$ = types.NewUpTypeInitial(modeFrom, modeTo, $4) }
+		   | /* downshift mode /\ model type */ modality DOWN_ARROW modality session_type_init
+		   		{ modeFrom := types.StringToMode($1)
+				  modeTo := types.StringToMode($3)
+				  $$ = types.NewDownTypeInitial(modeFrom, modeTo, $4) };
 
 session_type_options_init : 
             LABEL COLON session_type_init 
@@ -231,6 +241,7 @@ session_type_options_init :
 	 	  | LABEL COLON session_type_init COMMA session_type_options_init 
 		  { $$ = append([]types.OptionInitial{*types.NewOptionInitial($1, $3)}, $5...) };
 
+modality : LABEL { $$ = $1 };
 
 polarity : PLUS { $$ = types.POSITIVE }
 	     | MINUS { $$ = types.NEGATIVE };

@@ -269,7 +269,7 @@ func NewInvalidMode(mode string) *InvalidMode {
 }
 
 func (q *InvalidMode) String() string {
-	return q.mode
+	return "invalid: " + q.mode
 }
 
 func (q *InvalidMode) Copy() Modality {
@@ -305,7 +305,7 @@ func NewUnsetMode() *UnsetMode {
 }
 
 func (q *UnsetMode) String() string {
-	return ""
+	return "unset"
 }
 
 func (q *UnsetMode) Copy() Modality {

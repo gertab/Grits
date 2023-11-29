@@ -146,23 +146,23 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 
 	if isSpecialSymbol(ch) {
 		// s.unread()
-		return s.scanSpecialSymbol()
+		return s.scanSpecialSymbol(ch)
 	}
 
 	if isAlphaNum(ch) || isUnderscore(ch) {
 		// s.unread()
-		return s.scanLabel()
+		return s.scanLabel(ch)
 	}
 
 	return kILLEGAL, string(ch), startPos, endPos
 }
 
 // Scan label or keyword
-func (s *scanner) scanLabel() (token tok, value string, startPos, endPos TokenPos) {
+func (s *scanner) scanLabel(ch rune) (token tok, value string, startPos, endPos TokenPos) {
 	var buf bytes.Buffer
 	startPos = s.pos
 	defer func() { endPos = s.pos }()
-	// buf.WriteRune(ch)
+	buf.WriteRune(ch)
 
 	for {
 		if ch := s.read(); ch == eof {
@@ -267,11 +267,12 @@ func (s *scanner) consumeIfComment(ch rune) bool {
 		} else if ch == '*' {
 			s.skipToEndOfComment()
 			return true
+		} else {
+			s.unread()
 		}
-		s.unread()
+		// s.unread()
 	}
-	// Not a comment, so undo changes
-	s.unread()
+	// Not a comment, so do nothing
 	return false
 }
 
@@ -297,13 +298,13 @@ func (s *scanner) skipToEOL() {
 
 // Some commands are multi-character. So, they have to be check explicitly
 func isSpecialSymbol(ch rune) bool {
-	return ch == '=' || ch == '<' || ch == '-' || ch == '1'
+	return ch == '=' || ch == '<' || ch == '-' || ch == '1' || ch == '/' || ch == '\\'
 }
 
-func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos TokenPos) {
+func (s *scanner) scanSpecialSymbol(ch rune) (token tok, value string, startPos, endPos TokenPos) {
 	startPos = s.pos
 	defer func() { endPos = s.pos }()
-	ch := s.read()
+	// ch := s.read()
 	ch2 := s.read()
 
 	switch ch {
@@ -345,11 +346,21 @@ func (s *scanner) scanSpecialSymbol() (token tok, value string, startPos, endPos
 		if isAlphaNum(ch2) || isUnderscore(ch2) {
 			// is a label
 			s.unread()
-			return s.scanLabel()
+			return s.scanLabel(ch)
 		} else {
 			// is just 1
 			s.unread()
 			return UNIT, "1", startPos, endPos
+		}
+	case '\\':
+		// Should be \/
+		if ch2 == '/' {
+			return DOWN_ARROW, "\\/", startPos, endPos
+		}
+	case '/':
+		// Should be /\
+		if ch2 == '\\' {
+			return UP_ARROW, "\\/", startPos, endPos
 		}
 	}
 	// Not one of the special commands

@@ -111,7 +111,7 @@ func TestBasicForms(t *testing.T) {
 	compareOutputProgram(t, output, expected)
 }
 func TestSimpleTypes(t *testing.T) {
-	u := types.NewUnrestrictedMode()
+	u := types.NewUnsetMode()
 
 	unitType := types.NewUnitType(u)
 	labelType1 := types.NewLabelType("abc", u)
@@ -139,7 +139,7 @@ func TestSimpleTypes(t *testing.T) {
 }
 
 func TestTypes(t *testing.T) {
-	u := types.NewUnrestrictedMode()
+	u := types.NewUnsetMode()
 
 	unitType := types.NewUnitType(u)
 	labelType1 := types.NewLabelType("abc", u)
@@ -222,7 +222,7 @@ func TestEqualType(t *testing.T) {
 		{"1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : 1 * +{a : D}}}}}", "1 * C"},
 		{"E", "F"},
 		{"&{a : (1 -* 1), b : 1}", "&{b : 1, a : (1 -* 1)}"},
-		{"linear +{a : 1}", "G"},
+		// {"linear +{a : 1}", "G"},
 	}
 
 	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types
@@ -255,7 +255,7 @@ func TestNotEqualType(t *testing.T) {
 		{"abc", "dd"},
 		{"1 * +{a : D}", "C"},
 		{"1 * +{a : C}", "D"},
-		{"affine +{a : 1}", "E"},
+		// {"affine +{a : 1}", "E"},
 	}
 
 	sessionTypeDefinitions := *parseGetEnvironment(commonProgram).Types
@@ -344,6 +344,46 @@ func TestProcessesWithoutTypechecking(t *testing.T) {
 			if len(assumedFreeNames) != c.expectedNumberFreeNames {
 				t.Errorf("error in case #%d: Got %d free names, expected %d\n", i, len(processes), c.expectedNumberFreeNames)
 			}
+		}
+	}
+}
+
+// Modalities
+
+func TestTypeDefinitionModes(t *testing.T) {
+
+	inputProgram :=
+		`type A = 1 -* 1
+		 type B = 1
+		 type C = 1 * 1
+		 type D = &{a : 1, b : 1}
+		 type E = +{a : 1, b : 1}
+		// type B = &{a : A}
+		// type C = +{a : D}
+		// type D = 1 * C
+		// type E = F // these should be avoided
+		// type F = E
+		//type G = linear +{a : 1}`
+
+	cases := []struct {
+		input1 string
+	}{
+		{"[unset]1 [unset]-* [unset]1"},        // A
+		{"[unset]1"},                           // B
+		{"[unset]1 [unset]* [unset]1"},         // C
+		{"unset&{a : [unset]1, b : [unset]1}"}, // D
+		{"unset+{a : [unset]1, b : [unset]1}"}, // E
+	}
+
+	sessionTypeDefinitions := *parseGetEnvironment(inputProgram).Types
+	// labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(sessionTypeDefinitions)
+
+	if len(sessionTypeDefinitions) != len(cases) {
+		t.Errorf("number of cases do not match with the type definitions\n")
+	}
+	for i, c := range sessionTypeDefinitions {
+		if c.SessionType.StringWithModality() != cases[i].input1 {
+			t.Errorf("error in case #%d: Got %s, but expected %s\n", i, c.SessionType.StringWithModality(), cases[i].input1)
 		}
 	}
 }

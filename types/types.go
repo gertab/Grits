@@ -15,6 +15,7 @@ type SessionTypeDefinition struct {
 
 type SessionType interface {
 	String() string
+	StringWithModality() string
 	Polarity() Polarity
 	Modality() Modality
 
@@ -42,6 +43,16 @@ func (q *LabelType) String() string {
 	return q.Label
 }
 
+func (q *LabelType) StringWithModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]")
+	buffer.WriteString(q.Label)
+
+	return buffer.String()
+}
+
 func (q *LabelType) Modality() Modality {
 	return q.Mode
 }
@@ -59,6 +70,15 @@ func NewUnitType(mode Modality) *UnitType {
 
 func (q *UnitType) String() string {
 	return "1"
+}
+
+func (q *UnitType) StringWithModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]1")
+
+	return buffer.String()
 }
 
 func (q *UnitType) Modality() Modality {
@@ -86,6 +106,18 @@ func (q *SendType) String() string {
 	buffer.WriteString(q.Left.String())
 	buffer.WriteString(" * ")
 	buffer.WriteString(q.Right.String())
+	// buffer.WriteString(")")
+	return buffer.String()
+}
+
+func (q *SendType) StringWithModality() string {
+	var buffer bytes.Buffer
+	// buffer.WriteString("(")
+	buffer.WriteString(q.Left.StringWithModality())
+	buffer.WriteString(" [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]* ")
+	buffer.WriteString(q.Right.StringWithModality())
 	// buffer.WriteString(")")
 	return buffer.String()
 }
@@ -119,6 +151,18 @@ func (q *ReceiveType) String() string {
 	return buffer.String()
 }
 
+func (q *ReceiveType) StringWithModality() string {
+	var buffer bytes.Buffer
+	// buffer.WriteString("(")
+	buffer.WriteString(q.Left.StringWithModality())
+	buffer.WriteString(" [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]-* ")
+	buffer.WriteString(q.Right.StringWithModality())
+	// buffer.WriteString(")")
+	return buffer.String()
+}
+
 func (q *ReceiveType) Modality() Modality {
 	return q.Mode
 }
@@ -144,6 +188,15 @@ func (q *SelectLabelType) String() string {
 	return buffer.String()
 }
 
+func (q *SelectLabelType) StringWithModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("+{")
+	buffer.WriteString(stringifyBranchesWithModalities(q.Branches))
+	buffer.WriteString("}")
+	return buffer.String()
+}
+
 func (q *SelectLabelType) Modality() Modality {
 	return q.Mode
 }
@@ -165,6 +218,15 @@ func (q *BranchCaseType) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("&{")
 	buffer.WriteString(stringifyBranches(q.Branches))
+	buffer.WriteString("}")
+	return buffer.String()
+}
+
+func (q *BranchCaseType) StringWithModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("&{")
+	buffer.WriteString(stringifyBranchesWithModalities(q.Branches))
 	buffer.WriteString("}")
 	return buffer.String()
 }
@@ -198,6 +260,16 @@ func (q *UpType) String() string {
 	return buffer.String()
 }
 
+func (q *UpType) StringWithModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.From.String())
+	buffer.WriteString("/\\")
+	buffer.WriteString(q.To.String())
+	buffer.WriteString(" ")
+	buffer.WriteString(q.Continuation.StringWithModality())
+	return buffer.String()
+}
+
 func (q *UpType) Modality() Modality {
 	return q.To
 }
@@ -224,6 +296,16 @@ func (q *DownType) String() string {
 	buffer.WriteString(q.To.String())
 	buffer.WriteString(" ")
 	buffer.WriteString(q.Continuation.String())
+	return buffer.String()
+}
+
+func (q *DownType) StringWithModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.From.String())
+	buffer.WriteString("\\/")
+	buffer.WriteString(q.To.String())
+	buffer.WriteString(" ")
+	buffer.WriteString(q.Continuation.StringWithModality())
 	return buffer.String()
 }
 
@@ -254,6 +336,21 @@ func stringifyBranches(options []Option) string {
 		buf.WriteString(j.Label)
 		buf.WriteString(" : ")
 		buf.WriteString(j.SessionType.String())
+
+		if i < len(options)-1 {
+			buf.WriteString(", ")
+		}
+	}
+	return buf.String()
+}
+
+func stringifyBranchesWithModalities(options []Option) string {
+	var buf bytes.Buffer
+
+	for i, j := range options {
+		buf.WriteString(j.Label)
+		buf.WriteString(" : ")
+		buf.WriteString(j.SessionType.StringWithModality())
 
 		if i < len(options)-1 {
 			buf.WriteString(", ")
@@ -609,14 +706,6 @@ func NewExplicitModeTypeInitial(modality Modality, continuation SessionTypeIniti
 	return &ExplicitModeTypeInitial{
 		Modality:     modality,
 		Continuation: continuation,
-	}
-}
-
-func NewExplicitModeTypeInitialString(modality string) *ExplicitModeTypeInitial {
-	// StringToMode converts a string to a mode
-	// It returns an InvalidMode in case of an unrecognized mode
-	return &ExplicitModeTypeInitial{
-		Modality: StringToMode(modality),
 	}
 }
 

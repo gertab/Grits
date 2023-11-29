@@ -559,11 +559,6 @@ func checkInputRepeatedly(t *testing.T, input string, expectedOptions []traceOpt
 	// If you increase the number of repetitions to a very high number, make sure to increase
 	// the monitor inactiveTimer (to avoid the monitor timing out before terminating).
 
-	for _, c := range expectedOptions {
-		// Sort trace
-		sort.Sort(steps(c.trace))
-	}
-
 	wg := new(sync.WaitGroup)
 	wg.Add(numberOfIterations)
 	for i := 0; i < numberOfIterations; i++ {
@@ -598,9 +593,6 @@ func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *s
 			}
 		}
 
-		// No logs during testing
-		globalEnv.LogLevels = []process.LogLevel{}
-
 		deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv, execVersion, typecheck)
 		stepsGot := convertRulesLog(rulesLog)
 
@@ -622,6 +614,9 @@ func compareAllTraces(t *testing.T, got steps, cases []traceOption, deadProcesse
 
 	for _, c := range cases {
 		if len(c.trace) == len(got) {
+			// Sort trace
+			sort.Sort(steps(c.trace))
+
 			if compareSteps(t, c.trace, got) {
 				return true
 			}
@@ -632,21 +627,14 @@ func compareAllTraces(t *testing.T, got steps, cases []traceOption, deadProcesse
 }
 
 func printAllTraces(t *testing.T, got steps, cases []traceOption, input string) {
-
-	var buffer bytes.Buffer
-
-	buffer.WriteString("Got ")
-	buffer.WriteString(stingifySteps(got))
-	buffer.WriteString("[WRONG] , expected ")
-
 	for i := range cases {
-		buffer.WriteString(stingifySteps(cases[i].trace))
 
-		if i < len(cases)-1 {
-			buffer.WriteString("\n or ")
+		if len(cases[i].trace) == len(got) {
+			t.Errorf("Got %s, expected %s\n%s\n", stingifySteps(got), stingifySteps(cases[i].trace), input)
+		} else {
+			t.Errorf("Error: trace length not equal. Expected %d (%s), got %d (%s).\n%s\n", len(cases[i].trace), stingifySteps(cases[i].trace), len(got), stingifySteps(got), input)
 		}
 	}
-	t.Errorf(buffer.String())
 }
 
 func compareSteps(t *testing.T, got steps, expected steps) bool {
@@ -655,23 +643,26 @@ func compareSteps(t *testing.T, got steps, expected steps) bool {
 		return false
 	}
 
-	gotString := stingifySteps(got)
-	expectedString := stingifySteps(expected)
+	for index := range got {
+		if got[index] != expected[index] {
+			return false
+		}
+	}
 
-	return gotString == expectedString
+	return true
 }
 
 func stingifySteps(steps steps) string {
-	var buffer bytes.Buffer
+	var buf bytes.Buffer
 
 	for _, s := range steps {
-		buffer.WriteString(s.processName)
-		buffer.WriteString(":")
-		buffer.WriteString(process.RuleString[s.rule])
-		buffer.WriteString(" ")
+		buf.WriteString(s.processName)
+		buf.WriteString(":")
+		buf.WriteString(process.RuleString[s.rule])
+		buf.WriteString(" ")
 	}
 
-	return buffer.String()
+	return buf.String()
 }
 
 func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
@@ -683,6 +674,8 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 }
 
 func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment, execVersion process.Execution_Version, typechecked bool) ([]process.Process, []process.MonitorRulesLog, uint64) {
+
+	globalEnv.LogLevels = []process.LogLevel{}
 
 	debug := true
 

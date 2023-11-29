@@ -16,6 +16,7 @@ type SessionTypeDefinition struct {
 type SessionType interface {
 	String() string
 	Polarity() Polarity
+	Modality() Modality
 
 	// used for inner checks
 	checkTypeLabels(LabelledTypesEnv) error
@@ -27,43 +28,56 @@ type SessionType interface {
 // Label
 type LabelType struct {
 	Label string
+	Mode  Modality
+}
+
+func NewLabelType(i string, mode Modality) *LabelType {
+	return &LabelType{
+		Label: i,
+		Mode:  mode,
+	}
 }
 
 func (q *LabelType) String() string {
 	return q.Label
 }
 
-func NewLabelType(i string) *LabelType {
-	return &LabelType{
-		Label: i,
-	}
-}
-
-type WIPType struct{}
-
-// todo remove WIP
-func (q *WIPType) String() string {
-	return "wip"
-}
-func NewWIPType() *WIPType {
-	return &WIPType{}
+func (q *LabelType) Modality() Modality {
+	return q.Mode
 }
 
 // Unit: 1
-type UnitType struct{}
+type UnitType struct {
+	Mode Modality
+}
+
+func NewUnitType(mode Modality) *UnitType {
+	return &UnitType{
+		Mode: mode,
+	}
+}
 
 func (q *UnitType) String() string {
 	return "1"
 }
 
-func NewUnitType() *UnitType {
-	return &UnitType{}
+func (q *UnitType) Modality() Modality {
+	return q.Mode
 }
 
 // Send: A * B
 type SendType struct {
 	Left  SessionType
 	Right SessionType
+	Mode  Modality
+}
+
+func NewSendType(left, right SessionType, mode Modality) *SendType {
+	return &SendType{
+		Left:  left,
+		Right: right,
+		Mode:  mode,
+	}
 }
 
 func (q *SendType) String() string {
@@ -76,17 +90,23 @@ func (q *SendType) String() string {
 	return buffer.String()
 }
 
-func NewSendType(left, right SessionType) *SendType {
-	return &SendType{
-		Left:  left,
-		Right: right,
-	}
+func (q *SendType) Modality() Modality {
+	return q.Mode
 }
 
 // Receive: A -* B
 type ReceiveType struct {
 	Left  SessionType
 	Right SessionType
+	Mode  Modality
+}
+
+func NewReceiveType(left, right SessionType, mode Modality) *ReceiveType {
+	return &ReceiveType{
+		Left:  left,
+		Right: right,
+		Mode:  mode,
+	}
 }
 
 func (q *ReceiveType) String() string {
@@ -99,16 +119,21 @@ func (q *ReceiveType) String() string {
 	return buffer.String()
 }
 
-func NewReceiveType(left, right SessionType) *ReceiveType {
-	return &ReceiveType{
-		Left:  left,
-		Right: right,
-	}
+func (q *ReceiveType) Modality() Modality {
+	return q.Mode
 }
 
 // SelectLabel: +{ }
 type SelectLabelType struct {
-	Branches []BranchOption
+	Branches []Option
+	Mode     Modality
+}
+
+func NewSelectLabelType(branches []Option, mode Modality) *SelectLabelType {
+	return &SelectLabelType{
+		Branches: branches,
+		Mode:     mode,
+	}
 }
 
 func (q *SelectLabelType) String() string {
@@ -119,15 +144,21 @@ func (q *SelectLabelType) String() string {
 	return buffer.String()
 }
 
-func NewSelectType(branches []BranchOption) *SelectLabelType {
-	return &SelectLabelType{
-		Branches: branches,
-	}
+func (q *SelectLabelType) Modality() Modality {
+	return q.Mode
 }
 
 // BranchCase: & { }
 type BranchCaseType struct {
-	Branches []BranchOption
+	Branches []Option
+	Mode     Modality
+}
+
+func NewBranchCaseType(branches []Option, mode Modality) *BranchCaseType {
+	return &BranchCaseType{
+		Branches: branches,
+		Mode:     mode,
+	}
 }
 
 func (q *BranchCaseType) String() string {
@@ -138,10 +169,8 @@ func (q *BranchCaseType) String() string {
 	return buffer.String()
 }
 
-func NewBranchCaseType(branches []BranchOption) *BranchCaseType {
-	return &BranchCaseType{
-		Branches: branches,
-	}
+func (q *BranchCaseType) Modality() Modality {
+	return q.Mode
 }
 
 // Up shift: m /\ n ...
@@ -149,6 +178,14 @@ type UpType struct {
 	From         Modality
 	To           Modality
 	Continuation SessionType
+}
+
+func NewUpType(From, To Modality, Continuation SessionType) *UpType {
+	return &UpType{
+		From:         From,
+		To:           To,
+		Continuation: Continuation,
+	}
 }
 
 func (q *UpType) String() string {
@@ -161,12 +198,8 @@ func (q *UpType) String() string {
 	return buffer.String()
 }
 
-func NewUpType(From, To Modality, Continuation SessionType) *UpType {
-	return &UpType{
-		From:         From,
-		To:           To,
-		Continuation: Continuation,
-	}
+func (q *UpType) Modality() Modality {
+	return q.To
 }
 
 // Down shift: m \/ n ...
@@ -174,6 +207,14 @@ type DownType struct {
 	From         Modality
 	To           Modality
 	Continuation SessionType
+}
+
+func NewDownType(From, To Modality, Continuation SessionType) *DownType {
+	return &DownType{
+		From:         From,
+		To:           To,
+		Continuation: Continuation,
+	}
 }
 
 func (q *DownType) String() string {
@@ -186,49 +227,45 @@ func (q *DownType) String() string {
 	return buffer.String()
 }
 
-func NewDownType(From, To Modality, Continuation SessionType) *DownType {
-	return &DownType{
-		From:         From,
-		To:           To,
-		Continuation: Continuation,
-	}
+func (q *DownType) Modality() Modality {
+	return q.To
 }
 
-// Branches
-type BranchOption struct {
-	Label        string
-	Session_type SessionType
+// Branch/Case option
+type Option struct {
+	Label       string
+	SessionType SessionType
 }
 
-func (branch *BranchOption) String() string {
+func (option *Option) String() string {
 	var buffer bytes.Buffer
 
-	buffer.WriteString(branch.Label)
+	buffer.WriteString(option.Label)
 	buffer.WriteString(" : ")
-	buffer.WriteString(branch.Session_type.String())
+	buffer.WriteString(option.SessionType.String())
 
 	return buffer.String()
 }
 
-func stringifyBranches(branches []BranchOption) string {
+func stringifyBranches(options []Option) string {
 	var buf bytes.Buffer
 
-	for i, j := range branches {
+	for i, j := range options {
 		buf.WriteString(j.Label)
 		buf.WriteString(" : ")
-		buf.WriteString(j.Session_type.String())
+		buf.WriteString(j.SessionType.String())
 
-		if i < len(branches)-1 {
+		if i < len(options)-1 {
 			buf.WriteString(", ")
 		}
 	}
 	return buf.String()
 }
 
-func NewBranchOption(label string, session_type SessionType) *BranchOption {
-	return &BranchOption{
-		Label:        label,
-		Session_type: session_type,
+func NewOption(label string, sessionType SessionType) *Option {
+	return &Option{
+		Label:       label,
+		SessionType: sessionType,
 	}
 }
 
@@ -252,7 +289,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 
 	if isLabel1 || isLabel2 {
 		// Compare with existing snapshots
-		presentSnapshot := type1.String() + type2.String()
+		presentSnapshot := type1.String() + type1.Modality().String() + type2.String() + type2.Modality().String()
 
 		_, exists := snapshots[presentSnapshot]
 		if exists {
@@ -260,7 +297,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 		}
 
 		if isLabel1 && isLabel2 && f1.Label == f2.Label {
-			return true
+			return f1.Modality().Equals(f2.Modality())
 		}
 
 		// Expand label/s
@@ -302,17 +339,16 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 	// 	return ok1 && ok2 && f1.Label == f2.Label
 
 	case *UnitType:
-		_, ok1 := type1.(*UnitType)
-		_, ok2 := type2.(*UnitType)
-		return ok1 && ok2
+		f1, ok1 := type1.(*UnitType)
+		f2, ok2 := type2.(*UnitType)
+		return ok1 && ok2 && f1.Modality().Equals(f2.Modality())
 
 	case *SendType:
 		f1, ok1 := type1.(*SendType)
 		f2, ok2 := type2.(*SendType)
 
 		if ok1 && ok2 {
-			// todo check if send type is commutative
-			return innerEqualType(f1.Left, f2.Left, snapshots, labelledTypesEnv) && innerEqualType(f1.Right, f2.Right, snapshots, labelledTypesEnv)
+			return f1.Modality().Equals(f2.Modality()) && innerEqualType(f1.Left, f2.Left, snapshots, labelledTypesEnv) && innerEqualType(f1.Right, f2.Right, snapshots, labelledTypesEnv)
 		}
 
 	case *ReceiveType:
@@ -320,8 +356,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 		f2, ok2 := type2.(*ReceiveType)
 
 		if ok1 && ok2 {
-			// todo check if receive type is commutative
-			return innerEqualType(f1.Left, f2.Left, snapshots, labelledTypesEnv) && innerEqualType(f1.Right, f2.Right, snapshots, labelledTypesEnv)
+			return f1.Modality().Equals(f2.Modality()) && innerEqualType(f1.Left, f2.Left, snapshots, labelledTypesEnv) && innerEqualType(f1.Right, f2.Right, snapshots, labelledTypesEnv)
 		}
 
 	case *SelectLabelType:
@@ -329,7 +364,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 		f2, ok2 := type2.(*SelectLabelType)
 
 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
-			return equalTypeBranch(f1.Branches, f2.Branches, snapshots, labelledTypesEnv)
+			return f1.Modality().Equals(f2.Modality()) && equalTypeBranch(f1.Branches, f2.Branches, snapshots, labelledTypesEnv)
 		}
 
 	case *BranchCaseType:
@@ -337,8 +372,24 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 		f2, ok2 := type2.(*BranchCaseType)
 
 		if ok1 && ok2 && len(f1.Branches) == len(f2.Branches) {
-			// todo check if order matters
-			return equalTypeBranch(f1.Branches, f2.Branches, snapshots, labelledTypesEnv)
+			// order doesn't matters
+			return f1.Modality().Equals(f2.Modality()) && equalTypeBranch(f1.Branches, f2.Branches, snapshots, labelledTypesEnv)
+		}
+
+	case *UpType:
+		f1, ok1 := type1.(*UpType)
+		f2, ok2 := type2.(*UpType)
+
+		if ok1 && ok2 {
+			return f1.To.Equals(f2.To) && f1.From.Equals(f2.From) && innerEqualType(f1.Continuation, f2.Continuation, snapshots, labelledTypesEnv)
+		}
+
+	case *DownType:
+		f1, ok1 := type1.(*DownType)
+		f2, ok2 := type2.(*DownType)
+
+		if ok1 && ok2 {
+			return f1.To.Equals(f2.To) && f1.From.Equals(f2.From) && innerEqualType(f1.Continuation, f2.Continuation, snapshots, labelledTypesEnv)
 		}
 	}
 
@@ -347,7 +398,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 }
 
 // Compare branches in an unordered way. Here we are assuming that both branches contain unique labels
-func equalTypeBranch(options1, options2 []BranchOption, snapshots map[string]bool, labelledTypesEnv LabelledTypesEnv) bool {
+func equalTypeBranch(options1, options2 []Option, snapshots map[string]bool, labelledTypesEnv LabelledTypesEnv) bool {
 	if len(options1) != len(options2) {
 		return false
 	}
@@ -356,7 +407,7 @@ func equalTypeBranch(options1, options2 []BranchOption, snapshots map[string]boo
 	for _, b := range options1 {
 		matchingBranch, foundMatchingBranch := LookupBranchByLabel(options2, b.Label)
 		if foundMatchingBranch {
-			if !innerEqualType(b.Session_type, matchingBranch.Session_type, snapshots, labelledTypesEnv) {
+			if !innerEqualType(b.SessionType, matchingBranch.SessionType, snapshots, labelledTypesEnv) {
 				// If inner types do not match, then stop checking
 				return false
 			}
@@ -369,7 +420,7 @@ func equalTypeBranch(options1, options2 []BranchOption, snapshots map[string]boo
 }
 
 // Lookup branch by label
-func LookupBranchByLabel(branches []BranchOption, label string) (*BranchOption, bool) {
+func LookupBranchByLabel(branches []Option, label string) (*Option, bool) {
 	for index := range branches {
 		if branches[index].Label == label {
 			return &branches[index], true
@@ -380,8 +431,8 @@ func LookupBranchByLabel(branches []BranchOption, label string) (*BranchOption, 
 }
 
 // Given a list of branch, this function returns the sub-list of branches that are not in the list of labelsChecked
-func GetUncheckedBranches(branches []BranchOption, labelsChecked []string) []BranchOption {
-	result := []BranchOption{}
+func GetUncheckedBranches(branches []Option, labelsChecked []string) []Option {
+	result := []Option{}
 
 	for _, branch := range branches {
 		if !slices.Contains(labelsChecked, branch.Label) {
@@ -402,47 +453,47 @@ func CopyType(orig SessionType) SessionType {
 	case *LabelType:
 		p, ok := orig.(*LabelType)
 		if ok {
-			return NewLabelType(p.Label)
+			return NewLabelType(p.Label, p.Mode.Copy())
 		}
 	case *UnitType:
-		_, ok := orig.(*UnitType)
+		p, ok := orig.(*UnitType)
 		if ok {
-			return NewUnitType()
+			return NewUnitType(p.Mode.Copy())
 		}
 	case *SendType:
 		p, ok := orig.(*SendType)
 		if ok {
-			return NewSendType(CopyType(p.Left), CopyType(p.Right))
+			return NewSendType(CopyType(p.Left), CopyType(p.Right), p.Mode.Copy())
 		}
 	case *ReceiveType:
 		p, ok := orig.(*ReceiveType)
 		if ok {
-			return NewReceiveType(CopyType(p.Left), CopyType(p.Right))
+			return NewReceiveType(CopyType(p.Left), CopyType(p.Right), p.Mode.Copy())
 		}
 	case *SelectLabelType:
 		p, ok := orig.(*SelectLabelType)
 		if ok {
-			branches := make([]BranchOption, len(p.Branches))
+			branches := make([]Option, len(p.Branches))
 
 			for i := 0; i < len(p.Branches); i++ {
 				branches[i].Label = p.Branches[i].Label
-				branches[i].Session_type = CopyType(p.Branches[i].Session_type)
+				branches[i].SessionType = CopyType(p.Branches[i].SessionType)
 			}
 
-			return NewSelectType(branches)
+			return NewSelectLabelType(branches, p.Mode.Copy())
 		}
 
 	case *BranchCaseType:
 		p, ok := orig.(*BranchCaseType)
 		if ok {
-			branches := make([]BranchOption, len(p.Branches))
+			branches := make([]Option, len(p.Branches))
 
 			for i := 0; i < len(p.Branches); i++ {
 				branches[i].Label = p.Branches[i].Label
-				branches[i].Session_type = CopyType(p.Branches[i].Session_type)
+				branches[i].SessionType = CopyType(p.Branches[i].SessionType)
 			}
 
-			return NewBranchCaseType(branches)
+			return NewBranchCaseType(branches, p.Mode.Copy())
 		}
 	}
 
@@ -511,12 +562,209 @@ func Unfold(orig SessionType, labelledTypesEnv LabelledTypesEnv) SessionType {
 }
 
 // Lookup branches by label
-func FetchSelectBranch(branches []BranchOption, label string) (SessionType, bool) {
+func FetchSelectBranch(branches []Option, label string) (SessionType, bool) {
 	for _, branch := range branches {
 		if branch.Label == label {
-			return branch.Session_type, true
+			return branch.SessionType, true
 		}
 	}
 
 	return nil, false
+}
+
+// During session type construction (i.e. type parsing), we use construct a SessionTypeInitial.
+// This allows us to define a general modality for the type.
+
+// SessionTypeInitial can be converted into a SessionType (as used by the typechecker), where modes are then inserted into each SessionType struct (rather than just one at the beginning).
+
+func ConvertSessionTypeInitialToSessionType(st SessionTypeInitial) SessionType {
+	defaultMode := NewUnrestrictedMode()
+	return st.toSessionType(defaultMode)
+}
+
+// SessionTypeInitial defines the structure for session types with explicit modalities.
+// The modes are defined as an explicit struct (usually at the beginning of the type).
+type SessionTypeInitial interface {
+	toSessionType(Modality) SessionType
+}
+
+// Explicit mode, e.g. unrestricted A, where the mode of A becomes unrestricted
+// Sets the modality for the continuation type
+type ExplicitModeTypeInitial struct {
+	Modality     Modality
+	Continuation SessionTypeInitial
+}
+
+func NewExplicitModeTypeInitial(modality Modality) *ExplicitModeTypeInitial {
+	return &ExplicitModeTypeInitial{
+		Modality: modality,
+	}
+}
+
+func NewExplicitModeTypeInitialString(modality string) *ExplicitModeTypeInitial {
+	// StringToMode converts a string to a mode
+	// It returns an InvalidMode in case of an unrecognized mode
+	return &ExplicitModeTypeInitial{
+		Modality: StringToMode(modality),
+	}
+}
+
+func (q *ExplicitModeTypeInitial) toSessionType(oldModality Modality) SessionType {
+	return q.Continuation.toSessionType(q.Modality)
+}
+
+// Label
+type LabelTypeInitial struct {
+	Label string
+}
+
+func NewLabelTypeInitial(i string) *LabelTypeInitial {
+	return &LabelTypeInitial{
+		Label: i,
+	}
+}
+
+func (q *LabelTypeInitial) toSessionType(mode Modality) SessionType {
+	return NewLabelType(q.Label, mode)
+}
+
+// Unit: 1
+type UnitTypeInitial struct{}
+
+func NewUnitTypeInitial() *UnitTypeInitial {
+	return &UnitTypeInitial{}
+}
+
+func (q *UnitTypeInitial) toSessionType(mode Modality) SessionType {
+	return NewUnitType(mode)
+}
+
+// Send: A * B
+type SendTypeInitial struct {
+	Left  SessionTypeInitial
+	Right SessionTypeInitial
+}
+
+func NewSendTypeInitial(left, right SessionTypeInitial) *SendTypeInitial {
+	return &SendTypeInitial{
+		Left:  left,
+		Right: right,
+	}
+}
+
+func (q *SendTypeInitial) toSessionType(mode Modality) SessionType {
+	return NewSendType(q.Left.toSessionType(mode), q.Right.toSessionType(mode), mode)
+}
+
+// Receive: A -* B
+type ReceiveTypeInitial struct {
+	Left  SessionTypeInitial
+	Right SessionTypeInitial
+}
+
+func NewReceiveTypeInitial(left, right SessionTypeInitial) *ReceiveTypeInitial {
+	return &ReceiveTypeInitial{
+		Left:  left,
+		Right: right,
+	}
+}
+
+func (q *ReceiveTypeInitial) toSessionType(mode Modality) SessionType {
+	return NewReceiveType(q.Left.toSessionType(mode), q.Right.toSessionType(mode), mode)
+}
+
+// SelectLabel: +{ }
+type SelectLabelTypeInitial struct {
+	Branches []OptionInitial
+}
+
+func NewSelectLabelTypeInitial(options []OptionInitial) *SelectLabelTypeInitial {
+	return &SelectLabelTypeInitial{
+		Branches: options,
+	}
+}
+
+func (q *SelectLabelTypeInitial) toSessionType(mode Modality) SessionType {
+	branches := make([]Option, len(q.Branches))
+
+	for i := 0; i < len(q.Branches); i++ {
+		branches[i].Label = q.Branches[i].Label
+		branches[i].SessionType = q.Branches[i].Session_type.toSessionType(mode)
+	}
+
+	return NewSelectLabelType(branches, mode)
+}
+
+// BranchCase: & { }
+type BranchCaseTypeInitial struct {
+	Branches []OptionInitial
+}
+
+func NewBranchCaseTypeInitial(options []OptionInitial) *BranchCaseTypeInitial {
+	return &BranchCaseTypeInitial{
+		Branches: options,
+	}
+}
+
+func (q *BranchCaseTypeInitial) toSessionType(mode Modality) SessionType {
+	branches := make([]Option, len(q.Branches))
+
+	for i := 0; i < len(q.Branches); i++ {
+		branches[i].Label = q.Branches[i].Label
+		branches[i].SessionType = q.Branches[i].Session_type.toSessionType(mode)
+	}
+
+	return NewBranchCaseType(branches, mode)
+}
+
+// Up shift: m /\ n ...
+type UpTypeInitial struct {
+	From         Modality
+	To           Modality
+	Continuation SessionTypeInitial
+}
+
+func NewUpTypeInitial(From, To Modality, Continuation SessionTypeInitial) *UpTypeInitial {
+	return &UpTypeInitial{
+		From:         From,
+		To:           To,
+		Continuation: Continuation,
+	}
+}
+
+func (q *UpTypeInitial) toSessionType(mode Modality) SessionType {
+	// If 'mode' does not q.To, then it is an ill formed type, however a SessionTypeInitial is lenient during construct and allows this. This is checked later on during the preliminary checks
+	return NewUpType(q.From, q.To, q.Continuation.toSessionType(q.To))
+}
+
+// Down shift: m \/ n ...
+type DownTypeInitial struct {
+	From         Modality
+	To           Modality
+	Continuation SessionTypeInitial
+}
+
+func NewDownTypeInitial(From, To Modality, Continuation SessionTypeInitial) *DownTypeInitial {
+	return &DownTypeInitial{
+		From:         From,
+		To:           To,
+		Continuation: Continuation,
+	}
+}
+
+func (q *DownTypeInitial) toSessionType(mode Modality) SessionType {
+	return NewDownType(q.From, q.To, q.Continuation.toSessionType(q.To))
+}
+
+// Branch/Case option
+type OptionInitial struct {
+	Label        string
+	Session_type SessionTypeInitial
+}
+
+func NewOptionInitial(label string, session_type SessionTypeInitial) *OptionInitial {
+	return &OptionInitial{
+		Label:        label,
+		Session_type: session_type,
+	}
 }

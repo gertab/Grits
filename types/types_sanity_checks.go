@@ -89,9 +89,6 @@ func (q *LabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 
 	return nil
 }
-func (q *WIPType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
-	return nil
-}
 func (q *UnitType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	return nil
 }
@@ -138,7 +135,7 @@ func (q *SelectLabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) err
 		}
 
 		// Checking inside the branch
-		err := j.Session_type.checkTypeLabels(labelledTypesEnv)
+		err := j.SessionType.checkTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -159,7 +156,7 @@ func (q *BranchCaseType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) erro
 		}
 
 		// Checking inside the branch
-		err := j.Session_type.checkTypeLabels(labelledTypesEnv)
+		err := j.SessionType.checkTypeLabels(labelledTypesEnv)
 
 		if err != nil {
 			return err
@@ -201,10 +198,6 @@ func (q *LabelType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots m
 	return unfoldedType.isContractive(labelledTypesEnv, snapshots)
 }
 
-func (q *WIPType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots map[string]bool) bool {
-	return true
-}
-
 func (q *UnitType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots map[string]bool) bool {
 	return true
 }
@@ -235,7 +228,6 @@ func (q *DownType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots ma
 }
 
 // func (q *LabelType) String() string {}
-// func (q *WIPType) String() string {}
 // func (q *UnitType) String() string {}
 // func (q *SendType) String() string {}
 // func (q *ReceiveType) String() string {}

@@ -8,6 +8,7 @@ type Modality interface {
 	CanBeUpshiftedTo(Modality) bool
 	CanBeDownshiftedTo(Modality) bool
 
+	Copy() Modality
 	Equals(Modality) bool
 
 	// StructuralProperties() []string
@@ -27,8 +28,16 @@ type Modality interface {
 // Unrestricted => {W, C}
 type UnrestrictedMode struct{}
 
+func NewUnrestrictedMode() *UnrestrictedMode {
+	return &UnrestrictedMode{}
+}
+
 func (q *UnrestrictedMode) String() string {
 	return "U"
+}
+
+func (q *UnrestrictedMode) Copy() Modality {
+	return NewUnrestrictedMode()
 }
 
 func (q *UnrestrictedMode) AllowsContraction() bool {
@@ -77,8 +86,16 @@ func (q *UnrestrictedMode) Equals(other Modality) bool {
 // Replicable => {W, C}
 type ReplicableMode struct{}
 
+func NewReplicableMode() *ReplicableMode {
+	return &ReplicableMode{}
+}
+
 func (q *ReplicableMode) String() string {
 	return "R"
+}
+
+func (q *ReplicableMode) Copy() Modality {
+	return NewReplicableMode()
 }
 
 func (q *ReplicableMode) AllowsContraction() bool {
@@ -127,8 +144,16 @@ func (q *ReplicableMode) Equals(other Modality) bool {
 // Affine => {W}
 type AffineMode struct{}
 
+func NewAffineMode() *AffineMode {
+	return &AffineMode{}
+}
+
 func (q *AffineMode) String() string {
 	return "A"
+}
+
+func (q *AffineMode) Copy() Modality {
+	return NewAffineMode()
 }
 
 func (q *AffineMode) AllowsContraction() bool {
@@ -177,8 +202,16 @@ func (q *AffineMode) Equals(other Modality) bool {
 // Linear
 type LinearMode struct{}
 
+func NewLinearMode() *LinearMode {
+	return &LinearMode{}
+}
+
 func (q *LinearMode) String() string {
 	return "L"
+}
+
+func (q *LinearMode) Copy() Modality {
+	return NewLinearMode()
 }
 
 func (q *LinearMode) AllowsContraction() bool {
@@ -224,6 +257,44 @@ func (q *LinearMode) Equals(other Modality) bool {
 	return same
 }
 
+// Invalid
+type InvalidMode struct {
+	mode string
+}
+
+func NewInvalidMode(mode string) *InvalidMode {
+	return &InvalidMode{mode}
+}
+
+func (q *InvalidMode) String() string {
+	return q.mode
+}
+
+func (q *InvalidMode) Copy() Modality {
+	return NewInvalidMode(q.mode)
+}
+
+func (q *InvalidMode) AllowsContraction() bool {
+	return false
+}
+
+func (q *InvalidMode) AllowsWeakening() bool {
+	return false
+}
+
+func (q *InvalidMode) CanBeUpshiftedTo(toMode Modality) bool {
+	panic("shouldn't shift invalid modes")
+}
+
+func (q *InvalidMode) CanBeDownshiftedTo(toMode Modality) bool {
+	panic("shouldn't shift invalid modes")
+}
+
+func (q *InvalidMode) Equals(other Modality) bool {
+	_, same := other.(*InvalidMode)
+	return same
+}
+
 // Shareable
 // type ShareableMode struct{}
 
@@ -257,6 +328,6 @@ func StringToMode(input string) Modality {
 	case "linear":
 		return &LinearMode{}
 	default:
-		return &UnrestrictedMode{}
+		return &InvalidMode{input}
 	}
 }

@@ -111,9 +111,11 @@ func TestBasicForms(t *testing.T) {
 	compareOutputProgram(t, output, expected)
 }
 func TestSimpleTypes(t *testing.T) {
-	unitType := types.NewUnitType()
-	labelType1 := types.NewLabelType("abc")
-	labelType2 := types.NewLabelType("def")
+	u := types.NewUnrestrictedMode()
+
+	unitType := types.NewUnitType(u)
+	labelType1 := types.NewLabelType("abc", u)
+	labelType2 := types.NewLabelType("def", u)
 
 	cases := []struct {
 		input    string
@@ -121,10 +123,10 @@ func TestSimpleTypes(t *testing.T) {
 	}{
 		{"type A = 1", unitType},
 		{"type A = abc", labelType1},
-		{"type B = abc * def", types.NewSendType(labelType1, labelType2)},
-		{"type C = abc -* def", types.NewReceiveType(labelType1, labelType2)},
-		{"type C = +{a : abc}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1)})},
-		{"type D = &{a : abc}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1)})},
+		{"type B = abc * def", types.NewSendType(labelType1, labelType2, u)},
+		{"type C = abc -* def", types.NewReceiveType(labelType1, labelType2, u)},
+		{"type C = +{a : abc}", types.NewSelectLabelType([]types.Option{*types.NewOption("a", labelType1)}, u)},
+		{"type D = &{a : abc}", types.NewBranchCaseType([]types.Option{*types.NewOption("a", labelType1)}, u)},
 	}
 
 	for i, c := range cases {
@@ -137,9 +139,11 @@ func TestSimpleTypes(t *testing.T) {
 }
 
 func TestTypes(t *testing.T) {
-	unitType := types.NewUnitType()
-	labelType1 := types.NewLabelType("abc")
-	labelType2 := types.NewLabelType("def")
+	u := types.NewUnrestrictedMode()
+
+	unitType := types.NewUnitType(u)
+	labelType1 := types.NewLabelType("abc", u)
+	labelType2 := types.NewLabelType("def", u)
 
 	cases := []struct {
 		input    string
@@ -147,17 +151,17 @@ func TestTypes(t *testing.T) {
 	}{
 		{"type A = (1)", unitType},
 		{"type A = (abc)", labelType1},
-		{"type B = (abc * def)", types.NewSendType(labelType1, labelType2)},
-		{"type C = (abc -* def)", types.NewReceiveType(labelType1, labelType2)},
-		{"type C = +{a : abc, bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})},
-		{"type D = &{a : abc, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})},
-		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})), *types.NewBranchOption("bb", labelType2)})},
-		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})), *types.NewBranchOption("bb", labelType2)})},
-		{"type E = (abc -* (abc -* def))", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
-		{"type E = abc -* (abc -* def)", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
-		{"type E = abc -* abc -* def", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))},
-		{"type E = +{a : (abc -* (abc -* def)), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2))), *types.NewBranchOption("bb", labelType2)})},
-		{"type E = +{a : (abc -* (abc -* &{a : abc, bb : def})), bb : def}", types.NewSelectType([]types.BranchOption{*types.NewBranchOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, types.NewBranchCaseType([]types.BranchOption{*types.NewBranchOption("a", labelType1), *types.NewBranchOption("bb", labelType2)})))), *types.NewBranchOption("bb", labelType2)})},
+		{"type B = (abc * def)", types.NewSendType(labelType1, labelType2, u)},
+		{"type C = (abc -* def)", types.NewReceiveType(labelType1, labelType2, u)},
+		{"type C = +{a : abc, bb : def}", types.NewSelectLabelType([]types.Option{*types.NewOption("a", labelType1), *types.NewOption("bb", labelType2)}, u)},
+		{"type D = &{a : abc, bb : def}", types.NewBranchCaseType([]types.Option{*types.NewOption("a", labelType1), *types.NewOption("bb", labelType2)}, u)},
+		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.Option{*types.NewOption("a", types.NewSelectLabelType([]types.Option{*types.NewOption("a", labelType1), *types.NewOption("bb", labelType2)}, u)), *types.NewOption("bb", labelType2)}, u)},
+		{"type D = &{a : +{a : abc, bb : def}, bb : def}", types.NewBranchCaseType([]types.Option{*types.NewOption("a", types.NewSelectLabelType([]types.Option{*types.NewOption("a", labelType1), *types.NewOption("bb", labelType2)}, u)), *types.NewOption("bb", labelType2)}, u)},
+		{"type E = (abc -* (abc -* def))", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2, u), u)},
+		{"type E = abc -* (abc -* def)", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2, u), u)},
+		{"type E = abc -* abc -* def", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2, u), u)},
+		{"type E = +{a : (abc -* (abc -* def)), bb : def}", types.NewSelectLabelType([]types.Option{*types.NewOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, labelType2, u), u)), *types.NewOption("bb", labelType2)}, u)},
+		{"type E = +{a : (abc -* (abc -* &{a : abc, bb : def})), bb : def}", types.NewSelectLabelType([]types.Option{*types.NewOption("a", types.NewReceiveType(labelType1, types.NewReceiveType(labelType1, types.NewBranchCaseType([]types.Option{*types.NewOption("a", labelType1), *types.NewOption("bb", labelType2)}, u), u), u)), *types.NewOption("bb", labelType2)}, u)},
 	}
 
 	for i, c := range cases {

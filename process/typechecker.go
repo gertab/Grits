@@ -621,14 +621,14 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			}
 
 			// Set type
-			curBranchForm.payload_c.Type = expectedBranchType.Session_type
+			curBranchForm.payload_c.Type = expectedBranchType.SessionType
 
 			polarityError := checkExplicitPolarityValidity(p, curBranchForm.payload_c)
 			if polarityError != nil {
 				return polarityError
 			}
 
-			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, &curBranchForm.payload_c, expectedBranchType.Session_type, labelledTypesEnv, sigma, globalEnv)
+			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, &curBranchForm.payload_c, expectedBranchType.SessionType, labelledTypesEnv, sigma, globalEnv)
 
 			if continuationError != nil {
 				return continuationError
@@ -675,10 +675,10 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			}
 
 			// curBranchForm.payload_c cannot exist in gammaNameTypesCtx
-			gammaNameTypesCtx[curBranchForm.payload_c.Ident] = NamesType{Type: expectedBranchType.Session_type}
+			gammaNameTypesCtx[curBranchForm.payload_c.Ident] = NamesType{Type: expectedBranchType.SessionType}
 
 			// Set type
-			curBranchForm.payload_c.Type = expectedBranchType.Session_type
+			curBranchForm.payload_c.Type = expectedBranchType.SessionType
 
 			polarityError := checkExplicitPolarityValidity(p, curBranchForm.payload_c)
 			if polarityError != nil {
@@ -790,6 +790,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
 			}
 
+			// todo fix type modalities of the type of p.continuation_c
 			// Get type of inner provider
 			err := checkNameType(p.continuation_c, labelledTypesEnv)
 			if err != nil {
@@ -1299,7 +1300,7 @@ func linearGammaContext(gammaNameTypesCtx NamesTypesCtx) error {
 }
 
 // Compares the given labels with the ones offered by the branches. Returns the unused ones
-func extractUnusedLabels(branches []types.BranchOption, labels []string) string {
+func extractUnusedLabels(branches []types.Option, labels []string) string {
 	// One or more branches are not exhausted
 	uncheckedBranches := types.GetUncheckedBranches(branches, labels)
 
@@ -1345,6 +1346,7 @@ func splitGammaCtx(gammaNameTypesCtx NamesTypesCtx, names []Name, providerShadow
 }
 
 // Ensure that a name has a type linked to it. Check for well formedness of the type.
+// This is used to analyse types defined within the AST (e.g. checks type A from x : A <- new P; Q)
 func checkNameType(name Name, labelledTypesEnv types.LabelledTypesEnv) error {
 	if name.Type == nil {
 		return fmt.Errorf("type for name '%s' was not found", name.String())

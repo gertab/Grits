@@ -12,16 +12,17 @@ import (
 %}
 
 %union {
-	strval 			string
-	common_type		unexpandedProcessOrFunction
-	statements 		[]unexpandedProcessOrFunction
-	name 			process.Name
-	names 			[]process.Name
-	form 			process.Form
-	branches 		[]*process.BranchForm
-	sessionType 	types.SessionType
-	sessionTypeAlt 	[]types.BranchOption
-	polarity 		types.Polarity
+	strval 			      string
+	common_type		      unexpandedProcessOrFunction
+	statements 		      []unexpandedProcessOrFunction
+	name 			      process.Name
+	names 			      []process.Name
+	form 			      process.Form
+	branches 		      []*process.BranchForm
+	sessionType 	      types.SessionType
+	sessionTypeInitial 	  types.SessionTypeInitial
+	sessionTypeAltInitial []types.OptionInitial
+	polarity 		      types.Polarity
 }
 
 %token LABEL LEFT_ARROW RIGHT_ARROW EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
@@ -42,7 +43,8 @@ import (
 %type <names> names_with_type_ann
 %type <branches> branches
 %type <sessionType> session_type
-%type <sessionTypeAlt> session_type_alts
+%type <sessionTypeAltInitial> session_type_options_init
+%type <sessionTypeInitial> session_type_init
 %type <polarity> polarity
 
 %left SEQUENCE RANGLE
@@ -200,25 +202,34 @@ function_def :
 type_def : TYPE LABEL EQUALS session_type
 			{ $$ = unexpandedProcessOrFunction{kind: TYPE_DEF, session_type: types.SessionTypeDefinition{Name: $2, SessionType: $4}} };
 
-session_type :  
-			/* label */ LABEL
-				{ $$ = types.NewLabelType($1) }
-		   | /* unit */ UNIT
-		   		{ $$ = types.NewUnitType()}
-		   | /* select +{ } */ PLUS LCBRACK session_type_alts RCBRACK  
-		   		{ $$ = types.NewSelectType($3)}
-		   | /* branch &{ } */ AMPERSAND LCBRACK session_type_alts RCBRACK  
-		   		{ $$ = types.NewBranchCaseType($3)}
-		   | /* send A * B */ session_type TIMES session_type
-		   		{ $$ = types.NewSendType($1, $3)}
-		   | /* receive A -o B */ session_type LOLLI session_type
-		   		{ $$ = types.NewReceiveType($1, $3)}
-		   | /* brackets (A) */ LPAREN session_type RPAREN
-		   		{ $$ = $2};
+/* Returns a SessionType struct */
+session_type : /* no explicit mode */ session_type_init
+					{ $$ = types.ConvertSessionTypeInitialToSessionType($1)}
+			 | /* explicit mode */ LABEL session_type_init
+					{ $$ = types.ConvertSessionTypeInitialToSessionType(types.NewExplicitModeTypeInitialString($1))};
 
-session_type_alts : 
-			LABEL COLON session_type { $$ = []types.BranchOption{*types.NewBranchOption($1, $3)}} 
-	 	  | LABEL COLON session_type COMMA session_type_alts { $$ = append([]types.BranchOption{*types.NewBranchOption($1, $3)}, $5...) };
+/* Returns a SessionTypeInitial struct */
+session_type_init : 
+			/* label */ LABEL
+				{ $$ = types.NewLabelTypeInitial($1) }
+		   | /* unit */ UNIT
+		   		{ $$ = types.NewUnitTypeInitial() }
+		   | /* select +{ } */ PLUS LCBRACK session_type_options_init RCBRACK  
+		   		{ $$ = types.NewSelectLabelTypeInitial($3) }
+		   | /* branch &{ } */ AMPERSAND LCBRACK session_type_options_init RCBRACK  
+		   		{ $$ = types.NewBranchCaseTypeInitial($3) }
+		   | /* send A * B */ session_type_init TIMES session_type_init
+		   		{ $$ = types.NewSendTypeInitial($1, $3) }
+		   | /* receive A -o B */ session_type_init LOLLI session_type_init
+		   		{ $$ = types.NewReceiveTypeInitial($1, $3) }
+		   | /* brackets (A) */ LPAREN session_type_init RPAREN
+		   		{ $$ = $2 };
+
+session_type_options_init : 
+            LABEL COLON session_type_init 
+				{ $$ = []types.OptionInitial{*types.NewOptionInitial($1, $3)}} 
+	 	  | LABEL COLON session_type_init COMMA session_type_options_init 
+		  { $$ = append([]types.OptionInitial{*types.NewOptionInitial($1, $3)}, $5...) };
 
 
 polarity : PLUS { $$ = types.POSITIVE }

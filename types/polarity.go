@@ -23,10 +23,6 @@ func (q *LabelType) Polarity() Polarity {
 	// return UNKNOWN
 }
 
-func (q *WIPType) Polarity() Polarity {
-	return UNKNOWN
-}
-
 func (q *UnitType) Polarity() Polarity {
 	return POSITIVE
 }

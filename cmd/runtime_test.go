@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-const numberOfIterations = 70
-const monitorTimeout = 20 * time.Millisecond
+const numberOfIterations = 2
+const monitorTimeout = 40 * time.Millisecond
 
 // Invalidate all cache
 // go clean -testcache

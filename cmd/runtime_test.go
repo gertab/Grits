@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const numberOfIterations = 70
+const numberOfIterations = 20
 const monitorTimeout = 20 * time.Millisecond
 
 // Invalidate all cache

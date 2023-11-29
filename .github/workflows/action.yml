@@ -18,7 +18,9 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Install dependencies
         run: go get .
-      - name: Test with Go
+      - name: Run tests
+        run: go test ./...
+      - name: Test with Go (into JSON)
         run: go test -json ./... > TestResults-${{ matrix.go-version }}.json
       - name: Upload Go test results
         uses: actions/upload-artifact@v3

@@ -15,24 +15,8 @@ const program = `
 type A = 1 -* 1
 type B = 1
 type C = linear 1 * 1
-type D = &{a : 1, b : 1}
-type E = +{a : 1, b : 1}
-type F = &{a : A}
-type G = +{a : D}
-type H = 1 * C
-type I = J
-type J = I
-type I2 = J2
-type J2 = affine I2
-type K = linear +{a : 1}
-type L = linear 1 -* 1
-type M = affine 1 -* 1
-type N = replicable 1 -* 1
-type O = unrestricted 1 -* 1
-type P = 1 -* (1 * +{ab : 1, cd : 1})
-type Q = affine 1 -* (1 * +{ab : 1, cd : 1})
-type R =  1 * (1 * linear /\ affine +{ab : 1, cd : 1})
-type S =  1 -* (1 * affine /\ linear &{ab : 1, cd : 1})
+
+let f1(a: A) : 1 * 1 = close self
 
 // // This is not allowed:
 // type A = (1 -* 1) -* 1

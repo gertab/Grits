@@ -804,3 +804,61 @@ func TestTypecheckIncorrectPolarity(t *testing.T) {
 
 	runThroughTypechecker(t, cases, false)
 }
+
+func TestFunctionDefinitionModes(t *testing.T) {
+
+	inputProgram :=
+		`
+		// type C = linear 1 * 1
+		// type Q = affine 1 -* (1 * +{ab : 1, cd : 1})
+		// type R =  1 * (1 * linear /\ affine +{ab : 1, cd : 1})
+		// type S =  1 -* (1 * affine /\ linear &{ab : 1, cd : 1})
+		
+		
+		type A = +{l1 : 1}
+		type B = 1 -* 1
+		let f1(a : A, b : B) : A * B = send self<a, b>
+		
+		type C = 1 -* 1
+		let f2(a : linear +{l1 : 1}, b : C) : linear +{l1 : 1} * C = 
+				send self<a, b>
+		 `
+
+	cases := []struct {
+		input1 string
+		input2 []string
+	}{
+		{"[unr]A [unr]* [unr]B", []string{"[unr]A", "[unr]B"}},                       // f1
+		{"lin+{l1 : [lin]1} [lin]* [lin]C", []string{"lin+{l1 : [lin]1}", "[unr]C"}}, // f2
+	}
+
+	processes, assumedFreeNames, globalEnv, err := parser.ParseString(inputProgram)
+
+	if err != nil {
+		t.Errorf("compilation error in program: %s\n", err.Error())
+	}
+
+	err = process.Typecheck(processes, assumedFreeNames, globalEnv)
+
+	if err != nil {
+		t.Errorf("expected no type errors in program, but found %s\n", err.Error())
+	}
+
+	functionDefs := *globalEnv.FunctionDefinitions
+
+	if len(functionDefs) != len(cases) {
+		t.Errorf("number of cases do not match with the type definitions\n")
+	}
+
+	for i, c := range functionDefs {
+		if c.Type.StringWithModality() != cases[i].input1 {
+			t.Errorf("error in case #%d: Got %s, but expected %s\n", i, c.Type.StringWithModality(), cases[i].input1)
+		}
+
+		for j := range c.Parameters {
+			if c.Parameters[j].Type.StringWithModality() != cases[i].input2[j] {
+				t.Errorf("error in parameter case #%d: Got %s, but expected %s\n", i, c.Parameters[j].Type.StringWithModality(), cases[i].input2[j])
+			}
+		}
+	}
+}

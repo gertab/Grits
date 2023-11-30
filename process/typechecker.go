@@ -94,7 +94,7 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 
 	var typesToCheck []types.SessionType
 
-	// Analyse the function declarations types (i.e. let f(x : B) : A = ...)
+	// Analyse the function declarations types (i.e. from 'let f(x : B) : A = ...', check types A & B)
 	unique := make(map[string]bool)
 	for _, f := range *globalEnv.FunctionDefinitions {
 
@@ -124,6 +124,12 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 		// Ensure unique parameter names
 		if !AllNamesUnique(f.Parameters) {
 			return fmt.Errorf("(%s) in function definition %s, parameter/s %s are defined more than once", f.Position.String(), f.String(), NamesToString(DuplicateNames(f.Parameters)))
+		}
+
+		// Modify the types to set their modalities
+		labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
+		for i := range typesToCheck {
+			types.AddMissingModalities(&typesToCheck[i], labelledTypesEnv)
 		}
 
 		// Run the actual checks on the types
@@ -156,6 +162,12 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 		remainingAssumedFreeNames[fn.Ident] = true
 
 		typesToCheck = append(typesToCheck, fn.Type)
+	}
+
+	// Modify the types to set their modalities
+	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
+	for i := range typesToCheck {
+		types.AddMissingModalities(&typesToCheck[i], labelledTypesEnv)
 	}
 
 	if err := types.SanityChecksType(typesToCheck, *globalEnv.Types); err != nil {
@@ -195,6 +207,12 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 			typesToCheck = append(typesToCheck, processes[i].Type)
 		} else {
 			return fmt.Errorf("(%s) process %s has a missing type of provider", processes[i].Position.String(), processes[i].OutlineString())
+		}
+
+		// Modify the types to set their modalities
+		labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
+		for i := range typesToCheck {
+			types.AddMissingModalities(&typesToCheck[i], labelledTypesEnv)
 		}
 
 		// Run the checks
@@ -791,7 +809,9 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
 			}
 
-			// todo fix type modalities of the type of p.continuation_c
+			// Modify the type of p.continuation_c to set its modalities
+			types.AddMissingModalities(&p.continuation_c.Type, labelledTypesEnv)
+
 			// Get type of inner provider
 			err := checkNameType(p.continuation_c, labelledTypesEnv)
 			if err != nil {

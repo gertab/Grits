@@ -374,11 +374,20 @@ func StringToMode(input string) Modality {
 	}
 }
 
-func AddMissingModalities(t SessionType, labelledTypesEnv LabelledTypesEnv) {
+func AddMissingModalities(t *SessionType, labelledTypesEnv LabelledTypesEnv) {
 	// Infer general modality of type
-	mode := t.inferModality(labelledTypesEnv, make(map[string]bool))
+	mode := (*t).inferModality(labelledTypesEnv, make(map[string]bool))
+
 	// Assign the modality to the inner type
-	t.assignUnsetModalities(labelledTypesEnv, mode)
+	_, unset := mode.(*UnsetMode)
+	if unset {
+		// mode = UnsetMode, so use the default mode
+		(*t).assignUnsetModalities(labelledTypesEnv, DefaultMode())
+
+	} else {
+		// mode ≠ UnsetMode
+		(*t).assignUnsetModalities(labelledTypesEnv, mode)
+	}
 }
 
 // Takes a list of type definitions and sets the the general modality (for the type definition)

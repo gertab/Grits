@@ -1159,9 +1159,106 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 }
 
 func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	globalEnv.log(LOGRULEDETAILS, "rule CST")
+	if isProvider(p.to_c, providerShadowName) {
+		// Downshift DnSR: \/
+		globalEnv.log(LOGRULEDETAILS, "rule DnSR (Cast)")
 
-	return nil
+		providerType = types.Unfold(providerType, labelledTypesEnv)
+		// The type of the provider must be DownType
+		providerDownType, downTypeOk := providerType.(*types.DownType)
+
+		if !downTypeOk {
+			// wrong type: m \/ m A
+			return fmt.Errorf("expected '%s' to have a downshift type (i.e. \\/), but found type '%s' instead", p.String(), providerType.String())
+		}
+
+		// Check that m1 can be downshifted to m2: m1 \/ m2
+		if !providerDownType.From.CanBeDownshiftedTo(providerDownType.To) {
+			// This should never happen if the type is well formed
+			return fmt.Errorf("the type '%s' of '%s' has an improper downshift type, i.e. '%s' cannot be downshifted to '%s'", providerDownType.String(), p.String(), providerDownType.From.String(), providerDownType.To.String())
+		}
+
+		expectedContinuationType := providerDownType.Continuation
+		expectedContinuationType = types.Unfold(expectedContinuationType, labelledTypesEnv)
+		foundContinuationType, errorContinuation := consumeName(p.continuation_c, gammaNameTypesCtx)
+		foundContinuationType = types.Unfold(foundContinuationType, labelledTypesEnv)
+
+		if errorContinuation != nil {
+			return fmt.Errorf("error in %s; %s", p.String(), errorContinuation)
+		}
+
+		// Expect that the modalities match
+		if !providerDownType.From.Equals(foundContinuationType.Modality()) {
+			return fmt.Errorf("expected mode of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), providerDownType.From.String(), foundContinuationType.Modality().String())
+		}
+
+		// The expected and found types must match
+		if !types.EqualType(expectedContinuationType, foundContinuationType, labelledTypesEnv) {
+			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedContinuationType.String(), foundContinuationType.String())
+		}
+
+		// Set the types for the names
+		p.to_c.Type = providerDownType
+		p.continuation_c.Type = foundContinuationType
+	} else if isProvider(p.continuation_c, providerShadowName) {
+		// Downshift UpSL: /\
+		globalEnv.log(LOGRULEDETAILS, "rule UpSL (Cast)")
+
+		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+		}
+
+		clientType = types.Unfold(clientType, labelledTypesEnv)
+		// The type of the client must be UpType
+		clientUpType, clientTypeOk := clientType.(*types.UpType)
+
+		if !clientTypeOk {
+			// wrong type: A /\ B
+			return fmt.Errorf("expected '%s' to have an upshift type (i.e. /\\), but found type '%s' instead", p.to_c.String(), clientType.String())
+		}
+
+		// Check that m1 can be downshifted to m2: m1 \/ m2
+		if !clientUpType.From.CanBeUpshiftedTo(clientUpType.To) {
+			// This should never happen if the type is well formed
+			return fmt.Errorf("the type '%s' of '%s' has an improper upshift type, i.e. '%s' cannot be upshifted to '%s'", clientUpType.String(), p.String(), clientUpType.From.String(), clientUpType.To.String())
+		}
+
+		expectedContinuationType := clientUpType.Continuation
+		foundContinuationType, errorContinuation := consumeNameMaybeSelf(p.continuation_c, providerShadowName, gammaNameTypesCtx, providerType)
+
+		expectedContinuationType = types.Unfold(expectedContinuationType, labelledTypesEnv)
+		foundContinuationType = types.Unfold(foundContinuationType, labelledTypesEnv)
+
+		if errorContinuation != nil {
+			return fmt.Errorf("error in %s; %s", p.String(), errorContinuation)
+		}
+
+		// Expect that the modalities match
+		if !clientUpType.From.Equals(foundContinuationType.Modality()) {
+			return fmt.Errorf("expected mode of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), clientUpType.From.String(), foundContinuationType.Modality().String())
+		}
+
+		// The expected and found types must match
+		if !types.EqualType(expectedContinuationType, foundContinuationType, labelledTypesEnv) {
+			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedContinuationType.String(), foundContinuationType.String())
+		}
+
+		// Set the types for the names
+		p.to_c.Type = clientUpType
+		p.continuation_c.Type = foundContinuationType
+	} else {
+		return fmt.Errorf("the case construct requires that you cast to 'self' or cast 'self' as the continuation. In '%s', 'self' was not used", p.String())
+	}
+
+	if polarityError := checkExplicitPolarityValidity(p, p.to_c, p.continuation_c); polarityError != nil {
+		return polarityError
+	}
+
+	// make sure that no variables are left in gamma
+	err := linearGammaContext(gammaNameTypesCtx)
+
+	return err
 }
 
 func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {

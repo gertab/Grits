@@ -593,7 +593,6 @@ func CopyType(orig SessionType) SessionType {
 
 			return NewSelectLabelType(branches, p.Mode.Copy())
 		}
-
 	case *BranchCaseType:
 		p, ok := orig.(*BranchCaseType)
 		if ok {
@@ -605,6 +604,16 @@ func CopyType(orig SessionType) SessionType {
 			}
 
 			return NewBranchCaseType(branches, p.Mode.Copy())
+		}
+	case *UpType:
+		p, ok := orig.(*UpType)
+		if ok {
+			return NewUpType(p.From.Copy(), p.To.Copy(), CopyType(p.Continuation))
+		}
+	case *DownType:
+		p, ok := orig.(*DownType)
+		if ok {
+			return NewDownType(p.From.Copy(), p.To.Copy(), CopyType(p.Continuation))
 		}
 	}
 

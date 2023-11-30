@@ -805,6 +805,60 @@ func TestTypecheckIncorrectPolarity(t *testing.T) {
 	runThroughTypechecker(t, cases, false)
 }
 
+// Cast
+func TestTypecheckCorrectCastShifting(t *testing.T) {
+
+	cases := []string{
+		//  Downshift;  \/
+		`assuming u : affine 1
+		 prc[a] : affine \/ linear 1 = cast self<u>`,
+		`assuming u : affine 1
+		 prc[a] : affine \/ affine 1 = cast self<u>`,
+		`let f() : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>
+		 let f2[w : affine \/ linear 1] = x : affine 1 <- new (close x); cast w<x>
+		 prc[a] : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>`,
+		//  Upshift;  \/
+		`assuming u : linear /\ affine 1 
+		 prc[a] : linear 1 = cast u<self>`,
+		`assuming u : affine /\ affine 1
+		 prc[a] : affine 1 = cast u<self>`,
+		`let f(x : linear /\ affine 1 ) : linear 1 = cast x<self>
+		 let f2[w : linear 1, x : linear /\ affine 1] = cast x<w>
+		 assuming xx : linear /\ affine 1 * 1
+		 prc[a] : linear 1 * 1 = cast xx<self>`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectCastShifting(t *testing.T) {
+	cases := []string{
+		//  Downshift types;  \/
+		`assuming u : linear 1
+		 prc[a] : affine \/ linear 1 = cast self<u>`,
+		`assuming u : affine 1
+		 prc[a] : linear \/ affine 1 = cast self<u>`,
+		`assuming u : unrestricted 1
+		 prc[a] : affine \/ linear 1 = cast self<u>`,
+		`assuming a : affine 1 * 1
+		 prc[b] : affine \/ linear 1 = x : affine 1 <- new (close x); drop x; cast self<a>`,
+		`assuming u : affine 1
+		 prc[a] : affine /\ affine 1 = cast self<u>`,
+		`let f() : affine /\ linear 1 = x : affine 1 <- new (close x); cast self<x>`,
+		// Upshift
+		`assuming u : affine 1
+		 prc[a] : affine /\ linear 1 = cast u<self>`,
+		`assuming u : linear \/ affine 1 
+		 prc[a] : linear 1 = cast u<self>`,
+		`assuming u : affine /\ linear 1 
+		 prc[a] : affine 1 = cast u<self>`,
+		`assuming u : linear /\ affine 1 * 1
+		 prc[a] : linear 1 = cast u<self>`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
 func TestFunctionDefinitionModes(t *testing.T) {
 
 	inputProgram :=

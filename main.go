@@ -16,11 +16,17 @@ const program = `
 // type B = 1
 // type C = linear 1 * 1
 
-// let f1(a: A) : 1 * 1 = close self
+assuming u : affine /\ linear 1 
+prc[a] : affine 1 = cast u<self>
 
-type A = linear &{a : B, b : C}
-type B = 1 * (affine\/linear 1 -* 1)
-type C = ((replicable\/linear unrestricted\/replicable 1) -* 1) -* 1
+
+// let f() : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>
+// let f2[w : affine \/ linear 1] = x : affine 1 <- new (close x); cast w<x>
+// prc[a] : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>
+
+// type A = linear &{a : B, b : C}
+// type B = 1 * (affine\/linear 1 -* 1)
+// type C = ((replicable\/linear unrestricted\/replicable 1) -* 1) -* 1
 
 
 // // This is not allowed:

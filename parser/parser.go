@@ -95,9 +95,9 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 	var processes []*process.Process
 	var assumedFreeNames []process.Name
 	var functions []process.FunctionDefinition
-	var types []types.SessionTypeDefinition
+	var typeDefs []types.SessionTypeDefinition
 
-	// Collect all functions and types
+	// Collect all functions, types, processes and assumed names
 	for _, p := range u.procsAndFuns {
 		if p.kind == FUNCTION_DEF {
 
@@ -106,15 +106,15 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 				p.function.Body.Substitute(p.function.ExplicitProvider, p.function.ExplicitProvider)
 			}
 
-			// Set position
+			// Set line position
 			p.function.Position = p.position
 
 			functions = append(functions, p.function)
 		} else if p.kind == TYPE_DEF {
-			// Set position
+			// Set line position
 			p.session_type.Position = p.position
 
-			types = append(types, p.session_type)
+			typeDefs = append(typeDefs, p.session_type)
 		} else if p.kind == PROCESS_DEF {
 			// Processes may have multiple provider names:
 			// 		e.g. prc[a, b, c, d]: send self<...>
@@ -162,7 +162,14 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 		}
 	}
 
-	return processes, assumedFreeNames, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &types}, nil
+	// Fixes the modalities for each labelled type
+	types.SetModalityTypeDef(typeDefs)
+
+	// for _, t := range typeDefs {
+	// 	fmt.Println(t.Name, ": ", t.Modality.String(), " | ", t.SessionType.String(), " \t|| ", t.SessionType.StringWithModality())
+	// }
+
+	return processes, assumedFreeNames, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &typeDefs}, nil
 }
 
 // // Forms used as shorthand notations

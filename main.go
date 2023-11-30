@@ -12,14 +12,38 @@ import (
 /* ignore sample programs -- used for development*/
 
 const program = `
-// let f2(a : &{a : 1}, b : &{b : 1}) : &{a : 1} * 1 = send self<a, b>
+type A = 1 -* 1
+type B = 1
+type C = linear 1 * 1
+type D = &{a : 1, b : 1}
+type E = +{a : 1, b : 1}
+type F = &{a : A}
+type G = +{a : D}
+type H = 1 * C
+type I = J
+type J = I
+type I2 = J2
+type J2 = affine I2
+type K = linear +{a : 1}
+type L = linear 1 -* 1
+type M = affine 1 -* 1
+type N = replicable 1 -* 1
+type O = unrestricted 1 -* 1
+type P = 1 -* (1 * +{ab : 1, cd : 1})
+type Q = affine 1 -* (1 * +{ab : 1, cd : 1})
+type R =  1 * (1 * linear /\ affine +{ab : 1, cd : 1})
+type S =  1 -* (1 * affine /\ linear &{ab : 1, cd : 1})
 
-// let f(a : 1 -* 1, b : 1) : 1 * 1 = send self<a, b>
+// // This is not allowed:
+// type A = (1 -* 1) -* 1
+// assuming z : 1, u : 1 -* 1
+// prc[a] : (1 -* 1) -* 1 = send b<u, self>
+// prc[b] : A = <x, y> <- recv self; send x<z, y>
 
+// prc[z] : 1 = close self
+// prc[u] : 1 -* 1 = <x, y> <- recv self; wait x; close y
+// prc[v] : 1 = close self
 
-type A = +{label : 1}
-		 assuming z : 1
-		 prc[y] : 1 = m : A <- new self.label< -z >; case m (label<zz> => wait zz; close self )
 
 // type A = 1 -* (1 -* (1 * 1))
 // prc[x1] : 1 -* (1 * 1) = send z<yy, self>
@@ -473,32 +497,32 @@ func generateLogLevel(logLevel int) []process.LogLevel {
 	case 1:
 		return []process.LogLevel{
 			process.LOGINFO,
-			// process.LOGPROCESSING,
 			// process.LOGRULE,
+			// process.LOGPROCESSING,
 			// process.LOGRULEDETAILS,
 			// process.LOGMONITOR,
 		}
 	case 2:
 		return []process.LogLevel{
 			process.LOGINFO,
-			// process.LOGPROCESSING,
 			process.LOGRULE,
+			// process.LOGPROCESSING,
 			// process.LOGRULEDETAILS,
 			// process.LOGMONITOR,
 		}
 	case 3:
 		return []process.LogLevel{
 			process.LOGINFO,
-			process.LOGPROCESSING,
 			process.LOGRULE,
+			process.LOGPROCESSING,
 			process.LOGRULEDETAILS,
 			process.LOGMONITOR,
 		}
 	default:
 		return []process.LogLevel{
 			process.LOGINFO,
-			process.LOGPROCESSING,
 			process.LOGRULE,
+			process.LOGPROCESSING,
 			process.LOGRULEDETAILS,
 			process.LOGMONITOR,
 		}

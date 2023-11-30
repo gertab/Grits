@@ -63,13 +63,6 @@ func NewRuntimeEnvironment(debug, coloredOutput bool) *RuntimeEnvironment {
 
 // Entry point for execution
 func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, subscriber *SubscriberInfo, re *RuntimeEnvironment) *RuntimeEnvironment {
-	l := []LogLevel{
-		LOGINFO,
-		LOGPROCESSING,
-		LOGRULE,
-		LOGRULEDETAILS,
-		LOGMONITOR,
-	}
 
 	if re == nil {
 		re = &RuntimeEnvironment{
@@ -83,7 +76,17 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 
 	if globalEnv != nil {
 		re.GlobalEnvironment = globalEnv
-	} else {
+	}
+
+	if re.GlobalEnvironment.LogLevels == nil {
+		l := []LogLevel{
+			LOGINFO,
+			LOGPROCESSING,
+			LOGRULE,
+			LOGRULEDETAILS,
+			LOGMONITOR,
+		}
+
 		re.GlobalEnvironment.LogLevels = l
 	}
 
@@ -91,7 +94,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	re.debugChannelCounter = 0
 	re.errorChan = make(chan error)
 
-	re.logf(LOGINFO, "Initializing %d processes\n", len(processes))
+	re.logf(LOGINFO, "\nInitializing %d processes\n", len(processes))
 
 	channels := re.CreateChannelForEachProcess(processes)
 

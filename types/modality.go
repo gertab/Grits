@@ -25,6 +25,10 @@ type Modality interface {
 // E.g. Since Unrestricted > Linear, then you can downshift from Unrestricted to Linear (but not upshift)
 // You can upshift from Affine to Linear (since Affine > Linear)
 
+func DefaultMode() *UnrestrictedMode {
+	return NewUnrestrictedMode()
+}
+
 // Unrestricted => {W, C}
 type UnrestrictedMode struct{}
 
@@ -33,7 +37,7 @@ func NewUnrestrictedMode() *UnrestrictedMode {
 }
 
 func (q *UnrestrictedMode) String() string {
-	return "U"
+	return "unr"
 }
 
 func (q *UnrestrictedMode) Copy() Modality {
@@ -91,7 +95,7 @@ func NewReplicableMode() *ReplicableMode {
 }
 
 func (q *ReplicableMode) String() string {
-	return "R"
+	return "rep"
 }
 
 func (q *ReplicableMode) Copy() Modality {
@@ -149,7 +153,7 @@ func NewAffineMode() *AffineMode {
 }
 
 func (q *AffineMode) String() string {
-	return "A"
+	return "aff"
 }
 
 func (q *AffineMode) Copy() Modality {
@@ -207,7 +211,7 @@ func NewLinearMode() *LinearMode {
 }
 
 func (q *LinearMode) String() string {
-	return "L"
+	return "lin"
 }
 
 func (q *LinearMode) Copy() Modality {
@@ -369,3 +373,288 @@ func StringToMode(input string) Modality {
 		return &InvalidMode{input}
 	}
 }
+
+func AddMissingModalities(t SessionType, labelledTypesEnv LabelledTypesEnv) {
+	// Infer general modality of type
+	mode := t.inferModality(labelledTypesEnv, make(map[string]bool))
+	// Assign the modality to the inner type
+	t.assignUnsetModalities(labelledTypesEnv, mode)
+}
+
+// Takes a list of type definitions and sets the the general modality (for the type definition)
+// and also sets the modality for the inner type structure
+// Any UnsetModes are replace with inferred modes
+func SetModalityTypeDef(typesDef []SessionTypeDefinition) {
+	labelledTypesEnv := ProduceLabelledSessionTypeEnvironment(typesDef)
+
+	// First assign a general modality to each labelled type,
+	// e.g. for type A = linear 1 -* 1, then A has
+	for i := range typesDef {
+		mode := typesDef[i].SessionType.inferModality(labelledTypesEnv, make(map[string]bool))
+		// Set the found mode
+		_, unset := mode.(*UnsetMode)
+		if unset {
+			// mode = UnsetMode
+			typesDef[i].Modality = DefaultMode()
+		} else {
+			// mode ≠ UnsetMode
+			typesDef[i].Modality = mode
+		}
+	}
+
+	// Recreate the labelled types env (now each type will have a defined modality)
+	labelledTypesEnv = ProduceLabelledSessionTypeEnvironment(typesDef)
+	for i := range typesDef {
+		typesDef[i].SessionType.assignUnsetModalities(labelledTypesEnv, typesDef[i].Modality)
+	}
+}
+
+// Looks within a type to find the modality.
+// Modalities can be defined explicitly (i.e. mode ≠ UnsetMode), or taken from an Up/Down shift type.
+// If a label is reached, then the modality of that labelled type is checked. If a (mode-less) cycle is reached, then inference stops.
+func (q *LabelType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	_, unset := q.Mode.(*UnsetMode)
+	if !unset {
+		// If the type already has a modality, then return it
+		return q.Mode
+	}
+
+	// Fetch labelled type
+	typeFromLabel, exists := labelledTypesEnv[q.Label]
+	if exists {
+		// type found
+		if !usedLabels[q.Label] {
+			// no cycle reached yet
+			usedLabels[q.Label] = true
+			return typeFromLabel.Type.inferModality(labelledTypesEnv, usedLabels)
+		}
+	}
+	return q.Mode
+}
+
+func (q *UnitType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	return q.Mode
+}
+
+func (q *SendType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	_, unset := q.Mode.(*UnsetMode)
+	if !unset {
+		// If the type already has a modality, then return it
+		return q.Mode
+	}
+
+	leftUsedLabel := copyMap(usedLabels)
+	leftMode := q.Left.inferModality(labelledTypesEnv, leftUsedLabel)
+	rightMode := q.Right.inferModality(labelledTypesEnv, usedLabels)
+
+	commonMode := commonMode(leftMode, rightMode)
+
+	// _, unset = commonMode.(*UnsetMode)
+	// if !unset {
+	// 	// If the common mode is defined/set, return it
+	// 	return commonMode
+	// }
+
+	return commonMode
+}
+
+func (q *ReceiveType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	_, unset := q.Mode.(*UnsetMode)
+	if !unset {
+		// If the type already has a modality, then return it
+		return q.Mode
+	}
+
+	leftUsedLabel := copyMap(usedLabels)
+	leftMode := q.Left.inferModality(labelledTypesEnv, leftUsedLabel)
+	rightMode := q.Right.inferModality(labelledTypesEnv, usedLabels)
+
+	commonMode := commonMode(leftMode, rightMode)
+
+	return commonMode
+}
+
+func (q *SelectLabelType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	_, unset := q.Mode.(*UnsetMode)
+	if !unset {
+		// If the type already has a modality, then return it
+		return q.Mode
+	}
+
+	var commonModes []Modality
+	for _, branch := range q.Branches {
+		usedLabelsCopy := copyMap(usedLabels)
+		branchMode := branch.SessionType.inferModality(labelledTypesEnv, usedLabelsCopy)
+		commonModes = append(commonModes, branchMode)
+	}
+
+	commonMode := commonMode(commonModes...)
+
+	return commonMode
+}
+
+func (q *BranchCaseType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	_, unset := q.Mode.(*UnsetMode)
+	if !unset {
+		// If the type already has a modality, then return it
+		return q.Mode
+	}
+
+	var commonModes []Modality
+	for _, branch := range q.Branches {
+		usedLabelsCopy := copyMap(usedLabels)
+		branchMode := branch.SessionType.inferModality(labelledTypesEnv, usedLabelsCopy)
+		commonModes = append(commonModes, branchMode)
+	}
+
+	commonMode := commonMode(commonModes...)
+
+	return commonMode
+}
+
+func (q *UpType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	return q.To
+}
+
+func (q *DownType) inferModality(labelledTypesEnv LabelledTypesEnv, usedLabels map[string]bool) Modality {
+	return q.To
+}
+
+// Assigns a modality to each type (& inner types) with Unset Modes
+// The modality may be given (as currentMode) or inferred from a labelled type, or an up/downshift
+func (q *LabelType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	_, unset := q.Mode.(*UnsetMode)
+	if !unset {
+		// If the type already has a modality, then do not change it
+		// q.Mode ≠ Unset
+		return
+	}
+
+	// Assign present mode (just in case the label doesn't exist)
+	q.Mode = currentMode
+
+	// Fetch labelled type
+	foundLabelledType, exists := labelledTypesEnv[q.Label]
+	if exists {
+		// type found
+		q.Mode = foundLabelledType.Mode
+	}
+}
+
+func (q *UnitType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	_, unset := q.Mode.(*UnsetMode)
+	if !unset {
+		// If the type already has a modality, then do not change it
+		// q.Mode ≠ Unset
+		return
+	}
+
+	q.Mode = currentMode
+}
+
+func (q *SendType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	_, unset := q.Mode.(*UnsetMode)
+	if unset {
+		// If the type has no modality, so set it
+		// q.Mode = Unset
+		q.Mode = currentMode
+	} else {
+		// If the type already has a modality, then use it
+		// q.Mode ≠ Unset
+		currentMode = q.Mode
+	}
+
+	// Assign modes of inner type
+	q.Left.assignUnsetModalities(labelledTypesEnv, currentMode)
+	q.Right.assignUnsetModalities(labelledTypesEnv, currentMode)
+}
+
+func (q *ReceiveType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	_, unset := q.Mode.(*UnsetMode)
+	if unset {
+		// If the type has no modality, so set it
+		// q.Mode = Unset
+		q.Mode = currentMode
+	} else {
+		// If the type already has a modality, then use it
+		// q.Mode ≠ Unset
+		currentMode = q.Mode
+	}
+
+	// Assign modes of inner type
+	q.Left.assignUnsetModalities(labelledTypesEnv, currentMode)
+	q.Right.assignUnsetModalities(labelledTypesEnv, currentMode)
+}
+
+func (q *SelectLabelType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	_, unset := q.Mode.(*UnsetMode)
+	if unset {
+		// If the type has no modality, so set it
+		// q.Mode = Unset
+		q.Mode = currentMode
+	} else {
+		// If the type already has a modality, then use it
+		// q.Mode ≠ Unset
+		currentMode = q.Mode
+	}
+
+	// Assign modes of inner type
+	for i := range q.Branches {
+		q.Branches[i].SessionType.assignUnsetModalities(labelledTypesEnv, currentMode)
+	}
+}
+
+func (q *BranchCaseType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	_, unset := q.Mode.(*UnsetMode)
+	if unset {
+		// If the type has no modality, so set it
+		// q.Mode = Unset
+		q.Mode = currentMode
+	} else {
+		// If the type already has a modality, then use it
+		// q.Mode ≠ Unset
+		currentMode = q.Mode
+	}
+
+	// Assign modes of inner type
+	for i := range q.Branches {
+		q.Branches[i].SessionType.assignUnsetModalities(labelledTypesEnv, currentMode)
+	}
+}
+
+func (q *UpType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	q.Continuation.assignUnsetModalities(labelledTypesEnv, q.From)
+}
+
+func (q *DownType) assignUnsetModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) {
+	q.Continuation.assignUnsetModalities(labelledTypesEnv, q.From)
+}
+
+// Deep copies a map
+func copyMap(orig map[string]bool) map[string]bool {
+	copy := make(map[string]bool)
+	for k, v := range orig {
+		copy[k] = v
+	}
+
+	return copy
+}
+
+// Takes a list of modalities, and returns the first non UnsetMode that there is.
+// If all modes are Unset, then it returns Unset
+func commonMode(modes ...Modality) Modality {
+	commonMode := modes[0]
+
+	for _, mode := range modes {
+		_, unset := mode.(*UnsetMode)
+
+		if !unset {
+			commonMode = mode
+			break
+		}
+	}
+
+	return commonMode
+}
+
+///////

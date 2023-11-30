@@ -13,6 +13,7 @@ type SessionTypeDefinition struct {
 	SessionType SessionType
 	Name        string
 	Position    position.Position
+	Modality    Modality
 }
 
 type SessionType interface {
@@ -23,8 +24,9 @@ type SessionType interface {
 
 	// used for inner checks
 	checkTypeLabels(LabelledTypesEnv) error
-	// checkTypePolarities(LabelledTypesEnv) error
 	// checkTypeModalities(LabelledTypesEnv) error
+	inferModality(LabelledTypesEnv, map[string]bool) Modality
+	assignUnsetModalities(LabelledTypesEnv, Modality)
 	isContractive(LabelledTypesEnv, map[string]bool) bool
 }
 
@@ -616,13 +618,18 @@ func CopyType(orig SessionType) SessionType {
 type LabelledTypesEnv map[string]LabelledType
 type LabelledType struct {
 	Name string
+	Mode Modality
 	Type SessionType
 }
 
 func ProduceLabelledSessionTypeEnvironment(typeDefs []SessionTypeDefinition) LabelledTypesEnv {
 	labelledTypesEnv := make(LabelledTypesEnv)
 	for _, j := range typeDefs {
-		labelledTypesEnv[j.Name] = LabelledType{Type: j.SessionType, Name: j.Name}
+		labelledTypesEnv[j.Name] = LabelledType{
+			Type: j.SessionType,
+			Name: j.Name,
+			Mode: j.Modality,
+		}
 	}
 
 	return labelledTypesEnv
@@ -835,8 +842,9 @@ func NewUpTypeInitial(From, To Modality, Continuation SessionTypeInitial) *UpTyp
 }
 
 func (q *UpTypeInitial) toSessionType(mode Modality) SessionType {
-	// If 'mode' does not q.To, then it is an ill formed type, however a SessionTypeInitial is lenient during construct and allows this. This is checked later on during the preliminary checks
-	return NewUpType(q.From, q.To, q.Continuation.toSessionType(q.To))
+	// If 'mode' does not match the q.To, then it is an ill formed type, however a SessionTypeInitial is lenient during construct and allows this. This is checked later on during the preliminary checks
+	// The mode of the continuation type has to be set to q.From
+	return NewUpType(q.From, q.To, q.Continuation.toSessionType(q.From))
 }
 
 // Down shift: m \/ n ...
@@ -855,7 +863,7 @@ func NewDownTypeInitial(From, To Modality, Continuation SessionTypeInitial) *Dow
 }
 
 func (q *DownTypeInitial) toSessionType(mode Modality) SessionType {
-	return NewDownType(q.From, q.To, q.Continuation.toSessionType(q.To))
+	return NewDownType(q.From, q.To, q.Continuation.toSessionType(q.From))
 }
 
 // Branch/Case option

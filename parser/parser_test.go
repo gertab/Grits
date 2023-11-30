@@ -21,7 +21,7 @@ func compareOutputProgram(t *testing.T, got []process.Form, expected []process.F
 
 func compareOutputType(t *testing.T, got types.SessionType, expected types.SessionType, labelledTypesEnv types.LabelledTypesEnv) bool {
 	if !types.EqualType(got, expected, labelledTypesEnv) {
-		t.Errorf("got %s, expected %s\n", got.String(), expected.String())
+		t.Errorf("got %s, expected %s\n", got.StringWithModality(), expected.StringWithModality())
 		return false
 	}
 	return true
@@ -111,7 +111,7 @@ func TestBasicForms(t *testing.T) {
 	compareOutputProgram(t, output, expected)
 }
 func TestSimpleTypes(t *testing.T) {
-	u := types.NewUnsetMode()
+	u := types.NewUnrestrictedMode()
 
 	unitType := types.NewUnitType(u)
 	labelType1 := types.NewLabelType("abc", u)
@@ -130,8 +130,9 @@ func TestSimpleTypes(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		output := *parseGetEnvironment(c.input).Types
-		outputST := output[0].SessionType
+		globalEnv := parseGetEnvironment(c.input)
+		typeDefs := *globalEnv.Types
+		outputST := typeDefs[0].SessionType
 		if !compareOutputType(t, outputST, c.expected, make(types.LabelledTypesEnv)) {
 			t.Errorf("error in case #%d\n", i)
 		}
@@ -139,7 +140,7 @@ func TestSimpleTypes(t *testing.T) {
 }
 
 func TestTypes(t *testing.T) {
-	u := types.NewUnsetMode()
+	u := types.NewUnrestrictedMode()
 
 	unitType := types.NewUnitType(u)
 	labelType1 := types.NewLabelType("abc", u)
@@ -355,24 +356,50 @@ func TestTypeDefinitionModes(t *testing.T) {
 	inputProgram :=
 		`type A = 1 -* 1
 		 type B = 1
-		 type C = 1 * 1
+		 type C = linear 1 * 1
 		 type D = &{a : 1, b : 1}
 		 type E = +{a : 1, b : 1}
-		// type B = &{a : A}
-		// type C = +{a : D}
-		// type D = 1 * C
-		// type E = F // these should be avoided
-		// type F = E
-		//type G = linear +{a : 1}`
+		 type F = &{a : A}
+		 type G = +{a : D}
+		 type H = 1 * C
+		 type I = J
+		 type J = I
+		 type I2 = J2
+		 type J2 = affine I2
+		 type K = linear +{a : 1}
+		 type L = linear 1 -* 1
+		 type M = affine 1 -* 1
+		 type N = replicable 1 -* 1
+		 type O = unrestricted 1 -* 1
+		 type P = 1 -* (1 * +{ab : 1, cd : 1})
+		 type Q = affine 1 -* (1 * +{ab : 1, cd : 1})
+		 type R =  1 * (1 * linear /\ affine +{ab : 1, cd : 1})
+		 type S =  1 -* (1 * affine /\ linear &{ab : 1, cd : 1})`
 
 	cases := []struct {
 		input1 string
 	}{
-		{"[unset]1 [unset]-* [unset]1"},        // A
-		{"[unset]1"},                           // B
-		{"[unset]1 [unset]* [unset]1"},         // C
-		{"unset&{a : [unset]1, b : [unset]1}"}, // D
-		{"unset+{a : [unset]1, b : [unset]1}"}, // E
+		{"[unr]1 [unr]-* [unr]1"},        // A
+		{"[unr]1"},                       // B
+		{"[lin]1 [lin]* [lin]1"},         // C
+		{"unr&{a : [unr]1, b : [unr]1}"}, // D
+		{"unr+{a : [unr]1, b : [unr]1}"}, // E
+		{"unr&{a : [unr]A}"},             // F
+		{"unr+{a : [unr]D}"},             // G
+		{"[lin]1 [lin]* [lin]C"},         // H
+		{"[unr]J"},                       // I
+		{"[unr]I"},                       // J
+		{"[aff]J2"},                      // I2
+		{"[aff]I2"},                      // J2
+		{"lin+{a : [lin]1}"},             // K
+		{"[lin]1 [lin]-* [lin]1"},        // L
+		{"[aff]1 [aff]-* [aff]1"},        // M
+		{"[rep]1 [rep]-* [rep]1"},        // N
+		{"[unr]1 [unr]-* [unr]1"},        // O
+		{"[unr]1 [unr]-* [unr]1 [unr]* unr+{ab : [unr]1, cd : [unr]1}"},          // P
+		{"[aff]1 [aff]-* [aff]1 [aff]* aff+{ab : [aff]1, cd : [aff]1}"},          // Q
+		{`[aff]1 [aff]* [aff]1 [aff]* lin/\aff lin+{ab : [lin]1, cd : [lin]1}`},  // R
+		{`[lin]1 [lin]-* [lin]1 [lin]* aff/\lin aff&{ab : [aff]1, cd : [aff]1}`}, // S
 	}
 
 	sessionTypeDefinitions := *parseGetEnvironment(inputProgram).Types

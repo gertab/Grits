@@ -20,7 +20,7 @@ func Typecheck(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalE
 	case err := <-errorChan:
 		return err
 	case <-doneChan:
-		globalEnv.log(LOGINFO, "Typecheck successful\n\n")
+		globalEnv.log(LOGINFO, "Typecheck successful")
 	}
 
 	return nil
@@ -48,7 +48,7 @@ func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Nam
 		errorChan <- err
 	}
 
-	globalEnv.log(LOGPROCESSING, "Preliminary checks ok")
+	globalEnv.log(LOGRULEDETAILS, "Preliminary checks ok")
 
 	// At this point, we can assume that all names and functions have a type,
 	// and such type is well formed
@@ -60,14 +60,14 @@ func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Nam
 		errorChan <- err
 	}
 
-	globalEnv.log(LOGPROCESSING, "Function declarations typecheck ok")
+	globalEnv.log(LOGRULEDETAILS, "Function declarations typecheck ok")
 
 	// Typecheck process definitions
 	if err := typecheckProcesses(processes, assumedFreeNames, globalEnv); err != nil {
 		errorChan <- err
 	}
 
-	globalEnv.log(LOGPROCESSING, "Process declarations typecheck ok")
+	globalEnv.log(LOGRULEDETAILS, "Process declarations typecheck ok")
 }
 
 // Sets a common type to all provider names
@@ -90,6 +90,7 @@ func preliminaryTypesDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 // Perform some preliminary checks about the types in function definitions
 // Ensures that types only referred to existing labelled types (i.e. recursion is used correctly). Also, ensures that there are no missing types and that types are well formed
 func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
+	// todo the typesToCheck need to have the modalities added
 
 	var typesToCheck []types.SessionType
 
@@ -245,7 +246,7 @@ func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 		gammaNameTypesCtx := produceNameTypesCtx(funcDef.Parameters)
 		providerType := funcDef.Type
 
-		globalEnv.logf(LOGPROCESSING, "(%s)typechecking function definition %s\n", funcDef.Position.String(), funcDef.String())
+		globalEnv.logf(LOGRULE, "Typechecking function definition %s\n", funcDef.String())
 
 		err := funcDef.Body.typecheckForm(gammaNameTypesCtx, nil, providerType, labelledTypesEnv, functionDefinitionsEnv, globalEnv)
 		if err != nil {
@@ -270,7 +271,7 @@ func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv
 		gammaNameTypesCtx := produceNameTypesCtx(freeNames)
 		providerType := processes[i].Type
 
-		globalEnv.logf(LOGPROCESSING, "typechecking process %s\n", processes[i].OutlineString())
+		globalEnv.logf(LOGRULE, "Typechecking process %s\n", processes[i].OutlineString())
 
 		// Run the typechecker
 		// might be a good idea to set the shadowProvider name to processes[i].Providers[0] (when there is only one provider)
@@ -303,7 +304,7 @@ func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv
 func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	if isProvider(p.to_c, providerShadowName) {
 		// MulR: *
-		globalEnv.log(LOGRULE, "rule MulR")
+		globalEnv.log(LOGRULEDETAILS, "rule MulR")
 
 		providerType = types.Unfold(providerType, labelledTypesEnv)
 		// The type of the provider must be SendType
@@ -345,7 +346,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 	} else if isProvider(p.continuation_c, providerShadowName) {
 		// ImpL: -*
-		globalEnv.log(LOGRULE, "rule ImpL")
+		globalEnv.log(LOGRULEDETAILS, "rule ImpL")
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
@@ -412,7 +413,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	if isProvider(p.from_c, providerShadowName) {
 		// ImpR: -*
-		globalEnv.log(LOGRULE, "rule ImpR")
+		globalEnv.log(LOGRULEDETAILS, "rule ImpR")
 
 		providerType = types.Unfold(providerType, labelledTypesEnv)
 		// The type of the provider must be ReceiveType
@@ -455,7 +456,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		return fmt.Errorf("you cannot assign self to a new channel (%s)", p.String())
 	} else {
 		// MulL: *
-		globalEnv.log(LOGRULE, "rule MulL")
+		globalEnv.log(LOGRULEDETAILS, "rule MulL")
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
@@ -507,7 +508,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	if isProvider(p.to_c, providerShadowName) {
 		// IChoiceR: +{label1: T1, ...}
-		globalEnv.log(LOGRULE, "rule IChoiceR")
+		globalEnv.log(LOGRULEDETAILS, "rule IChoiceR")
 
 		providerType = types.Unfold(providerType, labelledTypesEnv)
 		// The type of the provider must be SelectLabelType
@@ -539,7 +540,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 		}
 	} else if isProvider(p.continuation_c, providerShadowName) {
 		// EChoiceL: &{label1: T1, ...}
-		globalEnv.log(LOGRULE, "rule EChoiceL")
+		globalEnv.log(LOGRULEDETAILS, "rule EChoiceL")
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
@@ -596,7 +597,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	if isProvider(p.from_c, providerShadowName) {
 		// EChoiceR: &{label1: T1, ...}
-		globalEnv.log(LOGRULE, "rule EChoiceR")
+		globalEnv.log(LOGRULEDETAILS, "rule EChoiceR")
 
 		providerType = types.Unfold(providerType, labelledTypesEnv)
 		// The type of the provider must be BranchCaseType
@@ -645,7 +646,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		p.from_c.Type = providerBranchCaseType
 	} else {
 		// IChoiceL: +{label1: T1, ...}
-		globalEnv.log(LOGRULE, "rule IChoiceL")
+		globalEnv.log(LOGRULEDETAILS, "rule IChoiceL")
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
@@ -718,7 +719,7 @@ func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 // New: continuation_c <- new (body); continuation_e
 func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	// Cut
-	globalEnv.log(LOGRULE, "rule Cut")
+	globalEnv.log(LOGRULEDETAILS, "rule Cut")
 
 	if isProvider(p.continuation_c, providerShadowName) || nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
 		// Names are not fresh
@@ -832,7 +833,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 // 1 : close w
 func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	// EndR: 1
-	globalEnv.log(LOGRULE, "rule EndR")
+	globalEnv.log(LOGRULEDETAILS, "rule EndR")
 
 	providerType = types.Unfold(providerType, labelledTypesEnv)
 
@@ -869,7 +870,7 @@ func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 // 1 : wait w; ...
 func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	// EndL: 1
-	globalEnv.log(LOGRULE, "rule EndL")
+	globalEnv.log(LOGRULEDETAILS, "rule EndL")
 
 	// Can only wait for a client (not self)
 	if isProvider(p.to_c, providerShadowName) {
@@ -914,7 +915,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 // fwd w u
 func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	// ID: 1
-	globalEnv.log(LOGRULE, "rule ID/FWD")
+	globalEnv.log(LOGRULEDETAILS, "rule ID/FWD")
 
 	if isProvider(p.from_c, providerShadowName) {
 		return fmt.Errorf("forwarding to self (%s) is not allowed. Use 'fwd %s %s' instead)", p.String(), p.from_c.String(), p.to_c.String())
@@ -960,7 +961,7 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 // drop w; ...
 func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	// Drop
-	globalEnv.log(LOGRULE, "rule DROP")
+	globalEnv.log(LOGRULEDETAILS, "rule DROP")
 
 	// Can only wait for a client (not self)
 	if !isProvider(p.client_c, providerShadowName) {
@@ -994,7 +995,7 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 // f(...)
 func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	globalEnv.log(LOGRULE, "rule CALL")
+	globalEnv.log(LOGRULEDETAILS, "rule CALL")
 
 	// Check that function exists
 	functionSignature, exists := sigma[p.functionName]
@@ -1090,7 +1091,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 // Split: <channel_one, channel_two> <- recv from_c; P
 func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	globalEnv.log(LOGRULE, "rule SPLIT")
+	globalEnv.log(LOGRULEDETAILS, "rule SPLIT")
 
 	// Can only wait for a client (not self)
 	if isProvider(p.from_c, providerShadowName) {
@@ -1138,20 +1139,20 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 }
 
 func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	globalEnv.log(LOGRULE, "rule CST")
+	globalEnv.log(LOGRULEDETAILS, "rule CST")
 
 	return nil
 }
 
 func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	globalEnv.log(LOGRULE, "rule SHF")
+	globalEnv.log(LOGRULEDETAILS, "rule SHF")
 
 	return nil
 }
 
 func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
 	// Print
-	globalEnv.log(LOGRULE, "rule PRINT")
+	globalEnv.log(LOGRULEDETAILS, "rule PRINT")
 
 	// Continue checking the remaining process
 	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)

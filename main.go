@@ -12,11 +12,16 @@ import (
 /* ignore sample programs -- used for development*/
 
 const program = `
-type A = 1 -* 1
-type B = 1
-type C = linear 1 * 1
+// type A = 1 -* 1
+// type B = 1
+// type C = linear 1 * 1
 
-let f1(a: A) : 1 * 1 = close self
+// let f1(a: A) : 1 * 1 = close self
+
+type A = linear &{a : B, b : C}
+type B = 1 * (affine\/linear 1 -* 1)
+type C = ((replicable\/linear unrestricted\/replicable 1) -* 1) -* 1
+
 
 // // This is not allowed:
 // type A = (1 -* 1) -* 1

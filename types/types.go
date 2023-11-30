@@ -22,9 +22,9 @@ type SessionType interface {
 	Polarity() Polarity
 	Modality() Modality
 
-	// used for inner checks
+	// used for type structure checks
 	checkTypeLabels(LabelledTypesEnv) error
-	// checkTypeModalities(LabelledTypesEnv) error
+	checkTypeModalities(LabelledTypesEnv, Modality) error
 	inferModality(LabelledTypesEnv, map[string]bool) Modality
 	assignUnsetModalities(LabelledTypesEnv, Modality)
 	isContractive(LabelledTypesEnv, map[string]bool) bool

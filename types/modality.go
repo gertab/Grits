@@ -1,6 +1,9 @@
 package types
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type Modality interface {
 	String() string
@@ -667,3 +670,229 @@ func commonMode(modes ...Modality) Modality {
 }
 
 ///////
+
+// Ensure that a type is constructed well, with respect to modalities
+// E.g. if there is an upshift/downshift, the shift should be allowed by the mode.
+// Also, the only modes allowed should be Unrestricted/Affine/Replicable/Linear --
+// UnsetModes or InvalidModes should be flagged as an error
+func (q *LabelType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.Mode.(*UnsetMode)
+	invalidMode, invalid := q.Mode.(*InvalidMode)
+
+	if unset || q.Mode == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	typeFound, exists := labelledTypesEnv[q.Label]
+
+	if !exists {
+		// Although this should be checked already
+		return fmt.Errorf("error calling undefined label type '%s'", q.String())
+	}
+
+	if !q.Mode.Equals(currentMode) {
+		return fmt.Errorf("error mode of label '%s' (%s) does not match the expected mode '%s'", q.String(), q.Mode.String(), currentMode.String())
+	}
+
+	if !q.Mode.Equals(typeFound.Mode) {
+		return fmt.Errorf("error mode of label '%s' (%s) does not match the mode '%s' (%s)", q.String(), q.Mode.String(), typeFound.Type.String(), typeFound.Mode.String())
+	}
+
+	return nil
+}
+
+func (q *UnitType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.Mode.(*UnsetMode)
+	invalidMode, invalid := q.Mode.(*InvalidMode)
+
+	if unset || q.Mode == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	if !q.Mode.Equals(currentMode) {
+		return fmt.Errorf("error mode of unit type '%s' (%s) does not match the expected mode '%s'", q.String(), q.Mode.String(), currentMode.String())
+	}
+
+	return nil
+}
+
+func (q *SendType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.Mode.(*UnsetMode)
+	invalidMode, invalid := q.Mode.(*InvalidMode)
+
+	if unset || q.Mode == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	if !q.Mode.Equals(currentMode) {
+		return fmt.Errorf("error mode of send type '%s' (%s) does not match the expected mode '%s'", q.String(), q.Mode.String(), currentMode.String())
+	}
+
+	if err := q.Left.checkTypeModalities(labelledTypesEnv, currentMode); err != nil {
+		return err
+	}
+
+	if err := q.Right.checkTypeModalities(labelledTypesEnv, currentMode); err != nil {
+		return err
+	}
+
+	return nil
+}
+func (q *ReceiveType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.Mode.(*UnsetMode)
+	invalidMode, invalid := q.Mode.(*InvalidMode)
+
+	if unset || q.Mode == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	if !q.Mode.Equals(currentMode) {
+		return fmt.Errorf("error mode of receive type '%s' (%s) does not match the expected mode '%s'", q.String(), q.Mode.String(), currentMode.String())
+	}
+
+	if err := q.Left.checkTypeModalities(labelledTypesEnv, currentMode); err != nil {
+		return err
+	}
+
+	if err := q.Right.checkTypeModalities(labelledTypesEnv, currentMode); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (q *SelectLabelType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.Mode.(*UnsetMode)
+	invalidMode, invalid := q.Mode.(*InvalidMode)
+
+	if unset || q.Mode == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	if !q.Mode.Equals(currentMode) {
+		return fmt.Errorf("error mode of select type '%s' (%s) does not match the expected mode '%s'", q.String(), q.Mode.String(), currentMode.String())
+	}
+
+	for _, j := range q.Branches {
+		// Checking inside each branch
+		if err := j.SessionType.checkTypeModalities(labelledTypesEnv, currentMode); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (q *BranchCaseType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.Mode.(*UnsetMode)
+	invalidMode, invalid := q.Mode.(*InvalidMode)
+
+	if unset || q.Mode == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	if !q.Mode.Equals(currentMode) {
+		return fmt.Errorf("error mode of the branch type '%s' (%s) does not match the expected mode '%s'", q.String(), q.Mode.String(), currentMode.String())
+	}
+
+	for _, j := range q.Branches {
+		// Checking inside each branch
+		if err := j.SessionType.checkTypeModalities(labelledTypesEnv, currentMode); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (q *UpType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.From.(*UnsetMode)
+	invalidMode, invalid := q.From.(*InvalidMode)
+
+	if unset || q.From == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	_, unset = q.To.(*UnsetMode)
+	invalidMode, invalid = q.To.(*InvalidMode)
+
+	if unset || q.To == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	if !q.To.Equals(currentMode) {
+		return fmt.Errorf("error mode of the upshift type '%s' (%s) does not match the expected mode '%s'", q.String(), q.From.String(), currentMode.String())
+	}
+
+	if !q.From.CanBeUpshiftedTo(q.To) {
+		return fmt.Errorf("error mode of the upshift type '%s': mode '%s' cannot be upshifted to mode '%s'", q.String(), q.From.String(), q.To.String())
+	}
+
+	return q.Continuation.checkTypeModalities(labelledTypesEnv, q.From)
+}
+
+func (q *DownType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
+	_, unset := q.From.(*UnsetMode)
+	invalidMode, invalid := q.From.(*InvalidMode)
+
+	if unset || q.From == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	_, unset = q.To.(*UnsetMode)
+	invalidMode, invalid = q.To.(*InvalidMode)
+
+	if unset || q.To == nil {
+		return fmt.Errorf("error type '%s' has no modality defined", q.String())
+	}
+
+	if invalid {
+		return fmt.Errorf("error type '%s' has an unknown modality '%s'", q.String(), invalidMode.mode)
+	}
+
+	if !q.To.Equals(currentMode) {
+		return fmt.Errorf("error mode of the downshift type '%s' (%s) does not match the expected mode '%s'", q.String(), q.From.String(), currentMode.String())
+	}
+
+	if !q.From.CanBeDownshiftedTo(q.To) {
+		return fmt.Errorf("error mode of the downshift type '%s': mode '%s' cannot be downshifted to mode '%s'", q.String(), q.From.String(), q.To.String())
+	}
+
+	return q.Continuation.checkTypeModalities(labelledTypesEnv, q.From)
+}

@@ -819,17 +819,16 @@ func TestFunctionDefinitionModes(t *testing.T) {
 		type B = 1 -* 1
 		let f1(a : A, b : B) : A * B = send self<a, b>
 		
-		type C = 1 -* 1
+		type C = linear 1 -* 1
 		let f2(a : linear +{l1 : 1}, b : C) : linear +{l1 : 1} * C = 
-				send self<a, b>
-		 `
+				send self<a, b>`
 
 	cases := []struct {
 		input1 string
 		input2 []string
 	}{
 		{"[unr]A [unr]* [unr]B", []string{"[unr]A", "[unr]B"}},                       // f1
-		{"lin+{l1 : [lin]1} [lin]* [lin]C", []string{"lin+{l1 : [lin]1}", "[unr]C"}}, // f2
+		{"lin+{l1 : [lin]1} [lin]* [lin]C", []string{"lin+{l1 : [lin]1}", "[lin]C"}}, // f2
 	}
 
 	processes, assumedFreeNames, globalEnv, err := parser.ParseString(inputProgram)
@@ -861,4 +860,112 @@ func TestFunctionDefinitionModes(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestTypecheckCorrectModalityStructure(t *testing.T) {
+
+	cases := []string{
+		`type A = B
+		 type B = linear 1`,
+		`type A = 1`,
+		`type A1 = unrestricted 1
+		 type A2 = unr 1
+		 type B1 = linear 1
+		 type B2 = lin 1
+		 type C1 = affine 1
+		 type C2 = aff 1
+		 type D1 = replicable 1
+		 type D2 = rep 1`,
+		`type A = linear 1 * B
+		 type B = linear 1`,
+		`type A =  1 -* B
+		 type B = affine 1`,
+		`type A1 = linear/\affine 1
+		 type A2 = linear/\linear 1
+		 type A3 = linear/\replicable 1
+		 type A4 = replicable/\unrestricted 1
+		 type A5 = replicable/\replicable 1
+		 type A6 = affine/\unrestricted 1
+		 type A7 = affine/\affine 1
+		 type A8 = unrestricted/\unrestricted 1`,
+		`type B1 = affine (linear/\affine 1)
+		 type B2 = linear (linear/\linear 1)
+		 type B3 = replicable (linear/\replicable 1)
+		 type B4 = unrestricted (replicable/\unrestricted 1)
+		 type B5 = replicable (replicable/\replicable 1)
+		 type B6 = unrestricted (affine/\unrestricted 1)
+		 type B7 = affine (affine/\affine 1)
+		 type B8 = unrestricted (unrestricted/\unrestricted 1)`,
+		`type A1 = affine\/linear 1
+		 type A2 = linear\/linear 1
+		 type A3 = replicable\/linear 1
+		 type A4 = unrestricted\/replicable 1
+		 type A5 = replicable\/replicable 1
+		 type A6 = unrestricted\/affine 1
+		 type A7 = affine\/affine 1
+		 type A8 = unrestricted\/unrestricted 1`,
+		`type B1 = affine (affine\/linear 1)
+		 type B2 = linear (linear\/linear 1)
+		 type B3 = replicable (replicable\/linear 1)
+		 type B4 = unrestricted (unrestricted\/replicable 1)
+		 type B5 = replicable (replicable\/replicable 1)
+		 type B6 = unrestricted (unrestricted\/affine 1)
+		 type B7 = affine (affine\/affine 1)
+		 type B8 = unrestricted (unrestricted\/unrestricted 1)`,
+		`type A = linear(replicable\/linear replicable\/replicable unrestricted\/replicable 1)`,
+		`type A = linear +{a : 1, b : B}
+		 type B = 1 * (affine\/linear 1 -* 1)`,
+		`type A = linear &{a : B, b : C}
+		 type B = 1 * (affine\/linear 1 -* 1)
+		 type C = ((replicable\/linear unrestricted\/replicable 1) -* 1) -* 1`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectModalityStructure(t *testing.T) {
+	cases := []string{
+		`type A = X`,
+		`type A = affine B
+		 type B = linear 1`,
+		`type A = othermode B
+		 type B = 1`, // Unknown mode
+		`type A = othermode 1`,
+		`type A = othermode 1 * 1`,
+		`type A = othermode 1 -* 1`,
+		`type A = othermode +{a : 1}`,
+		`type A = othermode &{a : 1}`,
+		`type A = linear 1 * B
+		 type B = affine 1`,
+		`type A = linear 1 -* B
+		 type B = affine 1`,
+		`type A = linear +{a : 1, b : B}
+		 type B = 1 * (unrestricted\/affine 1 -* 1)`,
+	}
+
+	runThroughTypechecker(t, cases, false)
+}
+
+func TestTypecheckIncorrectModalityShifts(t *testing.T) {
+	cases := []string{
+		// Check disallowed shifts
+		`type A = linear\/affine 1`,
+		`type A = linear\/replicable 1`,
+		`type A = replicable\/unrestricted 1`,
+		`type A = affine\/unrestricted 1`,
+		`type A = affine (linear\/affine 1)`,
+		`type A = replicable (linear\/replicable 1)`,
+		`type A = unrestricted (replicable\/unrestricted 1)`,
+		`type A = unrestricted (affine\/unrestricted 1)`,
+		`type A = affine/\linear 1`,
+		`type A = replicable/\linear 1`,
+		`type A = unrestricted/\replicable 1`,
+		`type A = unrestricted/\affine 1`,
+		`type A = linear (affine/\linear 1)`,
+		`type A = linear (replicable/\linear 1)`,
+		`type A = replicable (unrestricted/\replicable 1)`,
+		`type A = affine (unrestricted/\affine 1)`,
+	}
+
+	runThroughTypechecker(t, cases, false)
 }

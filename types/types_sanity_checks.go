@@ -70,7 +70,14 @@ func SanityChecksType(types []SessionType, typesDefs []SessionTypeDefinition) er
 
 // Run some checks on the construction of the type
 func CheckTypeWellFormedness(t SessionType, labelledTypesEnv LabelledTypesEnv) error {
-	return t.checkTypeLabels(labelledTypesEnv)
+	err := t.checkTypeLabels(labelledTypesEnv)
+	if err != nil {
+		return err
+	}
+
+	err = t.checkTypeModalities(labelledTypesEnv, t.Modality())
+
+	return err
 }
 
 // Check whether a reference to a session type label exists

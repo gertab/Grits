@@ -1262,9 +1262,94 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 }
 
 func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	globalEnv.log(LOGRULEDETAILS, "rule SHF")
+	if isProvider(p.from_c, providerShadowName) {
+		// UpSR: /\
+		globalEnv.log(LOGRULEDETAILS, "rule UpSR (Shift)")
 
-	return nil
+		providerType = types.Unfold(providerType, labelledTypesEnv)
+		// The type of the provider must be UpType
+		providerUpType, upTypeOk := providerType.(*types.UpType)
+
+		if !upTypeOk {
+			// wrong type: m /\ m A
+			return fmt.Errorf("expected '%s' to have an upshift type (i.e. /\\), but found type '%s' instead", p.String(), providerType.String())
+		}
+
+		// Check that m1 can be shifted to m2: m1 /\ m2
+		if !providerUpType.From.CanBeUpshiftedTo(providerUpType.To) {
+			// This should never happen if the type is well formed
+			return fmt.Errorf("the type '%s' of '%s' has an improper upshift type, i.e. '%s' cannot be upshifted to '%s'", providerUpType.String(), p.String(), providerUpType.From.String(), providerUpType.To.String())
+		}
+
+		expectedContinuationType := providerUpType.Continuation
+		expectedContinuationType = types.Unfold(expectedContinuationType, labelledTypesEnv)
+
+		if nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
+			// Names are not fresh
+			return fmt.Errorf("variable names '%s' is already defined. Use unique name in %s", p.continuation_c.String(), p.String())
+		}
+
+		p.from_c.Type = providerUpType
+		p.continuation_c.Type = expectedContinuationType
+
+		if polarityError := checkExplicitPolarityValidity(p, p.from_c, p.continuation_c); polarityError != nil {
+			return polarityError
+		}
+
+		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, expectedContinuationType, labelledTypesEnv, sigma, globalEnv)
+
+		return continuationError
+	} else if isProvider(p.continuation_c, providerShadowName) {
+		return fmt.Errorf("you cannot assign self to a new channel (%s)", p.String())
+	} else {
+		// DnSL: \/
+		globalEnv.log(LOGRULEDETAILS, "rule DnSL (shift)")
+
+		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
+		if errorClient != nil {
+			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+		}
+
+		clientType = types.Unfold(clientType, labelledTypesEnv)
+		// The type of the client must be DownType
+		clientDownType, clientTypeOk := clientType.(*types.DownType)
+
+		if !clientTypeOk {
+			// wrong type, expected A \/ B
+			return fmt.Errorf("expected '%s' to have a downshift type (i.e. \\/), but found type '%s' instead", p.from_c.String(), clientType.String())
+		}
+
+		// Check that m1 can be shifted to m2: m1 \/ m2
+		if !clientDownType.From.CanBeDownshiftedTo(clientDownType.To) {
+			// This should never happen if the type is well formed
+			return fmt.Errorf("the type '%s' of '%s' has an improper downshift type, i.e. '%s' cannot be upshifted to '%s'", clientDownType.String(), p.String(), clientDownType.From.String(), clientDownType.To.String())
+		}
+
+		newContinuationType := clientDownType.Continuation
+		newContinuationType = types.Unfold(newContinuationType, labelledTypesEnv)
+
+		if nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
+			return fmt.Errorf("variable name '%s' is already defined. Use unique names", p.continuation_c.String())
+		}
+
+		if isProvider(p.continuation_c, providerShadowName) {
+			// Unwanted reference to self
+			return fmt.Errorf("variable names '%s' should not refer to self", p.continuation_c.String())
+		}
+
+		gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newContinuationType}
+
+		p.from_c.Type = clientDownType
+		p.continuation_c.Type = newContinuationType
+
+		if polarityError := checkExplicitPolarityValidity(p, p.from_c, p.continuation_c); polarityError != nil {
+			return polarityError
+		}
+
+		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
+
+		return continuationError
+	}
 }
 
 func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {

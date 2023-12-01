@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const numberOfIterations = 2
+const numberOfIterations = 10
 const monitorTimeout = 40 * time.Millisecond
 
 // Invalidate all cache
@@ -24,7 +24,7 @@ func TestSimpleFWDRCV(t *testing.T) {
 	input := ` 	/* FWD + RCV rule */
 		prc[pid1] = send pid2<pid5, self>
 		prc[pid2] = fwd self -pid3
-		prc[pid3] = <a, b> <- recv self; close a`
+		prc[pid3] = <a, b> <- recv self; close b`
 
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.RCV}}},
@@ -37,7 +37,7 @@ func TestSimpleFWDRCV(t *testing.T) {
 func TestSimpleFWDSND(t *testing.T) {
 	// FWD + SND
 	input := ` 	/* FWD + RCV rule */
-		prc[pid1] = <a, b> <- recv pid2; close a
+		prc[pid1] = <a, b> <- recv pid2; close self
 		prc[pid2] = fwd self +pid3
 		prc[pid3] = send self<pid5, self>`
 
@@ -102,7 +102,7 @@ func TestSimpleMultipleFWD(t *testing.T) {
 		prc[pid1] = send pid2<pid5, self>
 		prc[pid2] = fwd self -pid3
 		prc[pid3] = fwd self -pid4
-		prc[pid4] = <a, b> <- recv self; close a`
+		prc[pid4] = <a, b> <- recv self; close b`
 
 	expected := []traceOption{
 		{steps{{"pid2", process.FWD}, {"pid2", process.FWD}, {"pid2", process.RCV}}},
@@ -205,7 +205,7 @@ func TestSimpleSPLITCALL(t *testing.T) {
 	// SPLIT + CALL
 
 	input := ` /* SPLIT + CALL rule */
-				let D1(c) =  <a, b> <- recv c; close a
+				let D1(c) =  <a, b> <- recv c; close self
 
 				prc[pid0] = <x1, x2> <- split +pid1; close self
 				prc[pid1] = D1(pid2)
@@ -213,7 +213,7 @@ func TestSimpleSPLITCALL(t *testing.T) {
 
 	expected := []traceOption{
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}}},
+		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}, {"x1", process.DUP}, {"x1", process.FWD}}},
 		{steps{{"pid0", process.SPLIT}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.CALL}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
 	}
 
@@ -291,7 +291,7 @@ func TestSimpleFunctionCalls(t *testing.T) {
 
 	input := ` 
 		let f(x,y) = send x<y, self>
-		let g() = <a, b> <- recv self; wait a; close w
+		let g() = <a, b> <- recv self; wait a; close b
 		
 		prc[pid1] = f(pid2, pid3)
 		prc[pid2] = g()
@@ -529,7 +529,67 @@ func TestNestedPolarizedFwd(t *testing.T) {
 		{steps{{"ff", process.FWD}, {"ff", process.CSE}}},
 	}
 	checkInputRepeatedly(t, input, expected, typecheck)
+}
 
+func TestUpShift(t *testing.T) {
+	// Upshift
+
+	input := ` 
+		type A = linear 1
+		
+		prc[a] : linear /\ affine A  = y <- shift self; close y
+		prc[b] : linear A = cast a<self>`
+
+	expected := []traceOption{
+		{steps{{"a", process.SHF}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestDownShift(t *testing.T) {
+	// DownShift
+
+	input := ` 
+	type A = affine 1
+
+	assuming x : A
+	prc[a] : affine A = y <- shift b; drop y; close self
+	prc[b] : affine \/ linear A = cast self<x>`
+
+	expected := []traceOption{
+		{steps{{"a", process.CST}, {"a", process.DROP}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestTwoReceives(t *testing.T) {
+	// TwoReceives
+
+	input := ` 
+		prc[a] : 1             = send b<u, self>
+		prc[b] : (1 -* 1) -* 1 = <x, y> <- recv self; send x<z, y>
+		prc[u] : 1 -* 1        = <x, y> <- recv self; wait x; close y
+		prc[z] : 1             = close self`
+
+	expected := []traceOption{
+		{steps{{"b", process.RCV}, {"u", process.RCV}, {"a", process.CLS}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
 type step struct {

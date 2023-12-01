@@ -12,13 +12,23 @@ import (
 /* ignore sample programs -- used for development*/
 
 const program = `
-// type A = 1 -* 1
-// type B = 1
-// type C = linear 1 * 1
 
-assuming u : affine /\ linear 1 
-prc[a] : affine 1 = cast u<self>
+prc[a] : 1             = send b<u, self>
+prc[b] : (1 -* 1) -* 1 = <x, y> <- recv self; send x<z, y>
+prc[u] : 1 -* 1        = <x, y> <- recv self; wait x; close y
+prc[z] : 1             = close self
 
+
+// type A = affine 1
+// assuming x : A
+// prc[a] : affine A = y <- shift b; drop y; close self
+// prc[b] : affine \/ linear A = cast self<x>
+
+// type A = unrestricted \/ affine B
+// type B = unrestricted 1 * 1
+// assuming y : B
+// let f(b : A) : 1 = y <- shift b; drop y; close self
+// prc[a] : 1 = x : A <- new cast self<y>; f(x)
 
 // let f() : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>
 // let f2[w : affine \/ linear 1] = x : affine 1 <- new (close x); cast w<x>

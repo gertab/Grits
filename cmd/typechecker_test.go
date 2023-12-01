@@ -809,7 +809,7 @@ func TestTypecheckIncorrectPolarity(t *testing.T) {
 func TestTypecheckCorrectCastShifting(t *testing.T) {
 
 	cases := []string{
-		//  Downshift;  \/
+		//  Downshift:  \/
 		`assuming u : affine 1
 		 prc[a] : affine \/ linear 1 = cast self<u>`,
 		`assuming u : affine 1
@@ -817,7 +817,7 @@ func TestTypecheckCorrectCastShifting(t *testing.T) {
 		`let f() : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>
 		 let f2[w : affine \/ linear 1] = x : affine 1 <- new (close x); cast w<x>
 		 prc[a] : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>`,
-		//  Upshift;  \/
+		//  Upshift:  /\
 		`assuming u : linear /\ affine 1 
 		 prc[a] : linear 1 = cast u<self>`,
 		`assuming u : affine /\ affine 1
@@ -845,7 +845,7 @@ func TestTypecheckIncorrectCastShifting(t *testing.T) {
 		`assuming u : affine 1
 		 prc[a] : affine /\ affine 1 = cast self<u>`,
 		`let f() : affine /\ linear 1 = x : affine 1 <- new (close x); cast self<x>`,
-		// Upshift
+		// Upshift /\
 		`assuming u : affine 1
 		 prc[a] : affine /\ linear 1 = cast u<self>`,
 		`assuming u : linear \/ affine 1 
@@ -855,27 +855,43 @@ func TestTypecheckIncorrectCastShifting(t *testing.T) {
 		`assuming u : linear /\ affine 1 * 1
 		 prc[a] : linear 1 = cast u<self>`,
 	}
+	runThroughTypechecker(t, cases, false)
+}
 
+// Shift
+func TestTypecheckCorrectShifting(t *testing.T) {
+
+	cases := []string{
+		//  Upshift:  /\
+		`prc[a] : linear /\ affine 1  = y <- shift self; close y`,
+		//  Downshift:  \/
+		`type A = affine 1
+		 assuming x : A
+	 	 prc[a] : affine A = y <- shift b; drop y; close self
+		 prc[b] : affine \/ linear A = cast self<x>`,
+	}
+
+	runThroughTypechecker(t, cases, true)
+}
+
+func TestTypecheckIncorrectShifting(t *testing.T) {
+	cases := []string{
+		//  Upshift:  /\
+		`prc[a] : affine /\ linear 1  = y <- shift self; close y`,
+		`prc[a] : linear \/ affine 1  = y <- shift self; close y`,
+	}
 	runThroughTypechecker(t, cases, false)
 }
 
 func TestFunctionDefinitionModes(t *testing.T) {
 
 	inputProgram :=
-		`
-		// type C = linear 1 * 1
-		// type Q = affine 1 -* (1 * +{ab : 1, cd : 1})
-		// type R =  1 * (1 * linear /\ affine +{ab : 1, cd : 1})
-		// type S =  1 -* (1 * affine /\ linear &{ab : 1, cd : 1})
-		
-		
-		type A = +{l1 : 1}
-		type B = 1 -* 1
-		let f1(a : A, b : B) : A * B = send self<a, b>
-		
-		type C = linear 1 -* 1
-		let f2(a : linear +{l1 : 1}, b : C) : linear +{l1 : 1} * C = 
-				send self<a, b>`
+		`type A = +{l1 : 1}
+		 type B = 1 -* 1
+		 let f1(a : A, b : B) : A * B = send self<a, b>
+		 
+		 type C = linear 1 -* 1
+		 let f2(a : linear +{l1 : 1}, b : C) : linear +{l1 : 1} * C = send self<a, b>`
 
 	cases := []struct {
 		input1 string

@@ -489,6 +489,8 @@ func (f *CloseForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		}
 
 		TransitionBySendingNP(process, process.Providers[0].Channel, clsRule, message, re)
+	} else {
+		re.error(process, "Found a close on a client. A process can only close itself.")
 	}
 }
 
@@ -693,7 +695,7 @@ func (f *CastForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		// cast to_c<...>
 
 		if !f.continuation_c.IsSelf {
-			re.errorf(process, "[send, client] in SHF rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
+			re.errorf(process, "[cast, client] in SHF rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
 		}
 
 		message := Message{Rule: SHF, Channel1: process.Providers[0]}
@@ -701,7 +703,7 @@ func (f *CastForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 		shfRule := func() {
 			// Message is the received message
-			re.logProcess(LOGRULE, process, "[send, client] starting SHF rule")
+			re.logProcess(LOGRULE, process, "[cast, client] starting SHF rule")
 			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule SHF\n", f.to_c.String())
 
 			// Although the process dies, its provider will be used as the client's provider
@@ -745,11 +747,11 @@ func (f *ShiftForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		// CST rule (client)
 
 		shfRule := func(message Message) {
-			re.logProcess(LOGRULE, process, "[receive, client] starting CST rule")
-			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
+			re.logProcess(LOGRULE, process, "[shift, client] starting CST rule")
+			re.logProcessf(LOGRULEDETAILS, process, "[shift, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
 
 			if message.Rule != CST {
-				re.error(process, "expected RCV")
+				re.error(process, "expected CST")
 			}
 
 			new_body := f.continuation_e
@@ -757,7 +759,7 @@ func (f *ShiftForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 			process.Body = new_body
 
-			process.finishedRule(CST, "[receive, client]", "(c)", re)
+			process.finishedRule(CST, "[shift, client]", "(c)", re)
 			process.transitionLoopNP(re)
 		}
 

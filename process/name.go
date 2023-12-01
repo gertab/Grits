@@ -6,8 +6,11 @@ import (
 	"strconv"
 )
 
-const showPolarities = false
-const printTypes = false
+const (
+	showPolarities    = false
+	showChannelNumber = false
+	printTypes        = false
+)
 
 // Name is channel or value.
 type Name struct {
@@ -55,7 +58,7 @@ func (n *Name) String() string {
 
 	}
 
-	if n.Initialized() {
+	if showChannelNumber && n.Initialized() {
 		buffer.WriteString("[")
 		buffer.WriteString(strconv.FormatUint(n.ChannelID, 10))
 		buffer.WriteString("]")

@@ -522,6 +522,8 @@ func (f *CloseForm) Transition(process *Process, re *RuntimeEnvironment) {
 		}
 
 		TransitionBySending(process, process.Providers[0].Channel, clsRule, message, re)
+	} else {
+		re.error(process, "Found a close on a client. A process can only close itself.")
 	}
 }
 
@@ -878,8 +880,8 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// cast self<..>
 
 		cstRule := func(message Message) {
-			re.logProcess(LOGRULE, process, "[receive, client] starting CST rule")
-			re.logProcessf(LOGRULEDETAILS, process, "[receive, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
+			re.logProcess(LOGRULE, process, "[shift, client] starting CST rule")
+			re.logProcessf(LOGRULEDETAILS, process, "[shift, client] Received message on channel %s, containing rule: %s\n", f.from_c.String(), RuleString[message.Rule])
 
 			if message.Rule != CST {
 				re.error(process, "expected CST")
@@ -890,7 +892,7 @@ func (f *ShiftForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 			process.Body = new_body
 
-			process.finishedRule(CST, "[receive, client]", "(c)", re)
+			process.finishedRule(CST, "[shift, client]", "(c)", re)
 			process.transitionLoop(re)
 		}
 

@@ -21,7 +21,7 @@ type Modality interface {
 
 //           Unrestricted {W, C}             |
 //          <            >                   |
-//   Affine {W}            Replicable {W, C} |
+//   Affine {W}            Replicable {C} |
 //          >            <                   |
 //               Linear ø                   \/  Downshifts allowed in this direction (and vice versa for upshifts)
 //
@@ -90,7 +90,7 @@ func (q *UnrestrictedMode) Equals(other Modality) bool {
 	return same
 }
 
-// Replicable => {W, C}
+// Replicable => {C}
 type ReplicableMode struct{}
 
 func NewReplicableMode() *ReplicableMode {
@@ -110,7 +110,7 @@ func (q *ReplicableMode) AllowsContraction() bool {
 }
 
 func (q *ReplicableMode) AllowsWeakening() bool {
-	return true
+	return false
 }
 
 func (q *ReplicableMode) CanBeUpshiftedTo(toMode Modality) bool {

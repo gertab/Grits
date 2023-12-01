@@ -200,8 +200,6 @@ func TestTypecheckCorrectDrop(t *testing.T) {
 		prc[b] : 1 = drop a; close self`,
 		`assuming a : affine 1
 		prc[b] : 1 = drop a; close self`,
-		`assuming a : replicable 1
-		prc[b] : 1 = drop a; close self`,
 		`type A = 1 * 1
 		 type B = 1 * 1
 		 type G = &{a : 1}
@@ -221,8 +219,10 @@ func TestTypecheckIncorrectDrop(t *testing.T) {
 		"let f1() : 1 -* 1 = drop x; <x, y> <- recv self;  wait x; close y",
 		// Missed drop
 		"let f1(x : 1 * 1, g : &{a : 1}) : 1 * 1 = fwd self x",
-		// Cannot drop a linear name
+		// Cannot drop a non weakenable name
 		`assuming a : linear 1
+		prc[b] : 1 = drop a; close self`,
+		`assuming a : replicable 1
 		prc[b] : 1 = drop a; close self`,
 	}
 

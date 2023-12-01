@@ -1,13 +1,8 @@
 # Phi
 
-[*Phi is currently a placeholder for the name*]
+[*Phi is currently a placeholder for the language name*]
 
 Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
-
-## type system todo
-
-- [ ] split rule
-- [ ] add modalities (then check up/down shifting)
 
 ## How to build project
 
@@ -64,10 +59,10 @@ After building the project (using `go  build .`), you can use the CLI version...
 
 <branch_type> ::= <label> : <type_i> [ , <branch_type> ]        // labelled branches
 
-<modality> ::= u | unrestricted                                 // unresticted mode
-             | r | replicable                                   // replicable mode
-             | a | affine                                       // affine mode
-             | l | linear                                       // linear mode
+<modality> ::= u | unr | unrestricted                           // unresticted mode
+             | r | rep | replicable                             // replicable mode
+             | a | aff | affine                                 // affine mode
+             | l | lin | linear                                 // linear mode
 
 <term> ::= send <name> '<' <name> , <name> '>'                  // send names
         | '<' <name> , <name> '>' <- recv <name> ; <term>       // receive names
@@ -88,14 +83,14 @@ After building the project (using `go  build .`), you can use the CLI version...
 <names> ::= <name> [ ',' <names> ]                              // list of names
 
 <name> ::= 'self'                                               // provider channel[s]
-         | <label>                                              // channel name
-         | <polarity> label                                     // channel with explicit polarity
+         | <channel_name>                                       // channel name
+         | <polarity> <channel_name>                            // channel with explicit polarity
 
 <polarity> ::= +                                                // positive polarity
              | -                                                // negative polarity
 
 Others:
-    <name> refers to a channel
+    <name> refers to a channel called <channel_name> or 'self'
     <label> ia an alpha-numeric combination, representing a choice option
     // Single line comments
     /* Multi line comments */

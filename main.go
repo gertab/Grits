@@ -13,11 +13,28 @@ import (
 
 const program = `
 
-assuming a : linear 1 * 1
-prc[b] : 1 = drop a; close self
+
+
+
+type A = affine 1 * 1
+
+assuming x : A
+
+prc[a] : 1 = y <- shift b; drop y; close self
+prc[b] : affine \/ linear A = cast self<x>
+
+
+
+// Drop
+// assuming a : linear 1 * 1
+// prc[b] : 1 = drop a; close self
+
+// Split
+// prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
+// prc[x] : linear 1 = close self
 		
 
-// Double lolli
+// // Double lolli
 // prc[a] : 1             = send b<u, self>
 // prc[b] : (1 -* 1) -* 1 = <x, y> <- recv self; send x<z, y>
 // prc[u] : 1 -* 1        = <x, y> <- recv self; wait x; close y
@@ -423,7 +440,7 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-const development = true
+const development = false
 
 func main() {
 	// Flags

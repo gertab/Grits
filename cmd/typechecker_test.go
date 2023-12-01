@@ -194,6 +194,14 @@ func TestTypecheckCorrectDrop(t *testing.T) {
 	cases := []string{
 		// Drop
 		"let f1(x : 1 * 1, g : &{a : 1}) : 1 * 1 = drop g; fwd self x",
+		`assuming a : 1
+		prc[b] : 1 = drop a; close self`,
+		`assuming a : unrestricted 1
+		prc[b] : 1 = drop a; close self`,
+		`assuming a : affine 1
+		prc[b] : 1 = drop a; close self`,
+		`assuming a : replicable 1
+		prc[b] : 1 = drop a; close self`,
 		`type A = 1 * 1
 		 type B = 1 * 1
 		 type G = &{a : 1}
@@ -213,6 +221,9 @@ func TestTypecheckIncorrectDrop(t *testing.T) {
 		"let f1() : 1 -* 1 = drop x; <x, y> <- recv self;  wait x; close y",
 		// Missed drop
 		"let f1(x : 1 * 1, g : &{a : 1}) : 1 * 1 = fwd self x",
+		// Cannot drop a linear name
+		`assuming a : linear 1
+		prc[b] : 1 = drop a; close self`,
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -522,6 +533,10 @@ func TestTypecheckCorrectSplit(t *testing.T) {
 		// Split
 		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
 		 prc[x] : 1 = close self`,
+		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
+		 prc[x] : unrestricted 1 = close self`,
+		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
+		 prc[x] : replicable 1 = close self`,
 		`type A = 1 * 1
 		 prc[pid1] : 1 = <a, b> <- split +pid2;
 		 				 <a2, b2> <- recv a;
@@ -547,6 +562,10 @@ func TestTypecheckIncorrectSplit(t *testing.T) {
 		 prc[x] : 1 = close self`,
 		`let f(x: 1, y : 1) : 1 = <u, x> <- split y; wait x; close self`,
 		`let f(x: 1, y : 1) : 1 = <u1, u2> <- split y; wait x; close self`,
+		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
+		prc[x] : linear 1 = close self`,
+		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
+		prc[x] : affine 1 = close self`,
 	}
 
 	runThroughTypechecker(t, cases, false)

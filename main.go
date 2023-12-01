@@ -13,10 +13,15 @@ import (
 
 const program = `
 
-prc[a] : 1             = send b<u, self>
-prc[b] : (1 -* 1) -* 1 = <x, y> <- recv self; send x<z, y>
-prc[u] : 1 -* 1        = <x, y> <- recv self; wait x; close y
-prc[z] : 1             = close self
+assuming a : linear 1 * 1
+prc[b] : 1 = drop a; close self
+		
+
+// Double lolli
+// prc[a] : 1             = send b<u, self>
+// prc[b] : (1 -* 1) -* 1 = <x, y> <- recv self; send x<z, y>
+// prc[u] : 1 -* 1        = <x, y> <- recv self; wait x; close y
+// prc[z] : 1             = close self
 
 
 // type A = affine 1

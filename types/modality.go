@@ -164,7 +164,7 @@ func (q *AffineMode) Copy() Modality {
 }
 
 func (q *AffineMode) AllowsContraction() bool {
-	return true
+	return false
 }
 
 func (q *AffineMode) AllowsWeakening() bool {

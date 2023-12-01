@@ -19,6 +19,7 @@ type SessionTypeDefinition struct {
 type SessionType interface {
 	String() string
 	StringWithModality() string
+	StringWithOuterModality() string
 	Polarity() Polarity
 	Modality() Modality
 
@@ -57,6 +58,16 @@ func (q *LabelType) StringWithModality() string {
 	return buffer.String()
 }
 
+func (q *LabelType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.Label)
+	buffer.WriteString(" [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]")
+
+	return buffer.String()
+}
+
 func (q *LabelType) Modality() Modality {
 	return q.Mode
 }
@@ -82,6 +93,14 @@ func (q *UnitType) StringWithModality() string {
 	buffer.WriteString(q.Mode.String())
 	buffer.WriteString("]1")
 
+	return buffer.String()
+}
+
+func (q *UnitType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("1 [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]")
 	return buffer.String()
 }
 
@@ -116,13 +135,22 @@ func (q *SendType) String() string {
 
 func (q *SendType) StringWithModality() string {
 	var buffer bytes.Buffer
-	// buffer.WriteString("(")
 	buffer.WriteString(q.Left.StringWithModality())
 	buffer.WriteString(" [")
 	buffer.WriteString(q.Mode.String())
 	buffer.WriteString("]* ")
 	buffer.WriteString(q.Right.StringWithModality())
-	// buffer.WriteString(")")
+	return buffer.String()
+}
+
+func (q *SendType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.Left.String())
+	buffer.WriteString(" * ")
+	buffer.WriteString(q.Right.String())
+	buffer.WriteString(" [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]")
 	return buffer.String()
 }
 
@@ -167,6 +195,17 @@ func (q *ReceiveType) StringWithModality() string {
 	return buffer.String()
 }
 
+func (q *ReceiveType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.Left.String())
+	buffer.WriteString(" -* ")
+	buffer.WriteString(q.Right.String())
+	buffer.WriteString(" [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]")
+	return buffer.String()
+}
+
 func (q *ReceiveType) Modality() Modality {
 	return q.Mode
 }
@@ -201,6 +240,17 @@ func (q *SelectLabelType) StringWithModality() string {
 	return buffer.String()
 }
 
+func (q *SelectLabelType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("+{")
+	buffer.WriteString(stringifyBranches(q.Branches))
+	buffer.WriteString("}")
+	buffer.WriteString(" [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]")
+	return buffer.String()
+}
+
 func (q *SelectLabelType) Modality() Modality {
 	return q.Mode
 }
@@ -232,6 +282,17 @@ func (q *BranchCaseType) StringWithModality() string {
 	buffer.WriteString("&{")
 	buffer.WriteString(stringifyBranchesWithModalities(q.Branches))
 	buffer.WriteString("}")
+	return buffer.String()
+}
+
+func (q *BranchCaseType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("&{")
+	buffer.WriteString(stringifyBranches(q.Branches))
+	buffer.WriteString("}")
+	buffer.WriteString(" [")
+	buffer.WriteString(q.Mode.String())
+	buffer.WriteString("]")
 	return buffer.String()
 }
 
@@ -274,6 +335,16 @@ func (q *UpType) StringWithModality() string {
 	return buffer.String()
 }
 
+func (q *UpType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.From.String())
+	buffer.WriteString("/\\")
+	buffer.WriteString(q.To.String())
+	buffer.WriteString(" ")
+	buffer.WriteString(q.Continuation.String())
+	return buffer.String()
+}
+
 func (q *UpType) Modality() Modality {
 	return q.To
 }
@@ -310,6 +381,16 @@ func (q *DownType) StringWithModality() string {
 	buffer.WriteString(q.To.String())
 	buffer.WriteString(" ")
 	buffer.WriteString(q.Continuation.StringWithModality())
+	return buffer.String()
+}
+
+func (q *DownType) StringWithOuterModality() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(q.From.String())
+	buffer.WriteString("\\/")
+	buffer.WriteString(q.To.String())
+	buffer.WriteString(" ")
+	buffer.WriteString(q.Continuation.String())
 	return buffer.String()
 }
 
@@ -651,17 +732,12 @@ func LabelledTypedExists(labelledTypesEnv LabelledTypesEnv, key string) bool {
 
 // Weaenable types allow for channels to be dropped
 func IsWeakenable(sessionType SessionType) bool {
-	// todo implement
-	// fmt.Println("todo: IsWeakenable")
-
-	return true
+	return sessionType.Modality().AllowsWeakening()
 }
 
+// Contraction types allow for channels to be copied/splits
 func IsContractable(sessionType SessionType) bool {
-	// todo implement
-	// fmt.Println("todo: IsContractable")
-
-	return true
+	return sessionType.Modality().AllowsContraction()
 }
 
 // Used to unroll a type only if needed (i.e. reached label)

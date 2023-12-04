@@ -53,8 +53,8 @@ After building the project (using `go  build .`), you can use the CLI version...
            | & { <branch_type> }                                // external choice
            | <type_i> * <type_i>                                // send
            | <type_i> -* <type_i>                               // receive
-           | <madality> /\ <madality> <type_i>                  // upshift
-           | <madality> \/ <madality> <type_i>                  // downshift
+           | <modality> /\ <modality> <type_i>                  // upshift
+           | <modality> \/ <modality> <type_i>                  // downshift
            | ( <type_i> ) 
 
 <branch_type> ::= <label> : <type_i> [ , <branch_type> ]        // labelled branches

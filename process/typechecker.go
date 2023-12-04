@@ -491,7 +491,9 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		}
 
 		newLeftType := clientSendType.Left
+		newLeftType = types.Unfold(newLeftType, labelledTypesEnv)
 		newRightType := clientSendType.Right
+		newRightType = types.Unfold(newRightType, labelledTypesEnv)
 
 		if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
 			nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
@@ -552,6 +554,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			}
 
 			p.to_c.Type = providerSelectLabelType
+			continuationType = types.Unfold(continuationType, labelledTypesEnv)
 			p.continuation_c.Type = continuationType
 		} else {
 			return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), providerSelectLabelType.String())
@@ -777,15 +780,18 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return fmt.Errorf("function '%s' is undefined", p.body.String())
 			}
 
+			functionSignatureType := types.CopyType(functionSignature.Type)
+			functionSignatureType = types.Unfold(functionSignatureType, labelledTypesEnv)
+
 			// Typecheck the call function
-			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, functionSignature.Type, labelledTypesEnv, sigma, globalEnv)
+			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, functionSignatureType, labelledTypesEnv, sigma, globalEnv)
 
 			if callBodyError != nil {
 				return fmt.Errorf("problem in '%s': %s", p.StringShort(), callBodyError)
 			}
 
 			// Add new channel name to gamma
-			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: functionSignature.Type}
+			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: functionSignatureType}
 
 			// typecheck the continuation body
 			continuationError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
@@ -795,7 +801,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			}
 
 			// Set type
-			p.continuation_c.Type = functionSignature.Type
+			p.continuation_c.Type = functionSignatureType
 
 			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
 			if polarityError != nil {
@@ -814,6 +820,9 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			if p.continuation_c.Type == nil {
 				return fmt.Errorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
 			}
+
+			// Unfold if needed
+			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
 
 			// Modify the type of p.continuation_c to set its modalities
 			types.AddMissingModalities(&p.continuation_c.Type, labelledTypesEnv)

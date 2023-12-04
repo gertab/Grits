@@ -8,7 +8,7 @@ import (
 
 const (
 	showPolarities    = false
-	showChannelNumber = true
+	showChannelNumber = false
 	printTypes        = false
 )
 
@@ -135,6 +135,7 @@ func (n *Name) Copy() *Name {
 		ChannelID:        n.ChannelID,
 		IsSelf:           n.IsSelf,
 		ControlChannel:   n.ControlChannel,
+		Type:             types.CopyType(n.Type),
 		ExplicitPolarity: &new_pol,
 	}
 }
@@ -281,14 +282,13 @@ func (n *Name) Substitute(old, new Name) {
 			n.Ident = new.Ident
 			n.ChannelID = new.ChannelID
 		}
-	} else {
-		if n.Ident == old.Ident {
-			n.Ident = new.Ident
-			n.Channel = new.Channel
-			n.ChannelID = new.ChannelID
-			n.IsSelf = new.IsSelf
-			n.ControlChannel = new.ControlChannel
-			// n.Type = new.Type
-		}
+	} else if !n.Initialized() && n.Ident == old.Ident {
+		n.Ident = new.Ident
+		n.Channel = new.Channel
+		n.ChannelID = new.ChannelID
+		n.IsSelf = new.IsSelf
+		n.ControlChannel = new.ControlChannel
+		// n.Type = new.Type
+
 	}
 }

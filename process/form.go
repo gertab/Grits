@@ -404,10 +404,10 @@ func (p *NewForm) StringShort() string {
 }
 
 func (p *NewForm) Substitute(old, new Name) {
-	p.body.Substitute(old, new)
 
 	// continuation_c is a bound variable
 	if !p.continuation_c.Equal(old) {
+		p.body.Substitute(old, new)
 		p.continuation_e.Substitute(old, new)
 	}
 }
@@ -555,7 +555,7 @@ func (p *SplitForm) StringShort() string {
 func (p *SplitForm) Substitute(old, new Name) {
 	p.from_c.Substitute(old, new)
 
-	if p.channel_one.Equal(old) && p.channel_two.Equal(old) {
+	if !p.channel_one.Equal(old) && !p.channel_two.Equal(old) {
 		// channel_one: channel_one,
 		// channel_two: channel_two,
 		p.continuation_e.Substitute(old, new)

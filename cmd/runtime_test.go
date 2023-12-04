@@ -114,20 +114,56 @@ func TestSimpleMultipleFWD(t *testing.T) {
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
-func TestSimpleSPLITCUT(t *testing.T) {
-	// SPLIT + CUT + SND
+func TestSimpleSPLITCLS(t *testing.T) {
+	// SPLIT + CLS
 
-	input := ` 	/* SPLIT + CUT + SND rule */
-			prc[pid0] = <x1, x2> <- split +pid1; close self
-			prc[pid1] = x <- new (<a, b> <- recv pid2; close b); close self
-			prc[pid2] = send self<pid5, self>`
+	input := ` 	/* SPLIT + CLS rule */
+	prc[pid0] : 1 = <x1, x2> <- split +pid1; wait x1; wait x2; close self
+	prc[pid1] : 1 = close self`
 
 	expected := []traceOption{
+		{steps{{"pid0", process.CLS}, {"pid0", process.CLS}, {"pid0", process.SPLIT}, {"x1", process.DUP}, {"x1", process.FWD}}},
+	}
+
+	typecheck := false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestSimpleSPLITSND(t *testing.T) {
+	// SPLIT + SND
+
+	input := ` 	/* SPLIT + SND rule */
+	assuming pid5 : 1, pid6 : 1
+	prc[pid0] : 1 = <x1, x2> <- split +pid1; drop x1; drop x2; close self
+	prc[pid1] : 1 = <y1, y2> <- recv pid2; drop y1; drop y2; close self
+	prc[pid2] : 1 * 1 = send self<pid5, pid6>`
+
+	expected := []traceOption{
+		// pid0:DROP pid0:DROP pid0:SPLIT pid2:DUP pid2:FWD x1:SND x1:DROP x1:DROP x1:DUP x1:FWD x2:SND x2:DROP x2:DROP
+		{steps{{"pid0", process.DROP}, {"pid0", process.DROP}, {"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x1", process.SND}, {"x1", process.DROP}, {"x1", process.DROP}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.SND}, {"x2", process.DROP}, {"x2", process.DROP}}},
+
+		// pid0:DROP pid0:DROP pid0:SPLIT pid1:SND pid1:DROP pid1:DROP x1:DUP x1:FWD
+		{steps{{"pid0", process.DROP}, {"pid0", process.DROP}, {"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.DROP}, {"pid1", process.DROP}, {"x1", process.DUP}, {"x1", process.FWD}}},
+
+		// // pid0:DROP pid0:DROP pid0:SPLIT pid2:DUP pid2:FWD x1:DUP x1:FWD x2:SND x2:DROP x2:DROP
+		// {steps{{"pid0", process.DROP}, {"pid0", process.DROP}, {"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.SND}, {"x2", process.DROP}, {"x2", process.DROP}}},
+
+		// pid0:DROP pid0:DROP pid0:SPLIT pid1:SND x1:DROP x1:DROP x1:DUP x1:FWD x2:DROP x2:DROP
+		{steps{{"pid0", process.DROP}, {"pid0", process.DROP}, {"pid0", process.SPLIT}, {"pid1", process.SND}, {"x1", process.DROP}, {"x1", process.DROP}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.DROP}, {"x2", process.DROP}}},
+
+		// pid0:DROP pid0:DROP pid0:SPLIT pid1:SND pid1:DROP x1:DROP x1:DUP x1:FWD x2:DROP
+		{steps{{"pid0", process.DROP}, {"pid0", process.DROP}, {"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.DROP}, {"x1", process.DROP}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.DROP}}},
+
 		// Either the split finishes before the CUT/SND rules, so the entire tree gets DUPlicated first, thus SND happens twice
-		{steps{{"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x", process.SND}, {"x", process.SND}, {"x1", process.CUT}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.CUT}}},
+		// {steps{{"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x", process.SND}, {"x", process.SND}, {"x1", process.CUT}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.CUT}}},
+
+		// pid0:DROP pid0:DROP pid0:SPLIT pid1:CUT x:SND x:DROP x:DROP x:CALL x:DUP x:FWD x1:DUP x1:FWD x2:CLS
+		// {steps{{"pid0", process.DROP}, {"pid0", process.DROP}, {"pid0", process.SPLIT}, {"pid1", process.CUT}, {"x", process.SND}, {"x", process.DROP}, {"x", process.DROP}, {"x", process.CALL}, {"x", process.DUP}, {"x", process.FWD}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.CLS}}},
+		// pid0:DROP pid0:DROP pid0:SPLIT pid2:DUP pid2:FWD x:SND x:DROP x:DROP x:CALL x:CALL x1:CLS x1:CUT x1:DUP x1:FWD x2:CUT
+		// {steps{{"pid0", process.DROP}, {"pid0", process.DROP}, {"pid0", process.SPLIT}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x", process.SND}, {"x", process.DROP}, {"x", process.DROP}, {"x", process.CALL}, {"x", process.CALL}, {"x1", process.CLS}, {"x1", process.CUT}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.CUT}}},
 
 		// Or the SND takes place before the SPLIT/DUP, so only one SND is needed
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"x", process.SND}, {"x1", process.DUP}, {"x1", process.FWD}}},
+		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CUT}, {"x", process.SND}, {"x1", process.DUP}, {"x1", process.FWD}}},
 		// {steps{{"pid0", process.SPLIT}, {"pid2", process.SND}, {"pid2", process.FWD}, {"x1", process.CUT}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.CUT}}, 2},
 	}
 
@@ -212,9 +248,18 @@ func TestSimpleSPLITCALL(t *testing.T) {
 				prc[pid2] = send self<pid3, pid4>`
 
 	expected := []traceOption{
-		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
+		// pid0:SPLIT pid1:CALL pid2:DUP pid2:FWD x1:SND x1:DUP x1:FWD x2:SND
+		{steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x1", process.SND}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.SND}}},
+		// // pid0:SPLIT pid1:CALL pid2:DUP pid2:FWD x1:DUP x1:FWD x2:SND
+		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x1", process.DUP}, {"x1", process.FWD}, {"x2", process.SND}}},
+		// pid0:SPLIT pid1:SND pid1:CALL x1:DUP x1:FWD
 		{steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}, {"x1", process.DUP}, {"x1", process.FWD}}},
-		{steps{{"pid0", process.SPLIT}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.CALL}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
+		// // pid0:SPLIT pid1:CALL pid2:DUP pid2:FWD x1:SND x1:DUP x1:FWD
+		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.DUP}, {"pid2", process.FWD}, {"x1", process.SND}, {"x1", process.DUP}, {"x1", process.FWD}}},
+
+		// {steps{{"pid0", process.SPLIT}, {"pid1", process.CALL}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
+		// {steps{{"pid0", process.SPLIT}, {"pid1", process.SND}, {"pid1", process.CALL}, {"x1", process.DUP}, {"x1", process.FWD}}},
+		// {steps{{"pid0", process.SPLIT}, {"pid2", process.FWD}, {"pid2", process.DUP}, {"x1", process.SND}, {"x1", process.CALL}, {"x1", process.FWD}, {"x1", process.DUP}, {"x2", process.SND}}},
 	}
 
 	typecheck := false
@@ -254,7 +299,19 @@ func TestSimpleDUP(t *testing.T) {
 		prc[y] = close self`
 
 	expected := []traceOption{
+		//  a:DUP m:SND m:CLS m:CLS n:SND n:CLS n:CLS o:SND o:CLS o:CLS p:SND p:CLS p:CLS x:DUP x:FWD y:DUP y:FWD
 		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+
+		// // a:DUP m:SND n:SND n:CLS n:CLS o:SND p:SND x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"p", process.SND}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+		// // a:DUP m:SND m:CLS m:CLS n:SND o:SND p:SND x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"o", process.SND}, {"p", process.SND}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+		// // a:DUP m:SND n:SND o:SND o:CLS o:CLS p:SND x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"n", process.SND}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+		// // a:DUP m:SND n:SND o:SND p:SND p:CLS p:CLS x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"n", process.SND}, {"o", process.SND}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
 	}
 
 	typecheck := false
@@ -279,6 +336,19 @@ func TestSimpleDUPTyping(t *testing.T) {
 		prc[y] : B = close self`
 
 	expected := []traceOption{
+
+		// // a:DUP m:SND n:SND n:CLS n:CLS o:SND p:SND x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"p", process.SND}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+
+		// // a:DUP m:SND m:CLS m:CLS n:SND o:SND p:SND x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"o", process.SND}, {"p", process.SND}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+
+		// // a:DUP m:SND n:SND o:SND o:CLS o:CLS p:SND x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"n", process.SND}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+
+		// // a:DUP m:SND n:SND o:SND p:SND p:CLS p:CLS x:DUP x:FWD y:DUP y:FWD
+		// {steps{{"a", process.DUP}, {"m", process.SND}, {"n", process.SND}, {"o", process.SND}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
+
 		{steps{{"a", process.DUP}, {"m", process.SND}, {"m", process.CLS}, {"m", process.CLS}, {"n", process.SND}, {"n", process.CLS}, {"n", process.CLS}, {"o", process.SND}, {"o", process.CLS}, {"o", process.CLS}, {"p", process.SND}, {"p", process.CLS}, {"p", process.CLS}, {"x", process.DUP}, {"x", process.FWD}, {"y", process.DUP}, {"y", process.FWD}}},
 	}
 

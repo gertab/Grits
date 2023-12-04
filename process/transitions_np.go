@@ -248,6 +248,8 @@ func (f *NewForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 		// First create fresh channel (with fake identity of the continuation_c name) to link both processes
 		newChannel := re.CreateFreshChannel(newChannelIdent)
+		newChannel.Type = types.CopyType(f.continuation_c.Type)
+		newChannel.ExplicitPolarity = f.continuation_c.ExplicitPolarity
 
 		// Substitute reference to this new channel by the actual channel in the current process and new process
 		currentProcessBody := f.continuation_e
@@ -368,7 +370,7 @@ func (f *CaseForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 			re.logProcessf(LOGRULEDETAILS, process, "[case, client] received select label %s on channel %s, containing rule: %s\n", message.Label, f.from_c.String(), RuleString[message.Rule])
 
 			if message.Rule != SEL {
-				re.error(process, "expected SEL ")
+				re.errorf(process, "expected SEL got %s", RuleString[message.Rule])
 			}
 
 			// Match received label with the available branches
@@ -649,12 +651,8 @@ func (process *Process) performDUPruleNP(re *RuntimeEnvironment) {
 
 		re.logProcessf(LOGRULEDETAILS, process, "[DUP] creating new process (%d): %s\n", i, newDuplicatedProcess.String())
 
-		// Need to spawn the new duplicated processes except the first one (since it's already running in its own thread)
-		if i > 0 {
-			newDuplicatedProcess.SpawnThenTransitionNP(re)
-		} else {
-			process = newDuplicatedProcess
-		}
+		// Need to spawn the new duplicated processes
+		newDuplicatedProcess.SpawnThenTransitionNP(re)
 	}
 
 	// Create and launch the forward processes to connect the free names (which will implicitly force a chain of further duplications)
@@ -672,7 +670,8 @@ func (process *Process) performDUPruleNP(re *RuntimeEnvironment) {
 
 	// todo remove // Current process has been duplicated, so remove the duplication requirements to continue executing its body [i.e. become interactive]
 	// process.OtherProviders = []Name{}
-	process.transitionLoopNP(re)
+	// process.transitionLoopNP(re)
+	process.terminate(re)
 }
 
 func (f *CastForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
@@ -786,7 +785,7 @@ func (f *PrintLForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of printl: %s\n", f.String())
 
 	printRule := func() {
-		fmt.Printf("Output from %s: %s\n", NamesToString(process.Providers), f.label.String())
+		fmt.Printf("> %s\n", f.label.String())
 		process.finishedRule(PRINT, "[printl]", "", re)
 
 		process.Body = f.continuation_e

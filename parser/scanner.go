@@ -204,6 +204,9 @@ func (s *scanner) scanLabel(ch rune) (token tok, value string, startPos, endPos 
 	case "print":
 		// Debug keyword
 		return PRINT, buf.String(), startPos, endPos
+	case "printl":
+		// Debug keyword
+		return PRINTL, buf.String(), startPos, endPos
 	}
 	return LABEL, buf.String(), startPos, endPos
 }

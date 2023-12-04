@@ -251,7 +251,7 @@ func (p *BranchForm) StringShort() string {
 
 func (p *BranchForm) Substitute(old, new Name) {
 	// payload_c is a bound variable
-	if p.payload_c.Equal(old) {
+	if !p.payload_c.Equal(old) {
 		p.continuation_e.Substitute(old, new)
 	}
 }
@@ -404,10 +404,10 @@ func (p *NewForm) StringShort() string {
 }
 
 func (p *NewForm) Substitute(old, new Name) {
-	// continuation_c is a bound variable
+	p.body.Substitute(old, new)
 
+	// continuation_c is a bound variable
 	if !p.continuation_c.Equal(old) {
-		p.body.Substitute(old, new)
 		p.continuation_e.Substitute(old, new)
 	}
 }
@@ -897,6 +897,50 @@ func (p *PrintForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironmen
 	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
+// PrintL: printl name_c
+// Used to printl channel name for debugging purposes
+type PrintLForm struct {
+	label          Label
+	continuation_e Form
+}
+
+func NewPrintL(label Label, continuation_e Form) *PrintLForm {
+	return &PrintLForm{
+		label:          label,
+		continuation_e: continuation_e,
+	}
+}
+
+func (p *PrintLForm) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("printl ")
+	buf.WriteString(p.label.String())
+	buf.WriteString("; ")
+	buf.WriteString(p.continuation_e.String())
+	return buf.String()
+}
+
+func (p *PrintLForm) StringShort() string {
+	var buf bytes.Buffer
+	buf.WriteString("printl ")
+	buf.WriteString(p.label.String())
+	buf.WriteString("; ...")
+	return buf.String()
+}
+
+func (p *PrintLForm) Substitute(old, new Name) {
+	p.continuation_e.Substitute(old, new)
+}
+
+func (p *PrintLForm) FreeNames() []Name {
+	return p.continuation_e.FreeNames()
+}
+
+func (p *PrintLForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+	// Lookup polarity from the continuation
+	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
+}
+
 // Check equality between different forms
 func EqualForm(form1, form2 Form) bool {
 	a := reflect.TypeOf(form1)
@@ -1031,6 +1075,13 @@ func EqualForm(form1, form2 Form) bool {
 		if ok1 && ok2 {
 			return f1.name_c.Equal(f2.name_c) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
+	case *PrintLForm:
+		f1, ok1 := form1.(*PrintLForm)
+		f2, ok2 := form2.(*PrintLForm)
+
+		if ok1 && ok2 {
+			return f1.label.Equal(f2.label) && EqualForm(f1.continuation_e, f2.continuation_e)
+		}
 	}
 
 	fmt.Printf("todo implement EqualForm for type %s\n", a)
@@ -1044,18 +1095,18 @@ func CopyForm(orig Form) Form {
 	case *SendForm:
 		p, ok := orig.(*SendForm)
 		if ok {
-			return NewSend(p.to_c, p.payload_c, p.continuation_c)
+			return NewSend(*p.to_c.Copy(), *p.payload_c.Copy(), *p.continuation_c.Copy())
 		}
 	case *ReceiveForm:
 		p, ok := orig.(*ReceiveForm)
 		if ok {
 			cont := CopyForm(p.continuation_e)
-			return NewReceive(p.payload_c, p.continuation_c, p.from_c, cont)
+			return NewReceive(*p.payload_c.Copy(), *p.continuation_c.Copy(), *p.from_c.Copy(), cont)
 		}
 	case *SelectForm:
 		p, ok := orig.(*SelectForm)
 		if ok {
-			return NewSelect(p.to_c, p.label, p.continuation_c)
+			return NewSelect(*p.to_c.Copy(), p.label, *p.continuation_c.Copy())
 		}
 	case *CaseForm:
 		p, ok := orig.(*CaseForm)
@@ -1067,81 +1118,84 @@ func CopyForm(orig Form) Form {
 				branches[i] = b
 			}
 
-			return NewCase(p.from_c, branches)
+			return NewCase(*p.from_c.Copy(), branches)
 		}
 
 	case *BranchForm:
 		p, ok := orig.(*BranchForm)
 		if ok {
 			cont := CopyForm(p.continuation_e)
-			return NewBranch(p.label, p.payload_c, cont)
+			return NewBranch(p.label, *p.payload_c.Copy(), cont)
 		}
 	case *CloseForm:
 		p, ok := orig.(*CloseForm)
 		if ok {
-			return NewClose(p.from_c)
+			return NewClose(*p.from_c.Copy())
 		}
 	case *NewForm:
 		p, ok := orig.(*NewForm)
 		if ok {
 			body := CopyForm(p.body)
 			cont := CopyForm(p.continuation_e)
-			return NewNew(p.continuation_c, body, cont)
+			return NewNew(*p.continuation_c.Copy(), body, cont)
 		}
 	case *ForwardForm:
 		p, ok := orig.(*ForwardForm)
 		if ok {
-			return NewForward(p.to_c, p.from_c)
+			return NewForward(*p.to_c.Copy(), p.from_c)
 		}
 	case *SplitForm:
 		p, ok := orig.(*SplitForm)
 		if ok {
 			cont := CopyForm(p.continuation_e)
-			return NewSplit(p.channel_one, p.channel_two, p.from_c, cont)
+			return NewSplit(*p.channel_one.Copy(), *p.channel_two.Copy(), *p.from_c.Copy(), cont)
 		}
 	case *CallForm:
 		p, ok := orig.(*CallForm)
 		if ok {
 			copiedParameters := make([]Name, len(p.parameters))
-			copy(copiedParameters, p.parameters)
+			for i := 0; i < len(p.parameters); i++ {
+				copiedParameters[i] = *p.parameters[i].Copy()
+			}
 			return NewCall(p.functionName, copiedParameters)
 		}
 	case *WaitForm:
 		p, ok := orig.(*WaitForm)
 		if ok {
 			body := CopyForm(p.continuation_e)
-			return NewWait(p.to_c, body)
+			return NewWait(*p.to_c.Copy(), body)
 		}
 	case *CastForm:
 		p, ok := orig.(*CastForm)
 		if ok {
-			return NewCast(p.to_c, p.continuation_c)
+			return NewCast(*p.to_c.Copy(), p.continuation_c)
 		}
 	case *ShiftForm:
 		p, ok := orig.(*ShiftForm)
 		if ok {
 			cont := CopyForm(p.continuation_e)
-			return NewShift(p.continuation_c, p.from_c, cont)
+			return NewShift(*p.continuation_c.Copy(), *p.from_c.Copy(), cont)
 		}
 	case *DropForm:
 		p, ok := orig.(*DropForm)
 		if ok {
 			body := CopyForm(p.continuation_e)
-			return NewDrop(p.client_c, body)
+			return NewDrop(*p.client_c.Copy(), body)
 		}
 	// Debug
 	case *PrintForm:
 		p, ok := orig.(*PrintForm)
 		if ok {
-			return NewPrint(p.name_c, p.continuation_e)
+			return NewPrint(*p.name_c.Copy(), CopyForm(p.continuation_e))
+		}
+	case *PrintLForm:
+		p, ok := orig.(*PrintLForm)
+		if ok {
+			return NewPrintL(p.label, CopyForm(p.continuation_e))
 		}
 	}
 
-	// todo panic
-	fmt.Print("todo: Should not happen")
-	panic("Should not happen")
-
-	// return nil
+	panic("modify CopyForm to handle new type")
 }
 
 // Return true if the given for has continuation expression, or false otherwise (i.e. follows an axiomatic rule)

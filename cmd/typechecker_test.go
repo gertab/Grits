@@ -287,6 +287,10 @@ func TestTypecheckCorrectBranch(t *testing.T) {
 						 close y
 						//  close self
 		) `,
+		`type bin = &{label1 : 1, label2 : 1}
+		 let f(a : 1) : bin = 
+				case self ( label1<c> => wait a; close c
+						  | label2<c> => drop a; close c)`,
 		// IChoiceL
 		"let f1(x : +{label1 : 1}) : 1 = case x (label1<a> => wait a; close self)",
 		`let f2(x : +{label1 : 1, label2 : 1, label3 : 1}) : 1 =
@@ -341,6 +345,10 @@ func TestTypecheckIncorrectBranch(t *testing.T) {
 							wait yy;
 							close self
 			)`,
+		`type bin = &{label1 : 1, label2 : 1}
+		 let f(a : 1) : bin = 
+				case self ( label1<c> => wait a; close c
+							| label2<c> => close c)`,
 	}
 
 	runThroughTypechecker(t, cases, false)

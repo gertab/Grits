@@ -271,6 +271,7 @@ const (
 	// Other actions
 	FWD
 	PRINT
+	PRINTL
 )
 
 type Action int
@@ -296,8 +297,9 @@ var RuleString = map[Rule]string{
 
 	DUP: "DUP",
 
-	FWD:   "FWD",
-	PRINT: "PRINT",
+	FWD:    "FWD",
+	PRINT:  "PRINT",
+	PRINTL: "PRINTL",
 }
 
 type ControlMessage struct {

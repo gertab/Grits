@@ -27,7 +27,7 @@ import (
 	polarity 		      types.Polarity
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW UP_ARROW DOWN_ARROW  EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
+%token LABEL LEFT_ARROW RIGHT_ARROW UP_ARROW DOWN_ARROW  EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PRINTL PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
 %type <strval> LABEL
 %type <statements> statements 
 %type <common_type> process_def
@@ -126,7 +126,9 @@ expression : /* Send */ SEND name LANGLE name COMMA name RANGLE
 		   | /* Brackets */ LPAREN expression RPAREN
 					{ $$ = $2 }
 		   | /* Print - for output */ PRINT name SEQUENCE expression
-		   			{ $$ = process.NewPrint($2, $4) };
+		   			{ $$ = process.NewPrint($2, $4) }
+		   | /* PrintL - for output */ PRINTL LABEL SEQUENCE expression
+		   			{ $$ = process.NewPrintL(process.Label{L: $2}, $4) };
 /* remaining expressions - used for shared processes
 	SNew, Acquire, Accept, Push, Detach, Release*/
  

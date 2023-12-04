@@ -623,7 +623,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !branchCaseTypeOk {
 			// wrong type, expected &{...}
-			return fmt.Errorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.String(), providerType.String())
+			return fmt.Errorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.StringShort(), providerType.String())
 		}
 
 		labelsChecked := []string{}
@@ -647,7 +647,10 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 				return polarityError
 			}
 
-			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, &curBranchForm.payload_c, expectedBranchType.SessionType, labelledTypesEnv, sigma, globalEnv)
+			// Copy gamma so that each branch has its own version
+			newGammaNameTypesCtx := copyContext(gammaNameTypesCtx)
+
+			continuationError := curBranchForm.continuation_e.typecheckForm(newGammaNameTypesCtx, &curBranchForm.payload_c, expectedBranchType.SessionType, labelledTypesEnv, sigma, globalEnv)
 
 			if continuationError != nil {
 				return continuationError
@@ -657,7 +660,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		if len(labelsChecked) < len(providerBranchCaseType.Branches) {
 			labels := extractUnusedLabels(providerBranchCaseType.Branches, labelsChecked)
 
-			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, providerBranchCaseType.String(), p.String())
+			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, providerBranchCaseType.String(), p.StringShort())
 		}
 
 		// Set type of case
@@ -668,7 +671,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+			return fmt.Errorf("error in %s; %s", p.StringShort(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -677,7 +680,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !clientTypeOk {
 			// wrong type, expected +{...}
-			return fmt.Errorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.String(), clientType.String())
+			return fmt.Errorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.StringShort(), clientType.String())
 		}
 
 		labelsChecked := []string{}
@@ -693,8 +696,11 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 				return fmt.Errorf("case labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), clientSelectLabelType.String())
 			}
 
+			// Copy gamma so that each branch has its own version
+			newGammaNameTypesCtx := copyContext(gammaNameTypesCtx)
+
 			// curBranchForm.payload_c cannot exist in gammaNameTypesCtx
-			gammaNameTypesCtx[curBranchForm.payload_c.Ident] = NamesType{Type: expectedBranchType.SessionType}
+			newGammaNameTypesCtx[curBranchForm.payload_c.Ident] = NamesType{Type: expectedBranchType.SessionType}
 
 			// Set type
 			curBranchForm.payload_c.Type = expectedBranchType.SessionType
@@ -704,7 +710,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 				return polarityError
 			}
 
-			continuationError := curBranchForm.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
+			continuationError := curBranchForm.continuation_e.typecheckForm(newGammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
 
 			if continuationError != nil {
 				return continuationError
@@ -714,7 +720,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		if len(labelsChecked) < len(clientSelectLabelType.Branches) {
 			labels := extractUnusedLabels(clientSelectLabelType.Branches, labelsChecked)
 
-			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, clientSelectLabelType.String(), p.String())
+			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, clientSelectLabelType.String(), p.StringShort())
 		}
 
 		// Set type of case
@@ -1362,6 +1368,15 @@ func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	return continuationError
 }
 
+func (p *PrintLForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+	// Print
+	globalEnv.log(LOGRULEDETAILS, "rule PRINTL")
+
+	// Continue checking the remaining process
+	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
+	return continuationError
+}
+
 /////////////////////////////////////////////////////
 ///////////////// Fixed Environment /////////////////
 /////////////////////////////////////////////////////
@@ -1410,6 +1425,16 @@ func produceNameTypesCtx(names []Name) NamesTypesCtx {
 func nameTypeExists(namesTypesCtx NamesTypesCtx, key string) bool {
 	_, ok := namesTypesCtx[key]
 	return ok
+}
+
+// Deep copies a map
+func copyContext(orig NamesTypesCtx) NamesTypesCtx {
+	copy := make(NamesTypesCtx)
+	for k, v := range orig {
+		copy[k] = v
+	}
+
+	return copy
 }
 
 // /// Util functions

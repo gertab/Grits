@@ -8,7 +8,7 @@ import (
 
 const (
 	showPolarities    = false
-	showChannelNumber = false
+	showChannelNumber = true
 	printTypes        = false
 )
 

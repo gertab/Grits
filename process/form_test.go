@@ -25,7 +25,7 @@ func assertEqualNames(t *testing.T, got []Name, expected []Name) {
 	}
 
 	for index := range got {
-		if got[index] != expected[index] {
+		if !got[index].Equal(expected[index]) {
 			// t.Errorf("got %s, expected %s\n", "sa", "de")
 			t.Errorf("got %s, expected %s\n", got[index].String(), expected[index].String())
 		}

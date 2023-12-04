@@ -915,6 +915,20 @@ func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
 	TransitionInternally(process, printRule, re)
 }
 
+func (f *PrintLForm) Transition(process *Process, re *RuntimeEnvironment) {
+	re.logProcessf(LOGRULEDETAILS, process, "transition of printl: %s\n", f.String())
+
+	printRule := func() {
+		fmt.Printf("Output from %s: %s\n", NamesToString(process.Providers), f.label.String())
+		process.finishedRule(PRINTL, "[printl]", "", re)
+
+		process.Body = f.continuation_e
+		process.transitionLoop(re)
+	}
+
+	TransitionInternally(process, printRule, re)
+}
+
 // To keep the log/monitor update with the currently running processes and the transition rules
 // being performed, there are the following functions:
 //

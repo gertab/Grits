@@ -1,0 +1,164 @@
+
+// Examples from the sax language
+
+type bin = +{b0 : bin, b1 : bin, e : 1}
+type list = +{cons : bin * list, nil : 1}
+
+// proc append (R : list) (L : list) (K : list) =
+//   recv L ( 'cons(x,L') => R' <- call append R' L' K ;
+//                           send R 'cons(x,R')
+//          | 'nil() => fwd R K )
+
+
+let append(L : list, K : list) : list =
+  case L ( cons<c> => 
+                <x, L2> <- recv c;
+                R <- new append(L2, K);
+                zz : bin * list <- new (send self<x, R>);
+                self.cons<zz>
+         | nil<c> => wait c; 
+                     fwd self K)
+
+let append2(L : list, K : list) : list =
+  case L ( cons<p> => 
+                <x, L2> <- recv p;
+                R2 <- new append2(L2, K);
+                p2 : bin * list <- new send p2<x, R2>;
+                self.cons<p2>  
+         | nil<u> => 
+                wait u; 
+                fwd self K)
+
+// Nil list
+let nilList() : list = 
+  c : 1 <- new close self;
+  self.nil<c>
+
+let append123() : list =
+  n12 : 1 <- new close self;
+  n11 : bin <- new self.e<n12>;
+  n1 : bin <- new self.b1<n11> ;   // n1: 'b1 'e
+
+  n23 : 1 <- new close self;
+  n22 : bin <- new self.e<n23>;
+  n21 : bin <- new self.b1<n22>;
+  n2 : bin <- new self.b0<n21>;             // n2: 'b0 'b1 'e
+
+  lnil11 <- new nilList();
+  l11 : bin * list <- new send self<n1, lnil11>;
+  l1 : list <- new self.cons<l11>;          // l1 : cons(n1, nil)    
+ 
+  lnil21 <- new nilList();
+  l21 : bin * list <- new send self<n2, lnil21>;
+  l2 : list <- new self.cons<l21>;          // l2 : cons(n2, nil)
+
+ // lnil <- new nilList();
+ // lres21 : bin * list <- new send self<n2, lnil>;
+ // lres2 : list <- new self.cons<lres21>;          // l2 : cons(n2, nil)
+ // lres1 : bin * list <- new send self<n1, lres2>;
+ // lres : list <- new self.cons<lres1>;          // lres : cons(n1, cons(n2, nil))
+ // 
+ // fwd self lres
+  
+   x <- new append(l1, l2);        // result : cons(n1, cons(n2, nil))
+
+   <x1, x2> <- split x;
+
+   y <- new append(x1, x2);
+
+   fwd self y
+
+
+//  n33 : 1 <- new close self;
+//  n32 : bin <- new self.e<n33>;
+//  n31 : bin <- new self.b1<n32>;
+//  n3 : bin <- new self.b1<n31>;             // n3: 'b1 'b1 'e
+//
+//  lnil1 <- new nilList();                   // lnil1 : nil
+//  l32 : bin * list <- new send self<n3, lnil1>;
+//  l3 : list <- new self.cons<l32>;          // l3 : cons(n3, lnil1)
+//  l42 : bin * list <- new send self<n2, l3>;
+//  l4 : list <- new self.cons<l42>;          // l4 : cons(n2, l3)
+//
+//  lnil2 <- new nilList();                   // lnil1 : nil
+//  l12 : bin * list <- new send self<n1, lnil2>;
+//  l1 : list <- new self.cons<l12>;          // l1: cons(n1, lnil2)
+//
+//  // fwd self l1
+//
+//  append(l1, l4)
+//  
+
+let getBin() : bin =
+  n13 : 1 <- new close self;
+  n12 : bin <- new self.e<n13>;
+  n11 : bin <- new self.b1<n12>;
+  n1 : bin <- new self.b0<n11>;            // 'b0 'b1 'e
+  fwd self n1
+
+let getOtherBin() : bin =
+  n13 : 1 <- new close self;
+  n11 : bin <- new self.e<n13>;
+  n1 : bin <- new self.b1<n11>;            // 'b1 'e
+  fwd self n1
+
+let getList() : list =
+  n1 <- new getOtherBin();
+  n2 <- new getBin();
+  lnil <- new nilList();
+  lres21 : bin * list <- new send self<n2, lnil>;
+  lres2 : list <- new self.cons<lres21>;            // lres2 : cons(n2, nil)
+  lres1 : bin * list <- new send self<n1, lres2>;
+  lres : list <- new self.cons<lres1>;              // lres : cons(n1, cons(n2, nil))
+  fwd self lres
+
+
+// cons(n1, nil)
+let getListN1() : list =
+  n1 <- new getOtherBin();
+  lnil <- new nilList();
+  lres1 : bin * list <- new send self<n1, lnil>;
+  self.cons<lres1>
+
+// cons(n2, nil)
+let getListN2() : list =
+  n2 <- new getBin();
+  lnil <- new nilList();
+  lres21 : bin * list <- new send self<n2, lnil>;
+  self.cons<lres21> 
+
+let appendN1N2() : list =
+    n1 <- new getListN1();          // cons('b1 'e, nil)
+    n2 <- new getListN2();          // cons('b0 'b1 'e, nil)
+    nappend <- new append2(n1, n2);
+    fwd self nappend
+
+
+let consumeBin(b : bin) : 1 = 
+        case b ( b0<c> => printl b0; consumeBin(c)
+               | b1<c> => printl b1; consumeBin(c)
+               | e<c>  => printl e; wait c; close self)
+
+let consumeList(l : list) : 1 = 
+        case l ( cons<c> => printl cons;
+                            <b, L2> <- recv c;
+                            bConsume <- new consumeBin(b);
+                            wait bConsume;
+                            consumeList(L2)
+               | nil<c>  => printl nil;
+                            wait c;
+                            close self)
+
+prc[a] : list = append123()
+// consume result/list
+prc[b] : 1 = yy <- new consumeList(a); 
+			wait yy;
+			printl okkkkkk;
+			close self
+
+
+// prc[a] : bin = getBin()
+// prc[b] : 1 = consumeBin(a) // consume result
+
+// prc[a] : list = appendN1N2()
+// prc[b] : 1 = consumeList(a) // consume result

@@ -1,0 +1,169 @@
+// Examples from 'A Message-Passing Interpretation of Adjoint Logic'
+
+// Example 1
+
+type A = 1 * 1
+type B = 1
+let eg1(x : A * B) : B * A  = <y, x'> <- recv x; send self<x', y>
+
+
+// Example 2
+type A2 = 1
+type B2 = 1
+
+let eg2(x : +{left : A2, right : B2}, y : &{left : A2, right : B2}) : A2 * B2  = 
+    case x (
+        left<x'>  => y' : B2 <- new y.right<self>;
+                     send self<x', y'>
+      | right<x'> => y' : A2 <- new y.left<self>;
+                     send self<y', x'>
+    )
+
+
+
+// Example 3
+type A3 = 1
+type B3 = 1
+
+type C3 = &{left : A3, right : B3}
+
+let eg3(p : C3) : A3 * B3 = 
+    q : C3 <- new fwd self p;
+    <p1, p2> <- split q;
+    x : A3 <- new p1.left<self>;
+    y : B3 <- new p2.right<self>;
+    send self<x, y>
+
+// Example 4
+type A4 = affine 1
+type B4 = affine 1
+
+let eg4(x : affine A4 * B4) : affine &{left : A4, right : B4} =
+    case self (
+        left<p1>  => <y, z> <- recv x; 
+                     drop z;
+                     fwd p1 y
+      | right<p2> => <y, z> <- recv x; 
+                     drop y;
+                     fwd p2 z
+    )
+
+// Example 5
+// Taking mode k as linear, and m as affine
+
+// type A5 = affine 1
+// type B5 = affine 1
+// 
+// let eg5(f : affine \/ linear (A5 -* B5)) : (affine \/ linear A5) -* (affine \/ linear B5) = 
+//     <x, y> <- recv self;
+//     w <- shift f;
+//     v <- shift x;
+//     z : affine \/ linear B5 <- new cast y<self>; /*problem due to y referring to old self*/
+//     send w<v, z>
+type A5 = affine 1
+type B5 = affine 1 * 1
+
+let eg5(f : affine \/ linear (A5 -* B5)) : (affine \/ linear A5) -* (affine \/ linear B5) = 
+    <x, y> <- recv self;
+    w <- shift f;
+    v <- shift x;
+    z : B5 <- new send w<v, z>; /*fixed problem by changing order*/
+    cast y<z>
+
+// Example 6 (reverse direction)
+
+type A6 = 1
+type B6 = 1
+type C6 = 1
+
+let eg6(y : &{left : A6 -* C6, right : B6 -* C6}) : (+{left : A6, right : B6} -* C6) = 
+    <ab, c> <- recv self;
+    case ab (
+          left<a>  => ac : A6 -* C6 <- new y.left<self>;
+                      send ac<a, c>
+        | right<b> => bc : B6 -* C6 <- new y.right<self>;
+                      send bc<b, c>
+    )
+
+
+
+
+// Example 8 
+
+// Run using
+// go run . -verbosity 2 ./examples/paper_examples.phi
+
+// prc[b] : affine &{left : A4, right : B4} = eg4(x)
+// prc[x] : affine A4 * B4 = send self<g, h>
+// prc[g] : affine A4 = close self
+// prc[h] : affine B4 = close self
+
+//  /* consume a */
+// prc[otherSide] : A4 = b.left<self> 
+
+
+
+
+// Example 9 (Circuits)
+// type bits = +{b0 : bits, b1 : bits}
+// let nor(x : bits, y : bits) : bits = 
+//     case x (
+//           b0<x'> => case y (
+//                           b0<y'> => z' : bits <- new (self.b1<z'>); // problem with multiple selfs (inc z')
+//                                     nor(z', x', y')
+//                         | b1<y'> => z' : bits <- new (self.b0<z'>); // same
+//                                     nor(z', x', y')
+//                     ) 
+//         | b1<x'> => case y (
+//                           b0<y'> => z' : bits <- new (self.b0<z'>); // same
+//                                     nor(z', x', y')
+//                         | b1<y'> => z' : bits <- new (self.b0<z'>); // same
+//                                     nor(z', x', y')
+//                     ) 
+//     )
+// Example 9 (Circuits - slightly modified)
+type bits = +{b0 : bits, b1 : bits}
+let nor(x : bits, y : bits) : bits = 
+    case x (
+          b0<x'> => case y (
+                          b0<y'> => z' <- new nor(x', y');
+                                    self.b1<z'> // problem with multiple selfs (inc z')
+                                    
+                        | b1<y'> => z' <- new nor(x', y');
+                                    self.b0<z'>
+                    ) 
+        | b1<x'> => case y (
+                          b0<y'> => z' <- new nor(x', y');
+                                    self.b0<z'>
+                        | b1<y'> => z' <- new nor(x', y');
+                                    self.b0<z'>
+                    ) 
+    )
+
+let or(x : bits, y : bits) : bits = 
+    w <- new nor(x, y);
+    <u, u'> <- split w;
+    nor(u, u')
+
+//// Example 10
+//type A10 = linear 1
+//type B10 = linear 1
+//
+//type bitsL = linear +{b0 : bitsL, b1 : bitsL}
+//
+//type list = linear +{cons : bitsL * list, nil : 1}
+//
+//let map(f : unrestricted (A10 -* B10), l : list) : list =
+//    case l (
+//          cons<l'> => <x, l''> <- recv l';
+//                      f''' <- new fwd self f;
+//                      <f', f''> <- split f''';
+//                      f' <- shift f'; // this should be its own separate process
+//                      y : B10 <- new send f'<x, y>;
+//                    
+//                      k' <- new ...
+//                      
+//                      k.cons<k'>
+//
+//        | nil<l'>  => 
+//    )

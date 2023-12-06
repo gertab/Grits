@@ -93,7 +93,11 @@ func isUnderscore(ch rune) bool {
 	return ch == '_'
 }
 
-func isNameSymbols(ch rune) bool {
-	return ch == '_'
-	//  || ch == '-'
+func isApostrophe(ch rune) bool {
+	return ch == '\''
 }
+
+// func isNameSymbols(ch rune) bool {
+// 	return ch == '_'
+// 	//  || ch == '-'
+// }

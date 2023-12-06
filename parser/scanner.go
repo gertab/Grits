@@ -128,7 +128,7 @@ func (s *scanner) scanLabel(ch rune) (token tok, value string, startPos, endPos 
 	for {
 		if ch := s.read(); ch == eof {
 			break
-		} else if !isAlphaNum(ch) && !isNameSymbols(ch) {
+		} else if !isAlphaNum(ch) && !isUnderscore(ch) && !isApostrophe(ch) {
 			s.unread()
 			break
 		} else {
@@ -307,7 +307,7 @@ func (s *scanner) scanSpecialSymbol(ch rune) (token tok, value string, startPos,
 		}
 	case '1':
 		// Can be 1 or label starting with 1
-		if isAlphaNum(ch2) || isUnderscore(ch2) {
+		if isAlphaNum(ch2) || isUnderscore(ch2) || isApostrophe(ch2) {
 			// is a label
 			s.unread()
 			return s.scanLabel(ch)

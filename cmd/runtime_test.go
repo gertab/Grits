@@ -134,8 +134,8 @@ func TestSimpleSPLITSND(t *testing.T) {
 
 	input := ` 	/* SPLIT + SND rule */
 	assuming pid5 : 1, pid6 : 1
-	prc[pid0] : 1 = <x1, x2> <- split +pid1; drop x1; drop x2; close self
-	prc[pid1] : 1 = <y1, y2> <- recv pid2; drop y1; drop y2; close self
+	prc[pid0] : 1 = <x1, x2> <- split +pid1; drop +x1; drop +x2; close self
+	prc[pid1] : 1 = <y1, y2> <- recv pid2; drop +y1; drop +y2; close self
 	prc[pid2] : 1 * 1 = send self<pid5, pid6>`
 
 	expected := []traceOption{
@@ -176,8 +176,8 @@ func TestSimpleSPLITSNDSND(t *testing.T) {
 
 	input := ` 	/* Simple SPLIT + SND rule (x 2) */
 	prc[pid1] : 1 = <a, b> <- split +pid2; 
-				<a2, b2> <- recv a; drop a2; drop b2;
-				<a3, b3> <- recv b; drop a3; drop b3;
+				<a2, b2> <- recv a; drop +a2; drop +b2;
+				<a3, b3> <- recv b; drop +a3; drop +b3;
 				close self
 	prc[pid2] : 1 * 1 = send self<+pid3, +pid4>
 	prc[pid3] : 1 = close self
@@ -527,7 +527,7 @@ func TestNestedSelectWithTyping(t *testing.T) {
 	prc[x] : +{next : 1} = f1(z)
 	prc[z] : A = f2(y)
 	prc[y] : 1 = close self
-	prc[final] : 1 = case x (next<z> => drop z; close self)`
+	prc[final] : 1 = case x (next<z> => drop +z; close self)`
 
 	expected := []traceOption{
 		{steps{{"x", process.CALL}, {"z", process.CALL}, {"z", process.CSE}, {"final", process.SEL}, {"final", process.DROP}}},
@@ -628,7 +628,7 @@ func TestDownShift(t *testing.T) {
 	type A = affine 1
 
 	assuming x : A
-	prc[a] : affine A = y <- shift b; drop y; close self
+	prc[a] : affine A = y <- shift b; drop +y; close self
 	prc[b] : affine \/ linear A = cast self<x>`
 
 	expected := []traceOption{
@@ -653,6 +653,27 @@ func TestTwoReceives(t *testing.T) {
 
 	expected := []traceOption{
 		{steps{{"b", process.RCV}, {"u", process.RCV}, {"a", process.CLS}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
+func TestFwdDrop(t *testing.T) {
+	// FwdDrop
+
+	input := ` 
+		prc[a] : 1 -* 1 = <x, y> <- recv self; wait +u; wait +v; drop +x; close y
+		prc[b] : 1 = drop -a; close self
+		prc[u] : 1 = close self
+		prc[v] : 1 = close self`
+
+	expected := []traceOption{
+		{steps{{"a", process.FWD}, {"b", process.DROP}}},
+		{steps{{"b", process.DROP}}},
 	}
 
 	typecheck := true
@@ -731,7 +752,8 @@ func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *s
 		// No logs during testing
 		globalEnv.LogLevels = []process.LogLevel{}
 
-		deadProcesses, rulesLog, _ := initProcesses(processes, globalEnv, execVersion, typecheck)
+		// processCount, deadProcessCount
+		deadProcesses, rulesLog, _, _ := initProcesses(processes, globalEnv, execVersion, typecheck)
 		stepsGot := convertRulesLog(rulesLog)
 
 		if len(stepsGot) == 0 {
@@ -812,7 +834,7 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 	return log
 }
 
-func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment, execVersion process.Execution_Version, typechecked bool) ([]process.Process, []process.MonitorRulesLog, uint64) {
+func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment, execVersion process.Execution_Version, typechecked bool) ([]process.Process, []process.MonitorRulesLog, uint64, uint64) {
 
 	debug := true
 
@@ -846,5 +868,5 @@ func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnviro
 
 	deadProcesses, rulesLog := re.WaitForMonitorToFinish()
 
-	return deadProcesses, rulesLog, re.ProcessCount()
+	return deadProcesses, rulesLog, re.ProcessCount(), re.DeadProcessCount()
 }

@@ -97,7 +97,7 @@ func TransitionInternallyNP(process *Process, internalFunction func(), re *Runti
 
 func handleControlMessageNP(process *Process, cm ControlMessage, re *RuntimeEnvironment) {
 	switch cm.Action {
-	case FWD_REQUEST:
+	case FWD_ACTION:
 		fwdhandleControlMessageNP(process, cm, re)
 	default:
 		re.error(process, "Received an invalid control message")
@@ -109,8 +109,8 @@ func fwdhandleControlMessageNP(process *Process, cm ControlMessage, re *RuntimeE
 	// todo remove Close current channel and switch to new one
 
 	// todo ensure that action is correct
-	if cm.Action != FWD_REQUEST {
-		re.error(process, "expected FWD_REQUEST")
+	if cm.Action != FWD_ACTION {
+		re.error(process, "expected FWD_ACTION")
 	}
 
 	// Notify that the process will change providers (i.e. the process.Providers will die and be replaced by cm.Providers)
@@ -545,7 +545,7 @@ func (f *ForwardForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 		re.error(process, "should forward on self")
 	}
 
-	controlMessage := ControlMessage{Action: FWD_REQUEST, Providers: process.Providers}
+	controlMessage := ControlMessage{Action: FWD_ACTION, Providers: process.Providers}
 
 	forwardRule := func() {
 		re.logProcessf(LOGRULE, process, "[forward, client] sent FWD request to control channel %s\n", f.from_c.String())

@@ -76,6 +76,8 @@ func TransitionByReceiving(process *Process, clientChan chan Message, processMes
 		// Process acting as a client by consuming a message from some channel
 		if receivedMessage.Rule == FWD {
 			handleNegativeForwardRequest(process, receivedMessage, re)
+		} else if receivedMessage.Rule == FWD_DROP {
+			handleNegativeDropRequest(process, re)
 		} else {
 			processMessageFunc(receivedMessage)
 		}
@@ -109,12 +111,39 @@ func handleNegativeForwardRequest(process *Process, message Message, re *Runtime
 	process.transitionLoop(re)
 }
 
+func handleNegativeDropRequest(process *Process, re *RuntimeEnvironment) {
+	re.logProcess(LOGRULEDETAILS, process, "Received FWD_DROP request.")
+
+	if len(NamesToString(process.Body.FreeNames())) > 0 {
+		re.logProcessf(LOGRULEDETAILS, process, "FWD_DROP will extend to %s.\n", NamesToString(process.Body.FreeNames()))
+	}
+
+	// Propagate the drop the the process' clients, before terminating
+	for _, fn := range process.Body.FreeNames() {
+		p := createDroppableForwardFromClient(process, re, fn)
+		p.SpawnThenTransition(re)
+	}
+
+	process.terminate(re)
+}
+
 func closeProviders(providers []Name) {
 	for _, p := range providers {
 		if p.Channel != nil {
 			close(p.Channel)
 		}
 	}
+}
+
+// Create a forward process with the to_drop flag set to true
+func createDroppableForwardFromClient(process *Process, re *RuntimeEnvironment, client Name) *Process {
+	clientType := types.CopyType(client.Type)
+	newProcessBody := NewDroppableForward(Name{IsSelf: true, Ident: client.Ident, Type: clientType, ExplicitPolarity: client.ExplicitPolarity}, client)
+	// First create fresh channel (with fake identity of the continuation_c name) to link both processes
+	newChannel := re.CreateFreshChannel(client.Ident)
+	newChannel.Type = types.CopyType(client.Type)
+	newChannel.ExplicitPolarity = client.ExplicitPolarity
+	return NewProcess(newProcessBody, []Name{newChannel}, clientType, LINEAR, process.Position)
 }
 
 ////////////////////////////////////////////////////////////
@@ -565,6 +594,13 @@ func (f *DropForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 	dropRule := func() {
 		// Drop does not need to notify the clients being dropped
+		// The new [droppable] forward with no providers will take care of this
+		// Create structure of new forward process
+		newProcess := createDroppableForwardFromClient(process, re, f.client_c)
+		re.logProcessf(LOGRULEDETAILS, process, "[drop, client] will create new forward process to drop %s\n", f.client_c.String())
+		// Spawn and initiate new forward process
+		newProcess.SpawnThenTransition(re)
+
 		process.finishedRule(DROP, "[drop]", "", re)
 
 		process.Body = f.continuation_e
@@ -572,17 +608,6 @@ func (f *DropForm) Transition(process *Process, re *RuntimeEnvironment) {
 	}
 
 	TransitionInternally(process, dropRule, re)
-}
-
-func GetPolarity(f Form, re *RuntimeEnvironment) types.Polarity {
-	// if re.Typechecked {
-
-	// } else {
-
-	// }
-
-	// return types.UNKNOWN
-	return f.Polarity(re.Typechecked, re.GlobalEnvironment)
 }
 
 // Special case: Forward
@@ -593,9 +618,9 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		re.error(process, "should forward on self")
 	}
 
-	polarity := GetPolarity(f, re)
+	polarity := f.Polarity(re.Typechecked, re.GlobalEnvironment)
 
-	if polarity == types.NEGATIVE {
+	if polarity == types.NEGATIVE && !f.to_drop {
 		// -ve
 		// least problematic
 		// ACTIVE
@@ -607,7 +632,7 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// todo check if this is needed: process.finishedRule(FWD, "[forward, client]", "", re)
 		process.terminateForward(re)
 
-	} else if polarity == types.POSITIVE {
+	} else if polarity == types.POSITIVE && !f.to_drop {
 		// +ve
 		// problematic
 		// PASSIVE: wait before acting
@@ -651,7 +676,46 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		process.finishedRule(FWD, "[fwd]", "(+ve)", re)
 		process.transitionLoop(re)
-	} else if polarity == types.UNKNOWN {
+	} else if polarity == types.UNKNOWN && !f.to_drop {
+		re.error(process, "forward has an unknown polarity")
+	}
+
+	// If f.to_drop is true, then the forward should propagate the drops
+	if polarity == types.NEGATIVE && f.to_drop {
+		// -ve
+		// least problematic
+		// ACTIVE
+
+		message := Message{Rule: FWD_DROP}
+		f.from_c.Channel <- message
+		re.logProcessf(LOGRULE, process, "[droppable forward, client] sent FWD_DROP request to client %s\n", f.from_c.String())
+
+		process.terminateForward(re)
+
+	} else if polarity == types.POSITIVE && f.to_drop {
+		// +ve
+		// PASSIVE: wait before acting
+
+		// Blocks until it received a message. Then this message will be dropped
+		message := <-f.from_c.Channel
+		re.logProcessf(LOGRULE, process, "[droppable forward, +ve] received message on %s [%s]. This message will be dropped \n", f.from_c.String(), RuleString[message.Rule])
+
+		// Need to handle any clients (aka free names) that will be dropped as a result,
+		// e.g. if dropping message <a, b> then you need to cancel a and b as well
+
+		if message.Channel1.Initialized() {
+			p := createDroppableForwardFromClient(process, re, message.Channel1)
+			p.SpawnThenTransition(re)
+		}
+
+		if message.Channel2.Initialized() {
+			p := createDroppableForwardFromClient(process, re, message.Channel2)
+			p.SpawnThenTransition(re)
+		}
+
+		process.terminate(re)
+
+	} else if polarity == types.UNKNOWN && f.to_drop {
 		re.error(process, "forward has an unknown polarity")
 	}
 }
@@ -945,6 +1009,8 @@ func (f *PrintLForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
 
+	// re.heartbeat <- struct{}{}
+
 	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, rule)
@@ -963,9 +1029,15 @@ func (process *Process) processRenamed(re *RuntimeEnvironment) {
 func (process *Process) terminate(re *RuntimeEnvironment) {
 	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
 
+	// re.heartbeat <- struct{}{}
+	// fmt.Println("sending heartbeat...")
+
 	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorProcessTerminated(process)
+
+		// Update dead process count
+		atomic.AddUint64(&re.deadProcessCount, 1)
 	}
 }
 
@@ -976,8 +1048,23 @@ func (process *Process) terminateForward(re *RuntimeEnvironment) {
 	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, FWD)
+
+		// Will not update the dead process count since the process' provider names will 'live' on
 	}
 }
+
+// // A forward process will terminate, and its providers will be be dropped so the process will die as well
+// func (process *Process) terminateForwardDropped(re *RuntimeEnvironment) {
+// 	re.logProcess(LOGRULEDETAILS, process, "process will change by forwarding its provider")
+
+// 	if re.Debug {
+// 		// Update monitor
+// 		re.monitor.MonitorRuleFinished(process, FWD)
+
+// 		// Update dead process count
+// 		atomic.AddUint64(&re.deadProcessCount, 1)
+// 	}
+// }
 
 func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
@@ -986,6 +1073,9 @@ func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name,
 		// Update monitor
 		// todo change
 		re.monitor.MonitorProcessForwarded(process)
+
+		// Update dead process count
+		atomic.AddUint64(&re.deadProcessCount, 1)
 	}
 }
 

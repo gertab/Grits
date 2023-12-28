@@ -19,7 +19,10 @@ type RuntimeEnvironment struct {
 
 	// Keeps count of how many processes were spawned (only for debug info)
 	processCount uint64
+	// Keeps count of how many processes died (only for debug info)
+	deadProcessCount uint64
 	// Debugging info
+	// todo replace debug flag with useMonitor
 	Debug bool
 	// Colored output
 	Color bool
@@ -56,6 +59,7 @@ func NewRuntimeEnvironment(debug, coloredOutput bool) *RuntimeEnvironment {
 		ExecutionVersion:    NORMAL_ASYNC,
 		debugChannelCounter: 0,
 		processCount:        0,
+		deadProcessCount:    0,
 		errorChan:           make(chan error),
 		Typechecked:         false,
 	}
@@ -91,6 +95,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	}
 
 	re.processCount = 0
+	re.deadProcessCount = 0
 	re.debugChannelCounter = 0
 	re.errorChan = make(chan error)
 
@@ -120,19 +125,18 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	}
 
 	if re.Debug {
-		re.logf(LOGINFO, "End process count: %d\n", re.ProcessCount())
+		re.logf(LOGINFO, "End process count: %d (%d)\n", re.ProcessCount(), re.DeadProcessCount())
 	}
 
 	return re
 }
 
-// func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
-// 	<-re.monitor.monitorFinished
-// 	return re.monitor.deadProcesses, re.monitor.rulesLog
-// }
-
 func (re *RuntimeEnvironment) ProcessCount() uint64 {
 	return re.processCount
+}
+
+func (re *RuntimeEnvironment) DeadProcessCount() uint64 {
+	return re.deadProcessCount
 }
 
 // Create the initial channels required. E.g. for a process prc[c1], a channel with Ident: c1 is created
@@ -270,15 +274,9 @@ const (
 
 	// Other actions
 	FWD
+	FWD_DROP
 	PRINT
 	PRINTL
-)
-
-type Action int
-
-const (
-	FWD_REQUEST Action = 100 // uses Channel1 of the ControlMessage struct
-	// FWD_REPLY                // uses Body, Shape of the ControlMessage struct
 )
 
 var RuleString = map[Rule]string{
@@ -297,9 +295,10 @@ var RuleString = map[Rule]string{
 
 	DUP: "DUP",
 
-	FWD:    "FWD",
-	PRINT:  "PRINT",
-	PRINTL: "PRINTL",
+	FWD:      "FWD",
+	FWD_DROP: "FWD_DROP",
+	PRINT:    "PRINT",
+	PRINTL:   "PRINTL",
 }
 
 type ControlMessage struct {
@@ -309,6 +308,13 @@ type ControlMessage struct {
 	Body      Form
 	Shape     Shape
 }
+
+type Action int
+
+const (
+	FWD_ACTION      Action = 100 // uses Channel1 of the ControlMessage struct
+	FWD_ACTION_DROP Action = 101 // Forward with no providers (i.e. perform drop action)
+)
 
 type NameInitialization struct {
 	old Name

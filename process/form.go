@@ -466,12 +466,17 @@ func (p *CloseForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironmen
 
 // Forward: fwd to_c from_c
 type ForwardForm struct {
-	to_c   Name
-	from_c Name
+	to_c    Name
+	from_c  Name
+	to_drop bool
 }
 
 func NewForward(to_c, from_c Name) *ForwardForm {
-	return &ForwardForm{to_c: to_c, from_c: from_c}
+	return &ForwardForm{to_c: to_c, from_c: from_c, to_drop: false}
+}
+
+func NewDroppableForward(to_c, from_c Name) *ForwardForm {
+	return &ForwardForm{to_c: to_c, from_c: from_c, to_drop: true}
 }
 
 func (p *ForwardForm) String() string {

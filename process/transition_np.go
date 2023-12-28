@@ -32,6 +32,9 @@ func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
 func (process *Process) transitionLoopNP(re *RuntimeEnvironment) {
 	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 
+	// Send heartbeat
+	re.heartbeat <- struct{}{}
+
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
 
@@ -53,6 +56,9 @@ func TransitionBySendingNP(process *Process, toChan chan Message, continuationFu
 		process.performDUPruleNP(re)
 	} else {
 		select {
+		case <-re.ctx.Done():
+			// Handle timeout event
+			return
 		case cm := <-process.Providers[0].ControlChannel:
 			handleControlMessageNP(process, cm, re)
 		case toChan <- sendingMessage:
@@ -72,6 +78,9 @@ func TransitionByReceivingNP(process *Process, clientChan chan Message, processM
 		process.performDUPruleNP(re)
 	} else {
 		select {
+		case <-re.ctx.Done():
+			// Received cancellation request, so stop
+			return
 		case cm := <-process.Providers[0].ControlChannel:
 			handleControlMessageNP(process, cm, re)
 		case receivedMessage := <-clientChan:
@@ -82,6 +91,13 @@ func TransitionByReceivingNP(process *Process, clientChan chan Message, processM
 }
 
 func TransitionInternallyNP(process *Process, internalFunction func(), re *RuntimeEnvironment) {
+	select {
+	case <-re.ctx.Done():
+		// If received cancellation request, then stop
+		return
+	default:
+	}
+
 	if len(process.Providers) > 1 {
 		// Split process if needed
 		process.performDUPruleNP(re)

@@ -5,7 +5,6 @@ import (
 	"phi/types"
 	"strconv"
 	"sync"
-	"time"
 )
 
 type Monitor struct {
@@ -28,9 +27,6 @@ type Monitor struct {
 	processID            int
 	providersToProcessID map[Name]int
 	processIDToProcess   map[int]*Process
-	// Inactive after _ milliseconds
-	inactiveTimer   time.Duration
-	monitorFinished chan bool
 }
 
 type MonitorUpdate struct {
@@ -54,7 +50,6 @@ func NewMonitor(re *RuntimeEnvironment, subscriberInfo *SubscriberInfo) *Monitor
 	monitorChan := make(chan MonitorUpdate)
 	errorChan := make(chan error)
 	stopMonitorChan := make(chan bool)
-	monitorFinishedChan := make(chan bool)
 
 	// Set the maps to store the processes
 	providersToProcessID := make(map[Name]int)
@@ -66,16 +61,10 @@ func NewMonitor(re *RuntimeEnvironment, subscriberInfo *SubscriberInfo) *Monitor
 		errorChan:            errorChan,
 		stopMonitorChan:      stopMonitorChan,
 		subscriber:           subscriberInfo,
-		monitorFinished:      monitorFinishedChan,
 		re:                   re,
-		inactiveTimer:        300 * time.Millisecond,
 		providersToProcessID: providersToProcessID,
 		processIDToProcess:   processIDToProcess,
 		processID:            0}
-}
-
-func (m *Monitor) SetInactivityTimer(t time.Duration) {
-	m.inactiveTimer = t
 }
 
 func (m *Monitor) startMonitor(startedWg *sync.WaitGroup) {
@@ -87,9 +76,9 @@ func (m *Monitor) startMonitor(startedWg *sync.WaitGroup) {
 	m.monitorLoop()
 }
 
-// func (m *Monitor) stopMonitor() {
-// 	m.stopMonitorChan <- true
-// }
+func (m *Monitor) stopMonitor() {
+	m.stopMonitorChan <- true
+}
 
 func (m *Monitor) monitorLoop() {
 	select {
@@ -133,11 +122,6 @@ func (m *Monitor) monitorLoop() {
 
 	case error := <-m.errorChan:
 		fmt.Println(error)
-
-	case <-time.After(m.inactiveTimer + m.re.Delay):
-		m.re.logMonitorf("Monitor inactive, terminating\n")
-		m.monitorFinished <- true
-		return
 	}
 
 	m.monitorLoop()

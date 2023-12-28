@@ -36,6 +36,9 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 func (process *Process) transitionLoop(re *RuntimeEnvironment) {
 	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 
+	// Send heartbeat
+	re.heartbeat <- struct{}{}
+
 	// To slow down the execution speed
 	time.Sleep(re.Delay)
 
@@ -55,8 +58,14 @@ func TransitionBySending(process *Process, toChan chan Message, continuationFunc
 		process.performDUPrule(re)
 	} else {
 		// Send message and perform the remaining work defined by continuationFunc
-		toChan <- sendingMessage
-		continuationFunc()
+		// If received cancellation request, then stop
+		select {
+		case <-re.ctx.Done():
+			return
+		default:
+			toChan <- sendingMessage
+			continuationFunc()
+		}
 	}
 }
 
@@ -69,22 +78,33 @@ func TransitionByReceiving(process *Process, clientChan chan Message, processMes
 		// Split process if needed
 		process.performDUPrule(re)
 	} else {
+		select {
+		case <-re.ctx.Done():
+			// Received cancellation request, then stop
+			return
+		case receivedMessage := <-clientChan:
+			// Blocks until a message arrives (may be a FWD request)
 
-		// Blocks until a message arrives (may be a FWD request)
-		receivedMessage := <-clientChan
-
-		// Process acting as a client by consuming a message from some channel
-		if receivedMessage.Rule == FWD {
-			handleNegativeForwardRequest(process, receivedMessage, re)
-		} else if receivedMessage.Rule == FWD_DROP {
-			handleNegativeDropRequest(process, re)
-		} else {
-			processMessageFunc(receivedMessage)
+			// Process acting as a client by consuming a message from some channel
+			if receivedMessage.Rule == FWD {
+				handleNegativeForwardRequest(process, receivedMessage, re)
+			} else if receivedMessage.Rule == FWD_DROP {
+				handleNegativeDropRequest(process, re)
+			} else {
+				processMessageFunc(receivedMessage)
+			}
 		}
 	}
 }
 
 func TransitionInternally(process *Process, internalTransition func(), re *RuntimeEnvironment) {
+	select {
+	case <-re.ctx.Done():
+		// If received cancellation request, then stop
+		return
+	default:
+	}
+
 	if len(process.Providers) > 1 {
 		// Split process if needed
 		process.performDUPrule(re)
@@ -1029,8 +1049,8 @@ func (process *Process) processRenamed(re *RuntimeEnvironment) {
 func (process *Process) terminate(re *RuntimeEnvironment) {
 	re.logProcess(LOGRULEDETAILS, process, "process terminated successfully")
 
-	// re.heartbeat <- struct{}{}
-	// fmt.Println("sending heartbeat...")
+	// Send heartbeat
+	re.heartbeat <- struct{}{}
 
 	if re.Debug {
 		// Update monitor
@@ -1045,6 +1065,9 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 func (process *Process) terminateForward(re *RuntimeEnvironment) {
 	re.logProcess(LOGRULEDETAILS, process, "process will change by forwarding its provider")
 
+	// Send heartbeat
+	re.heartbeat <- struct{}{}
+
 	if re.Debug {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, FWD)
@@ -1056,6 +1079,9 @@ func (process *Process) terminateForward(re *RuntimeEnvironment) {
 // // A forward process will terminate, and its providers will be be dropped so the process will die as well
 // func (process *Process) terminateForwardDropped(re *RuntimeEnvironment) {
 // 	re.logProcess(LOGRULEDETAILS, process, "process will change by forwarding its provider")
+
+// // Send heartbeat
+// re.heartbeat <- struct{}{}
 
 // 	if re.Debug {
 // 		// Update monitor
@@ -1069,6 +1095,9 @@ func (process *Process) terminateForward(re *RuntimeEnvironment) {
 func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
 
+	// Send heartbeat
+	re.heartbeat <- struct{}{}
+
 	if re.Debug {
 		// Update monitor
 		// todo change
@@ -1081,6 +1110,9 @@ func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name,
 
 func (process *Process) renamed(oldProviders, newProviders []Name, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "process renamed from %s to %s\n", NamesToString(oldProviders), NamesToString(newProviders))
+
+	// Send heartbeat
+	re.heartbeat <- struct{}{}
 
 	// Although the old providers should be closed (i.e. die), the process itself does not die. It lives on using the new provider names.
 }

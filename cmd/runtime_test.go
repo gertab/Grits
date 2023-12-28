@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-const numberOfIterations = 10
-const monitorTimeout = 40 * time.Millisecond
+const numberOfIterations = 100
+const timeout = 20 * time.Millisecond
 
 // Invalidate all cache
 // go clean -testcache
@@ -757,7 +757,7 @@ func checkInput(t *testing.T, input string, expectedOptions []traceOption, wg *s
 		stepsGot := convertRulesLog(rulesLog)
 
 		if len(stepsGot) == 0 {
-			t.Errorf("Zero transitions: %s (Increase monitor timeout value) \n", stingifySteps(stepsGot))
+			t.Errorf("Zero transitions: %s (Increase timeout value) \n", stingifySteps(stepsGot))
 		}
 
 		// Make sure that at least the rulesLog match to one of the trance options
@@ -838,35 +838,38 @@ func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnviro
 
 	debug := true
 
-	re := &process.RuntimeEnvironment{
-		GlobalEnvironment: globalEnv,
-		Debug:             true,
-		Color:             true,
-		Delay:             0,
-		ExecutionVersion:  execVersion,
-		Typechecked:       typechecked,
-	}
+	re, cancel := process.NewRuntimeEnvironment()
+	defer cancel()
+
+	re.GlobalEnvironment = globalEnv
+	re.Debug = debug
+	re.Color = true
+	re.Delay = 0
+	re.ExecutionVersion = execVersion
+	re.Typechecked = typechecked
 
 	channels := re.CreateChannelForEachProcess(processes)
 
 	re.SubstituteNameInitialization(processes, channels)
 
-	if debug {
-		startedWg := new(sync.WaitGroup)
-		startedWg.Add(1)
+	// Start monitor
+	startedWg := new(sync.WaitGroup)
+	startedWg.Add(1)
+	newMonitor := process.NewMonitor(re, nil)
+	re.InitializeGivenMonitor(startedWg, newMonitor, nil)
+	startedWg.Wait()
 
-		newMonitor := process.NewMonitor(re, nil)
-		newMonitor.SetInactivityTimer(monitorTimeout)
+	// Start heartbeat receiver which cleans up any remaining processes
+	go re.HeartbeatReceiver(timeout, cancel)
 
-		re.InitializeGivenMonitor(startedWg, newMonitor, nil)
-
-		// Ensure that both servers are running
-		startedWg.Wait()
-	}
-
+	// Initiate transtitions
 	re.StartTransitions(processes)
 
-	deadProcesses, rulesLog := re.WaitForMonitorToFinish()
-
-	return deadProcesses, rulesLog, re.ProcessCount(), re.DeadProcessCount()
+	select {
+	case <-re.Ctx().Done():
+		deadProcesses, rulesLog := re.StopMonitor()
+		return deadProcesses, rulesLog, re.ProcessCount(), re.DeadProcessCount()
+	case <-re.ErrorChan():
+		return []process.Process{}, []process.MonitorRulesLog{}, re.ProcessCount(), re.DeadProcessCount()
+	}
 }

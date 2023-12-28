@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -21,6 +22,12 @@ type RuntimeEnvironment struct {
 	processCount uint64
 	// Keeps count of how many processes died (only for debug info)
 	deadProcessCount uint64
+
+	// Keeps context to control the new processes
+	ctx context.Context
+	// If heartbeats stop, then the processes are killed
+	heartbeat chan struct{}
+
 	// Debugging info
 	// todo replace debug flag with useMonitor
 	Debug bool
@@ -52,8 +59,8 @@ const (
 	// NON_POLARIZED_ASYNC /* problematic */
 )
 
-func NewRuntimeEnvironment(debug, coloredOutput bool) *RuntimeEnvironment {
-	return &RuntimeEnvironment{
+func NewRuntimeEnvironment() (*RuntimeEnvironment, context.CancelFunc) {
+	re := &RuntimeEnvironment{
 		Debug:               true,
 		Color:               true,
 		ExecutionVersion:    NORMAL_ASYNC,
@@ -62,7 +69,14 @@ func NewRuntimeEnvironment(debug, coloredOutput bool) *RuntimeEnvironment {
 		deadProcessCount:    0,
 		errorChan:           make(chan error),
 		Typechecked:         false,
+		heartbeat:           make(chan struct{}, 1),
 	}
+
+	// Prepare context with cancellation
+	var cancel context.CancelFunc
+	re.ctx, cancel = context.WithCancel(context.Background())
+
+	return re, cancel
 }
 
 // Entry point for execution
@@ -99,6 +113,12 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	re.debugChannelCounter = 0
 	re.errorChan = make(chan error)
 
+	// Prepare context with cancellation
+	var cancel context.CancelFunc
+	re.ctx, cancel = context.WithCancel(context.Background())
+	re.heartbeat = make(chan struct{}, 1)
+	defer cancel()
+
 	re.logf(LOGINFO, "\nInitializing %d processes\n", len(processes))
 
 	channels := re.CreateChannelForEachProcess(processes)
@@ -115,11 +135,14 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 		startedWg.Wait()
 	}
 
+	go re.HeartbeatReceiver(50*time.Millisecond, cancel)
+
 	re.StartTransitions(processes)
 
 	select {
-	case <-re.monitor.monitorFinished:
-		// Monitor terminated successfully
+	case <-re.ctx.Done():
+	// case <-re.monitor.monitorFinished:
+	// Monitor terminated successfully
 	case err := <-re.errorChan:
 		log.Fatal(err)
 	}
@@ -234,9 +257,32 @@ func (re *RuntimeEnvironment) StartTransitions(processes []*Process) {
 	}
 }
 
-func (re *RuntimeEnvironment) WaitForMonitorToFinish() ([]Process, []MonitorRulesLog) {
-	<-re.monitor.monitorFinished
+func (re *RuntimeEnvironment) StopMonitor() ([]Process, []MonitorRulesLog) {
+	re.monitor.stopMonitor()
 	return re.monitor.deadProcesses, re.monitor.rulesLog
+}
+
+func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel context.CancelFunc) {
+	fullTimeout := re.Delay + timeout
+
+	for {
+		select {
+		case <-time.After(fullTimeout):
+			// todo do proper restart
+			cancel()
+			return
+		case <-re.heartbeat:
+			// Restart timer
+		}
+	}
+}
+
+func (re *RuntimeEnvironment) Ctx() context.Context {
+	return re.ctx
+}
+
+func (re *RuntimeEnvironment) ErrorChan() chan error {
+	return re.errorChan
 }
 
 type Message struct {
@@ -489,6 +535,7 @@ func (re *RuntimeEnvironment) error(process *Process, message string) {
 	}
 
 	// fmt.Println(buffer.String())
+	// todo change to use ctx Err
 	panic(buffer.String())
 }
 

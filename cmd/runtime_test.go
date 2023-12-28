@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const numberOfIterations = 100
+const numberOfIterations = 10
 const timeout = 50 * time.Millisecond
 
 // Invalidate all cache

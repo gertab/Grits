@@ -29,8 +29,7 @@ type RuntimeEnvironment struct {
 	heartbeat chan struct{}
 
 	// Debugging info
-	// todo replace debug flag with useMonitor
-	Debug bool
+	UseMonitor bool
 	// Colored output
 	Color bool
 	// Keeps counter of the number of channels created
@@ -61,7 +60,7 @@ const (
 
 func NewRuntimeEnvironment() (*RuntimeEnvironment, context.CancelFunc) {
 	re := &RuntimeEnvironment{
-		Debug:               true,
+		UseMonitor:          true,
 		Color:               true,
 		ExecutionVersion:    NORMAL_ASYNC,
 		debugChannelCounter: 0,
@@ -84,7 +83,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 
 	if re == nil {
 		re = &RuntimeEnvironment{
-			Debug:            true,
+			UseMonitor:       true,
 			Color:            true,
 			Delay:            1000 * time.Millisecond,
 			ExecutionVersion: NORMAL_ASYNC,
@@ -125,7 +124,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 
 	re.SubstituteNameInitialization(processes, channels)
 
-	if re.Debug {
+	if re.UseMonitor {
 		startedWg := new(sync.WaitGroup)
 		startedWg.Add(1)
 
@@ -147,9 +146,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 		log.Fatal(err)
 	}
 
-	if re.Debug {
-		re.logf(LOGINFO, "End process count: %d (%d)\n", re.ProcessCount(), re.DeadProcessCount())
-	}
+	re.logf(LOGINFO, "End process count: %d (%d)\n", re.ProcessCount(), re.DeadProcessCount())
 
 	return re
 }

@@ -836,13 +836,11 @@ func convertRulesLog(monRulesLog []process.MonitorRulesLog) (log steps) {
 
 func initProcesses(processes []*process.Process, globalEnv *process.GlobalEnvironment, execVersion process.Execution_Version, typechecked bool) ([]process.Process, []process.MonitorRulesLog, uint64, uint64) {
 
-	debug := true
-
 	re, cancel := process.NewRuntimeEnvironment()
 	defer cancel()
 
 	re.GlobalEnvironment = globalEnv
-	re.Debug = debug
+	re.UseMonitor = true
 	re.Color = true
 	re.Delay = 0
 	re.ExecutionVersion = execVersion

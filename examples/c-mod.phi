@@ -2,13 +2,13 @@
 
 type A = 1 * 1
 
-assuming pid2 : A, pid3 : 1, pid4 : 1
+// assuming pid2 : A, pid3 : 1, pid4 : 1
 
 prc[pid1] : 1 = 
-		<a, b> <- +split pid2; 
+		<a, b> <- split +pid2; 
 		<a2, b2> <- recv a; 
 		<a3, b3> <- recv b; 
-		wait a2; 
+		drop a2; 
 		wait b2; 
 		wait a3; 
 		wait b3; 

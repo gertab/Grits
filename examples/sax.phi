@@ -66,7 +66,11 @@ let append123() : list =
 
    y <- new append(x1, x2);
 
-   fwd self y
+   <y', y''> <- split y;
+
+   drop y';
+
+   fwd self y''
 
 
 //  n33 : 1 <- new close self;

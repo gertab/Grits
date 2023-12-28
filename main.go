@@ -14,86 +14,96 @@ import (
 
 const program = `
 
-type bin = +{b0 : bin, b1 : bin, e : 1}
-type list = +{cons : bin * list, nil : 1}
+type A = 1
 
-// proc append (R : list) (L : list) (K : list) =
-//   recv L ( 'cons(x,L') => R' <- call append R' L' K ;
-//                           send R 'cons(x,R')
-//          | 'nil() => fwd R K )
+let f() : A = x : A <- new close x; 
+                  wait x; 
+                  close self
+
+// prc[pid0] : A = f()
+
+exec f()
+
+// type bin = +{b0 : bin, b1 : bin, e : 1}
+// type list = +{cons : bin * list, nil : 1}
+
+// // proc append (R : list) (L : list) (K : list) =
+// //   recv L ( 'cons(x,L') => R' <- call append R' L' K ;
+// //                           send R 'cons(x,R')
+// //          | 'nil() => fwd R K )
 
 
-let append(L : list, K : list) : list =
-  case L ( cons<c> => 
-                <x, L2> <- recv c;
-                R <- new append(L2, K);
-                zz : bin * list <- new (send self<x, R>);
-                self.cons<zz>
-         | nil<c> => wait c; 
-                     fwd self K)
+// let append(L : list, K : list) : list =
+//   case L ( cons<c> => 
+//                 <x, L2> <- recv c;
+//                 R <- new append(L2, K);
+//                 zz : bin * list <- new (send self<x, R>);
+//                 self.cons<zz>
+//          | nil<c> => wait c; 
+//                      fwd self K)
 
-let append2(L : list, K : list) : list =
-  case L ( cons<p> => 
-                <x, L2> <- recv p;
-                R2 <- new append2(L2, K);
-                p2 : bin * list <- new send p2<x, R2>;
-                self.cons<p2>  
-         | nil<u> => 
-                wait u; 
-                fwd self K)
+// let append2(L : list, K : list) : list =
+//   case L ( cons<p> => 
+//                 <x, L2> <- recv p;
+//                 R2 <- new append2(L2, K);
+//                 p2 : bin * list <- new send p2<x, R2>;
+//                 self.cons<p2>  
+//          | nil<u> => 
+//                 wait u; 
+//                 fwd self K)
 
-// Nil list
-let nilList() : list = 
-  c : 1 <- new close self;
-  self.nil<c>
+// // Nil list
+// let nilList() : list = 
+//   c : 1 <- new close self;
+//   self.nil<c>
 
-let append123() : list =
+// let append123() : list =
 	
-  printl step1;
+//   printl step1;
   
-  n12 : 1 <- new close self;
-  n11 : bin <- new self.e<n12>;
-  n1 : bin <- new self.b1<n11> ;   // n1: 'b1 'e
+//   n12 : 1 <- new close self;
+//   n11 : bin <- new self.e<n12>;
+//   n1 : bin <- new self.b1<n11> ;   // n1: 'b1 'e
 
-  printl step2;
+//   printl step2;
 
-  n23 : 1 <- new close self;
-  n22 : bin <- new self.e<n23>;
-  n21 : bin <- new self.b1<n22>;
-  n2 : bin <- new self.b0<n21>;             // n2: 'b0 'b1 'e
+//   n23 : 1 <- new close self;
+//   n22 : bin <- new self.e<n23>;
+//   n21 : bin <- new self.b1<n22>;
+//   n2 : bin <- new self.b0<n21>;             // n2: 'b0 'b1 'e
 
-  printl step3;
+//   printl step3;
 
-  lnil11 <- new nilList();
-  l11 : bin * list <- new send self<n1, lnil11>;
-  l1 : list <- new self.cons<l11>;          // l1 : cons(n1, nil)    
+//   lnil11 <- new nilList();
+//   l11 : bin * list <- new send self<n1, lnil11>;
+//   l1 : list <- new self.cons<l11>;          // l1 : cons(n1, nil)    
  
-  printl step4;
+//   printl step4;
 
-  lnil21 <- new nilList();
-  l21 : bin * list <- new send self<n2, lnil21>;
-  l2 : list <- new self.cons<l21>;          // l2 : cons(n2, nil)
+//   lnil21 <- new nilList();
+//   l21 : bin * list <- new send self<n2, lnil21>;
+//   l2 : list <- new self.cons<l21>;          // l2 : cons(n2, nil)
 
-  printl step5;
+//   printl step5;
 
-  x <- new append(l1, l2);        // result : con(n1, cons(n2, nil))
+//   x <- new append(l1, l2);        // result : con(n1, cons(n2, nil))
 
-  printl step6;
+//   printl step6;
   
-  <x1, x2> <- split x;
+//   <x1, x2> <- split x;
 
-  printl step7;
+//   printl step7;
   
-  y <- new append(x1, x2);
+//   y <- new append(x1, x2);
   
-  printl step8;
-  <y', y''> <- split y;
+//   printl step8;
+//   <y', y''> <- split y;
   
-  printl step9;
-  drop y';
+//   printl step9;
+//   drop y';
   
-  printl step10;
-  fwd self y''
+//   printl step10;
+//   fwd self y''
 
 
 
@@ -101,72 +111,72 @@ let append123() : list =
 
 
 
-let getBin() : bin =
-   n13 : 1 <- new close self;
-   n12 : bin <- new self.e<n13>;
-   n11 : bin <- new self.b1<n12>;
-   n1 : bin <- new self.b0<n11>;            // 'b0 'b1 'e
-   fwd self n1
+// let getBin() : bin =
+//    n13 : 1 <- new close self;
+//    n12 : bin <- new self.e<n13>;
+//    n11 : bin <- new self.b1<n12>;
+//    n1 : bin <- new self.b0<n11>;            // 'b0 'b1 'e
+//    fwd self n1
  
-let getOtherBin() : bin =
-   n13 : 1 <- new close self;
-   n11 : bin <- new self.e<n13>;
-   n1 : bin <- new self.b1<n11>;            // 'b1 'e
-   fwd self n1
+// let getOtherBin() : bin =
+//    n13 : 1 <- new close self;
+//    n11 : bin <- new self.e<n13>;
+//    n1 : bin <- new self.b1<n11>;            // 'b1 'e
+//    fwd self n1
  
-let getList() : list =
-   n1 <- new getOtherBin();
-   n2 <- new getBin();
-   lnil <- new nilList();
-   lres21 : bin * list <- new send self<n2, lnil>;
-   lres2 : list <- new self.cons<lres21>;            // lres2 : cons(n2, nil)
-   lres1 : bin * list <- new send self<n1, lres2>;
-   lres : list <- new self.cons<lres1>;              // lres : cons(n1, cons(n2, nil))
-   fwd self lres
- 
- 
- // cons(n1, nil)
- let getListN1() : list =
-   n1 <- new getOtherBin();
-   lnil <- new nilList();
-   lres1 : bin * list <- new send self<n1, lnil>;
-   self.cons<lres1>
- 
- // cons(n2, nil)
- let getListN2() : list =
-   n2 <- new getBin();
-   lnil <- new nilList();
-   lres21 : bin * list <- new send self<n2, lnil>;
-   self.cons<lres21> 
- 
- let appendN1N2() : list =
-	 n1 <- new getListN1();          // cons('b1 'e, nil)
-	 n2 <- new getListN2();          // cons('b0 'b1 'e, nil)
-	 nappend <- new append2(n1, n2);
-	 fwd self nappend
+// let getList() : list =
+//    n1 <- new getOtherBin();
+//    n2 <- new getBin();
+//    lnil <- new nilList();
+//    lres21 : bin * list <- new send self<n2, lnil>;
+//    lres2 : list <- new self.cons<lres21>;            // lres2 : cons(n2, nil)
+//    lres1 : bin * list <- new send self<n1, lres2>;
+//    lres : list <- new self.cons<lres1>;              // lres : cons(n1, cons(n2, nil))
+//    fwd self lres
  
  
- let consumeBin(b : bin) : 1 = 
-		 case b ( b0<c> => printl b0; consumeBin(c)
-				| b1<c> => printl b1; consumeBin(c)
-				| e<c>  => printl e; wait c; close self)
+//  // cons(n1, nil)
+//  let getListN1() : list =
+//    n1 <- new getOtherBin();
+//    lnil <- new nilList();
+//    lres1 : bin * list <- new send self<n1, lnil>;
+//    self.cons<lres1>
  
- let consumeList(l : list) : 1 = 
-		 case l ( cons<c> => printl cons;
-							 <b, L2> <- recv c;
-							 bConsume <- new consumeBin(b);
-							 wait bConsume;
-							 consumeList(L2)
-				| nil<c>  => printl nil;
-							 wait c;
-							 close self)
+//  // cons(n2, nil)
+//  let getListN2() : list =
+//    n2 <- new getBin();
+//    lnil <- new nilList();
+//    lres21 : bin * list <- new send self<n2, lnil>;
+//    self.cons<lres21> 
  
- prc[a] : list = append123()
- prc[b] : 1 = printl startinggg;
- 			 yy <- new consumeList(a); 
-			 wait yy;
-			 printl okkkkkk;
-			 close self
+//  let appendN1N2() : list =
+// 	 n1 <- new getListN1();          // cons('b1 'e, nil)
+// 	 n2 <- new getListN2();          // cons('b0 'b1 'e, nil)
+// 	 nappend <- new append2(n1, n2);
+// 	 fwd self nappend
+ 
+ 
+//  let consumeBin(b : bin) : 1 = 
+// 		 case b ( b0<c> => printl b0; consumeBin(c)
+// 				| b1<c> => printl b1; consumeBin(c)
+// 				| e<c>  => printl e; wait c; close self)
+ 
+//  let consumeList(l : list) : 1 = 
+// 		 case l ( cons<c> => printl cons;
+// 							 <b, L2> <- recv c;
+// 							 bConsume <- new consumeBin(b);
+// 							 wait bConsume;
+// 							 consumeList(L2)
+// 				| nil<c>  => printl nil;
+// 							 wait c;
+// 							 close self)
+ 
+//  prc[a] : list = append123()
+//  prc[b] : 1 = printl startinggg;
+//  			 yy <- new consumeList(a); 
+// 			 wait yy;
+// 			 printl okkkkkk;
+// 			 close self
 `
 
 const program55 = `
@@ -790,7 +800,8 @@ prc[res_false]: close self
 // prc[pid3]: close self
 // `
 
-const development = true
+const development = false
+const executionVersion = process.NORMAL_ASYNC
 
 func main() {
 	// Flags
@@ -858,9 +869,9 @@ func main() {
 	if executeRes {
 		re := &process.RuntimeEnvironment{
 			GlobalEnvironment: globalEnv,
-			Debug:             true,
+			UseMonitor:        true,
 			Color:             true,
-			ExecutionVersion:  process.NON_POLARIZED_SYNC,
+			ExecutionVersion:  executionVersion,
 			Typechecked:       typecheckRes,
 			Delay:             0 * time.Millisecond,
 		}

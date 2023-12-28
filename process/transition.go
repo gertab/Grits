@@ -20,10 +20,8 @@ import (
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
-	if re.Debug {
-		// ProcessCount is atomic
-		atomic.AddUint64(&re.processCount, 1)
-	}
+	// Increment ProcessCount atomically
+	atomic.AddUint64(&re.processCount, 1)
 
 	// notify monitor about new process
 	re.monitor.MonitorNewProcess(process)
@@ -1029,9 +1027,9 @@ func (f *PrintLForm) Transition(process *Process, re *RuntimeEnvironment) {
 func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULE, process, "%s finished %s rule %s\n", prefix, RuleString[rule], suffix)
 
-	// re.heartbeat <- struct{}{}
+	re.heartbeat <- struct{}{}
 
-	if re.Debug {
+	if re.UseMonitor {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, rule)
 	}
@@ -1039,7 +1037,7 @@ func (process *Process) finishedRule(rule Rule, prefix, suffix string, re *Runti
 
 // Process did not finish executing but will be taken over
 func (process *Process) processRenamed(re *RuntimeEnvironment) {
-	if re.Debug {
+	if re.UseMonitor {
 		// Update monitor
 		re.monitor.MonitorProcessRenamed(process)
 	}
@@ -1052,13 +1050,13 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 	// Send heartbeat
 	re.heartbeat <- struct{}{}
 
-	if re.Debug {
+	if re.UseMonitor {
 		// Update monitor
 		re.monitor.MonitorProcessTerminated(process)
-
-		// Update dead process count
-		atomic.AddUint64(&re.deadProcessCount, 1)
 	}
+
+	// Update dead process count
+	atomic.AddUint64(&re.deadProcessCount, 1)
 }
 
 // A forward process will terminate, but its providers will be used by other processes being forwarded
@@ -1068,12 +1066,12 @@ func (process *Process) terminateForward(re *RuntimeEnvironment) {
 	// Send heartbeat
 	re.heartbeat <- struct{}{}
 
-	if re.Debug {
+	if re.UseMonitor {
 		// Update monitor
 		re.monitor.MonitorRuleFinished(process, FWD)
-
-		// Will not update the dead process count since the process' provider names will 'live' on
 	}
+
+	// Will not update the dead process count since the process' provider names will 'live' on
 }
 
 // // A forward process will terminate, and its providers will be be dropped so the process will die as well
@@ -1098,14 +1096,14 @@ func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name,
 	// Send heartbeat
 	re.heartbeat <- struct{}{}
 
-	if re.Debug {
+	if re.UseMonitor {
 		// Update monitor
 		// todo change
 		re.monitor.MonitorProcessForwarded(process)
-
-		// Update dead process count
-		atomic.AddUint64(&re.deadProcessCount, 1)
 	}
+
+	// Update dead process count
+	atomic.AddUint64(&re.deadProcessCount, 1)
 }
 
 func (process *Process) renamed(oldProviders, newProviders []Name, re *RuntimeEnvironment) {

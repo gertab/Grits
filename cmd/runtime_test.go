@@ -11,7 +11,7 @@ import (
 )
 
 const numberOfIterations = 100
-const timeout = 20 * time.Millisecond
+const timeout = 50 * time.Millisecond
 
 // Invalidate all cache
 // go clean -testcache

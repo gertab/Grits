@@ -1377,15 +1377,6 @@ func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	return continuationError
 }
 
-func (p *PrintLForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	// Print
-	globalEnv.log(LOGRULEDETAILS, "rule PRINTL")
-
-	// Continue checking the remaining process
-	continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
-	return continuationError
-}
-
 /////////////////////////////////////////////////////
 ///////////////// Fixed Environment /////////////////
 /////////////////////////////////////////////////////

@@ -1,10 +1,11 @@
 
-type A = 1
+type A = lin 1
 
 let f() : A = x : A <- new close x; 
-                  wait x; 
+                  wait x;
+                  print ok;
                   close self
 
-// prc[pid0] : A = f()
+prc[a] : A = f()
 
-exec f()
+//exec f()

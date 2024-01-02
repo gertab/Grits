@@ -1,0 +1,4 @@
+
+assuming c : 1, d : 1
+prc[a] : 1 = <x,y> <- recv b; drop x; drop y; close self
+prc[b] : 1 * 1 = send self<c,d>

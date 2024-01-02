@@ -785,22 +785,8 @@ func (f *PrintForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of print: %s\n", f.String())
 
 	printRule := func() {
-		fmt.Printf("Output from %s: %s\n", NamesToString(process.Providers), f.name_c.String())
-		process.finishedRule(PRINT, "[print]", "", re)
-
-		process.Body = f.continuation_e
-		process.transitionLoopNP(re)
-	}
-
-	TransitionInternallyNP(process, printRule, re)
-}
-
-func (f *PrintLForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
-	re.logProcessf(LOGRULEDETAILS, process, "transition of printl: %s\n", f.String())
-
-	printRule := func() {
 		fmt.Printf("> %s\n", f.label.String())
-		process.finishedRule(PRINT, "[printl]", "", re)
+		process.finishedRule(PRINT, "[print]", "", re)
 
 		process.Body = f.continuation_e
 		process.transitionLoopNP(re)

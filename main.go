@@ -14,15 +14,13 @@ import (
 
 const program = `
 
-type A = 1
+// prc[a] : lin /\ unr 1 = x <- shift self; close x
+// prc[b] : lin 1 = cast a<self>
 
-let f() : A = x : A <- new close x; 
-                  wait x; 
-                  close self
+prc[a] : lin 1 = x <- shift b; wait x; close self
+prc[b] : unr \/ lin 1 = cast self<c>
+prc[c] : unr 1 = close self
 
-// prc[pid0] : A = f()
-
-exec f()
 
 // type bin = +{b0 : bin, b1 : bin, e : 1}
 // type list = +{cons : bin * list, nil : 1}
@@ -59,50 +57,50 @@ exec f()
 
 // let append123() : list =
 	
-//   printl step1;
+//   print step1;
   
 //   n12 : 1 <- new close self;
 //   n11 : bin <- new self.e<n12>;
 //   n1 : bin <- new self.b1<n11> ;   // n1: 'b1 'e
 
-//   printl step2;
+//   print step2;
 
 //   n23 : 1 <- new close self;
 //   n22 : bin <- new self.e<n23>;
 //   n21 : bin <- new self.b1<n22>;
 //   n2 : bin <- new self.b0<n21>;             // n2: 'b0 'b1 'e
 
-//   printl step3;
+//   print step3;
 
 //   lnil11 <- new nilList();
 //   l11 : bin * list <- new send self<n1, lnil11>;
 //   l1 : list <- new self.cons<l11>;          // l1 : cons(n1, nil)    
  
-//   printl step4;
+//   print step4;
 
 //   lnil21 <- new nilList();
 //   l21 : bin * list <- new send self<n2, lnil21>;
 //   l2 : list <- new self.cons<l21>;          // l2 : cons(n2, nil)
 
-//   printl step5;
+//   print step5;
 
 //   x <- new append(l1, l2);        // result : con(n1, cons(n2, nil))
 
-//   printl step6;
+//   print step6;
   
 //   <x1, x2> <- split x;
 
-//   printl step7;
+//   print step7;
   
 //   y <- new append(x1, x2);
   
-//   printl step8;
+//   print step8;
 //   <y', y''> <- split y;
   
-//   printl step9;
+//   print step9;
 //   drop y';
   
-//   printl step10;
+//   print step10;
 //   fwd self y''
 
 
@@ -157,25 +155,25 @@ exec f()
  
  
 //  let consumeBin(b : bin) : 1 = 
-// 		 case b ( b0<c> => printl b0; consumeBin(c)
-// 				| b1<c> => printl b1; consumeBin(c)
-// 				| e<c>  => printl e; wait c; close self)
+// 		 case b ( b0<c> => print b0; consumeBin(c)
+// 				| b1<c> => print b1; consumeBin(c)
+// 				| e<c>  => print e; wait c; close self)
  
 //  let consumeList(l : list) : 1 = 
-// 		 case l ( cons<c> => printl cons;
+// 		 case l ( cons<c> => print cons;
 // 							 <b, L2> <- recv c;
 // 							 bConsume <- new consumeBin(b);
 // 							 wait bConsume;
 // 							 consumeList(L2)
-// 				| nil<c>  => printl nil;
+// 				| nil<c>  => print nil;
 // 							 wait c;
 // 							 close self)
  
 //  prc[a] : list = append123()
-//  prc[b] : 1 = printl startinggg;
+//  prc[b] : 1 = print startinggg;
 //  			 yy <- new consumeList(a); 
 // 			 wait yy;
-// 			 printl okkkkkk;
+// 			 print okkkkkk;
 // 			 close self
 `
 
@@ -213,14 +211,14 @@ const program55 = `
 
 
 
-// prc[pid1] : 1 = drop a; printl okk2; close self
+// prc[pid1] : 1 = drop a; print okk2; close self
 // prc[a] : 1 * 1 = send self <x, y>
 // prc[x] : 1 = close self
 // prc[y] : 1 = close self
 
 
 
-// prc[pid1] : 1 = <a2, b2> <- recv a; printl okk; drop a2; wait b2; printl okk2; close self
+// prc[pid1] : 1 = <a2, b2> <- recv a; print okk; drop a2; wait b2; print okk2; close self
 // prc[a] : 1 * 1 = send self <x, y>
 // prc[x] : 1 = close self
 // prc[y] : 1 = close self
@@ -247,8 +245,8 @@ const program55 = `
 // // Double lolli
 // exec f4()
 
-// let f1[w : (1 -* 1) -* 1, z : 1] = <x, y> <- recv w; printl ok; send x<z, y>
-// let f2[w : 1 -* 1] = <x, y> <- recv w; wait x; printl ok2; close y
+// let f1[w : (1 -* 1) -* 1, z : 1] = <x, y> <- recv w; print ok; send x<z, y>
+// let f2[w : 1 -* 1] = <x, y> <- recv w; wait x; print ok2; close y
 // let f3[w : 1, b : (1 -* 1) -* 1, u : 1 -* 1] = send b<u, w>
 
 // let f4[w : 1] = 
@@ -322,20 +320,20 @@ let appendN1N2() : list =
     fwd self nappend
 
 let consumeBin(b : bin) : 1 = 
-        case b ( b0<c> => printl b0; consumeBin(c)
-               | b1<c> => printl b1; consumeBin(c)
-               | e<c>  => printl e; wait c; close self)
+        case b ( b0<c> => print b0; consumeBin(c)
+               | b1<c> => print b1; consumeBin(c)
+               | e<c>  => print e; wait c; close self)
 
 let consumeList(l : list) : 1 = 
-        case l ( cons<c> => printl cons;
+        case l ( cons<c> => print cons;
                             <b, L2> <- recv c;
                             bConsume <- new consumeBin(b);
                             wait bConsume;
-							printl end1;
+							print end1;
                             consumeList(L2)
-               | nil<c>  => printl nil;
+               | nil<c>  => print nil;
                             wait c;
-							printl end2;
+							print end2;
                             close self)
 
 
@@ -367,7 +365,7 @@ prc[a] : list =
 // consume result/list
 prc[b] : 1 = yy <- new consumeList(a); 
 			wait yy;
-			printl okkkkkk;
+			print okkkkkk;
 			close self
 
 `
@@ -829,16 +827,16 @@ func main() {
 
 	args := flag.Args()
 
-	var processes []*process.Process
-	var assumedFreeNames []process.Name
-	var globalEnv *process.GlobalEnvironment
-	var err error
-
 	if *startWebserver {
 		// Run via API
 		webserver.SetupAPI()
 		return
 	}
+
+	var processes []*process.Process
+	var assumedFreeNames []process.Name
+	var globalEnv *process.GlobalEnvironment
+	var err error
 
 	if development {
 		processes, assumedFreeNames, globalEnv, err = parser.ParseString(program)

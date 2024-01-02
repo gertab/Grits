@@ -319,7 +319,6 @@ const (
 	FWD
 	FWD_DROP
 	PRINT
-	PRINTL
 )
 
 var RuleString = map[Rule]string{
@@ -341,7 +340,6 @@ var RuleString = map[Rule]string{
 	FWD:      "FWD",
 	FWD_DROP: "FWD_DROP",
 	PRINT:    "PRINT",
-	PRINTL:   "PRINTL",
 }
 
 type ControlMessage struct {

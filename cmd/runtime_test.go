@@ -683,6 +683,25 @@ func TestFwdDrop(t *testing.T) {
 	checkInputRepeatedly(t, input, expected, typecheck)
 }
 
+func TestShifting(t *testing.T) {
+	// Shifting
+
+	input := ` 
+	prc[a] : lin 1 = x <- shift b; wait x; close self
+	prc[b] : unr \/ lin 1 = cast self<c>
+	prc[c] : unr 1 = close self`
+
+	expected := []traceOption{
+		{steps{{"a", process.CST}, {"a", process.CLS}}},
+	}
+
+	typecheck := true
+	checkInputRepeatedly(t, input, expected, typecheck)
+
+	typecheck = false
+	checkInputRepeatedly(t, input, expected, typecheck)
+}
+
 type step struct {
 	processName string
 	rule        process.Rule

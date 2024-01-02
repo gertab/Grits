@@ -854,16 +854,16 @@ func (p *DropForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment
 	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
 
-// Print: print name_c
-// Used to print channel name for debugging purposes
+// Print: print l; P
+// Used to print label for debugging purposes
 type PrintForm struct {
-	name_c         Name
+	label          Label
 	continuation_e Form
 }
 
-func NewPrint(name_c Name, continuation_e Form) *PrintForm {
+func NewPrint(label Label, continuation_e Form) *PrintForm {
 	return &PrintForm{
-		name_c:         name_c,
+		label:          label,
 		continuation_e: continuation_e,
 	}
 }
@@ -871,7 +871,7 @@ func NewPrint(name_c Name, continuation_e Form) *PrintForm {
 func (p *PrintForm) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("print ")
-	buf.WriteString(p.name_c.String())
+	buf.WriteString(p.label.String())
 	buf.WriteString("; ")
 	buf.WriteString(p.continuation_e.String())
 	return buf.String()
@@ -880,68 +880,20 @@ func (p *PrintForm) String() string {
 func (p *PrintForm) StringShort() string {
 	var buf bytes.Buffer
 	buf.WriteString("print ")
-	buf.WriteString(p.name_c.String())
+	buf.WriteString(p.label.String())
 	buf.WriteString("; ...")
 	return buf.String()
 }
 
 func (p *PrintForm) Substitute(old, new Name) {
-	p.name_c.Substitute(old, new)
 	p.continuation_e.Substitute(old, new)
 }
 
 func (p *PrintForm) FreeNames() []Name {
-	var fn []Name
-	fn = appendIfNotSelf(p.name_c, fn)
-	fn = mergeTwoNamesList(fn, p.continuation_e.FreeNames())
-	return fn
-}
-
-func (p *PrintForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
-	// Lookup polarity from the continuation
-	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
-}
-
-// PrintL: printl name_c
-// Used to printl channel name for debugging purposes
-type PrintLForm struct {
-	label          Label
-	continuation_e Form
-}
-
-func NewPrintL(label Label, continuation_e Form) *PrintLForm {
-	return &PrintLForm{
-		label:          label,
-		continuation_e: continuation_e,
-	}
-}
-
-func (p *PrintLForm) String() string {
-	var buf bytes.Buffer
-	buf.WriteString("printl ")
-	buf.WriteString(p.label.String())
-	buf.WriteString("; ")
-	buf.WriteString(p.continuation_e.String())
-	return buf.String()
-}
-
-func (p *PrintLForm) StringShort() string {
-	var buf bytes.Buffer
-	buf.WriteString("printl ")
-	buf.WriteString(p.label.String())
-	buf.WriteString("; ...")
-	return buf.String()
-}
-
-func (p *PrintLForm) Substitute(old, new Name) {
-	p.continuation_e.Substitute(old, new)
-}
-
-func (p *PrintLForm) FreeNames() []Name {
 	return p.continuation_e.FreeNames()
 }
 
-func (p *PrintLForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
+func (p *PrintForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	// Lookup polarity from the continuation
 	return p.continuation_e.Polarity(fromTypes, globalEnvironment)
 }
@@ -1078,13 +1030,6 @@ func EqualForm(form1, form2 Form) bool {
 		f2, ok2 := form2.(*PrintForm)
 
 		if ok1 && ok2 {
-			return f1.name_c.Equal(f2.name_c) && EqualForm(f1.continuation_e, f2.continuation_e)
-		}
-	case *PrintLForm:
-		f1, ok1 := form1.(*PrintLForm)
-		f2, ok2 := form2.(*PrintLForm)
-
-		if ok1 && ok2 {
 			return f1.label.Equal(f2.label) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	}
@@ -1191,12 +1136,7 @@ func CopyForm(orig Form) Form {
 	case *PrintForm:
 		p, ok := orig.(*PrintForm)
 		if ok {
-			return NewPrint(*p.name_c.Copy(), CopyForm(p.continuation_e))
-		}
-	case *PrintLForm:
-		p, ok := orig.(*PrintLForm)
-		if ok {
-			return NewPrintL(p.label, CopyForm(p.continuation_e))
+			return NewPrint(p.label, CopyForm(p.continuation_e))
 		}
 	}
 

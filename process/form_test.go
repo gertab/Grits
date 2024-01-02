@@ -477,7 +477,6 @@ func TestFormHasContinuation(t *testing.T) {
 	expectedFalse = append(expectedFalse, FormHasContinuation(input6))
 
 	// case *DropForm:
-	// case *PrintForm:
 
 	// Receive
 	input7 := NewReceive(pay_c, cont_c, from_c, end)

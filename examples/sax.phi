@@ -139,17 +139,17 @@ let appendN1N2() : list =
 
 
 let consumeBin(b : bin) : 1 = 
-        case b ( b0<c> => printl b0; consumeBin(c)
-               | b1<c> => printl b1; consumeBin(c)
-               | e<c>  => printl e; wait c; close self)
+        case b ( b0<c> => print b0; consumeBin(c)
+               | b1<c> => print b1; consumeBin(c)
+               | e<c>  => print e; wait c; close self)
 
 let consumeList(l : list) : 1 = 
-        case l ( cons<c> => printl cons;
+        case l ( cons<c> => print cons;
                             <b, L2> <- recv c;
                             bConsume <- new consumeBin(b);
                             wait bConsume;
                             consumeList(L2)
-               | nil<c>  => printl nil;
+               | nil<c>  => print nil;
                             wait c;
                             close self)
 
@@ -157,7 +157,7 @@ prc[a] : list = append123()
 // consume result/list
 prc[b] : 1 = yy <- new consumeList(a); 
 			wait yy;
-			printl okkkkkk;
+			print okkkkkk;
 			close self
 
 

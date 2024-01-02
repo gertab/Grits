@@ -110,7 +110,7 @@ func (s *scanner) Scan() (token tok, value string, startPos, endPos TokenPos) {
 		return s.scanSpecialSymbol(ch)
 	}
 
-	if isAlphaNum(ch) || isUnderscore(ch) {
+	if isAlphaNum(ch) || isUnderscore(ch) || isApostrophe(ch) {
 		// s.unread()
 		return s.scanLabel(ch)
 	}

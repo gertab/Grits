@@ -1,6 +1,6 @@
-# Phi
+# Harruba
 
-[*Phi is currently a placeholder for the language name*]
+[*Harruba is currently a placeholder for the language name*]
 
 Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 

@@ -44,8 +44,7 @@ After building the project (using `go  build .`), you can use the CLI version...
 
 <param> ::= <name> : <type> [ , <param> ]                       // typed variable names
 
-<type> ::= <modality> <type_i>                           // session type with modality
-         | <type_i>                                             // session type
+<type> ::= [<modality>] <type_i>                                // session type with optional modality
 
 <type_i> ::= <label>                                            // session type label
            | 1                                                  // unit type
@@ -78,7 +77,7 @@ After building the project (using `go  build .`), you can use the CLI version...
         | <name> <- shift <name> ; <term>                       // receive shift
         | ( <term> ) 
 
-<branches> ::= <label> '<' <name> '> => term [ '|' <branches> ] // term branches
+<branches> ::= <label> '<' <name> '>' => <term> [ '|' <branches> ] // term branches
 
 <names> ::= <name> [ ',' <names> ]                              // list of names
 

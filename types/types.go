@@ -740,6 +740,20 @@ func IsContractable(sessionType SessionType) bool {
 	return sessionType.Modality().AllowsContraction()
 }
 
+func UnfoldIfNeeded(orig SessionType, typeDefs *[]SessionTypeDefinition) SessionType {
+	if orig == nil {
+		return nil
+	}
+
+	_, labelType := orig.(*LabelType)
+
+	if labelType {
+		return Unfold(orig, ProduceLabelledSessionTypeEnvironment(*typeDefs))
+	}
+
+	return orig
+}
+
 // Used to unroll a type only if needed (i.e. reached label)
 func Unfold(orig SessionType, labelledTypesEnv LabelledTypesEnv) SessionType {
 	if orig == nil {

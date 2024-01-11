@@ -60,7 +60,7 @@ const (
 
 func NewRuntimeEnvironment() (*RuntimeEnvironment, context.CancelFunc) {
 	re := &RuntimeEnvironment{
-		UseMonitor:          true,
+		UseMonitor:          false,
 		Color:               true,
 		ExecutionVersion:    NORMAL_ASYNC,
 		debugChannelCounter: 0,
@@ -83,7 +83,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 
 	if re == nil {
 		re = &RuntimeEnvironment{
-			UseMonitor:       true,
+			UseMonitor:       false,
 			Color:            true,
 			Delay:            1000 * time.Millisecond,
 			ExecutionVersion: NORMAL_ASYNC,
@@ -134,17 +134,22 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 		startedWg.Wait()
 	}
 
-	go re.HeartbeatReceiver(50*time.Millisecond, cancel)
+	const heartbeatDelay = 50 * time.Millisecond
 
+	go re.HeartbeatReceiver(heartbeatDelay, cancel)
+
+	var finish time.Duration
+	start := time.Now()
 	re.StartTransitions(processes)
 
 	select {
 	case <-re.ctx.Done():
-	// case <-re.monitor.monitorFinished:
-	// Monitor terminated successfully
+		finish = time.Since(start) - heartbeatDelay
 	case err := <-re.errorChan:
 		log.Fatal(err)
 	}
+
+	fmt.Printf("Finished in %v\n", finish)
 
 	re.logf(LOGINFO, "End process count: %d (%d)\n", re.ProcessCount(), re.DeadProcessCount())
 

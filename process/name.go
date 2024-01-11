@@ -93,6 +93,8 @@ func NewSelf(Ident string) Name {
 func (n *Name) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment) types.Polarity {
 	// Fetch the polarity either directly from the type, or the user inputted polarity
 	if fromTypes {
+		// unfold if required
+		n.Type = types.UnfoldIfNeeded(n.Type, globalEnvironment.Types)
 		return n.Type.Polarity()
 	} else if n.ExplicitPolarity != nil {
 		return *n.ExplicitPolarity

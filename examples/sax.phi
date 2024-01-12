@@ -4,12 +4,6 @@
 type bin = +{b0 : bin, b1 : bin, e : 1}
 type list = +{cons : bin * list, nil : 1}
 
-// proc append (R : list) (L : list) (K : list) =
-//   recv L ( 'cons(x,L') => R' <- call append R' L' K ;
-//                           send R 'cons(x,R')
-//          | 'nil() => fwd R K )
-
-
 let append(L : list, K : list) : list =
   case L ( cons<c> => 
                 <x, L2> <- recv c;
@@ -28,6 +22,21 @@ let append2(L : list, K : list) : list =
          | nil<u> => 
                 wait u; 
                 fwd self K)
+
+let rev(l : list, accum : list) : list =
+  case l ( cons<p> =>      
+                <x, l'> <- recv p;
+                t : bin * list <- new send t<x, accum>;
+                accum2 : list <- new accum2.cons<t>;
+                rev(l', accum2)
+         | nil<u> => 
+                wait u;
+                fwd self accum
+  )
+
+let reverse(l : list) : list =
+  a : list <- new nilList();
+  rev(l, a)
 
 // Nil list
 let nilList() : list = 
@@ -51,48 +60,10 @@ let append123() : list =
   lnil21 <- new nilList();
   l21 : bin * list <- new send self<n2, lnil21>;
   l2 : list <- new self.cons<l21>;          // l2 : cons(n2, nil)
-
- // lnil <- new nilList();
- // lres21 : bin * list <- new send self<n2, lnil>;
- // lres2 : list <- new self.cons<lres21>;          // l2 : cons(n2, nil)
- // lres1 : bin * list <- new send self<n1, lres2>;
- // lres : list <- new self.cons<lres1>;          // lres : cons(n1, cons(n2, nil))
- // 
- // fwd self lres
   
-   x <- new append(l1, l2);        // result : cons(n1, cons(n2, nil))
-
-   <x1, x2> <- split x;
-
-   y <- new append(x1, x2);
-
-   <y', y''> <- split y;
-
-   drop y';
-
-   fwd self y''
-
-
-//  n33 : 1 <- new close self;
-//  n32 : bin <- new self.e<n33>;
-//  n31 : bin <- new self.b1<n32>;
-//  n3 : bin <- new self.b1<n31>;             // n3: 'b1 'b1 'e
-//
-//  lnil1 <- new nilList();                   // lnil1 : nil
-//  l32 : bin * list <- new send self<n3, lnil1>;
-//  l3 : list <- new self.cons<l32>;          // l3 : cons(n3, lnil1)
-//  l42 : bin * list <- new send self<n2, l3>;
-//  l4 : list <- new self.cons<l42>;          // l4 : cons(n2, l3)
-//
-//  lnil2 <- new nilList();                   // lnil1 : nil
-//  l12 : bin * list <- new send self<n1, lnil2>;
-//  l1 : list <- new self.cons<l12>;          // l1: cons(n1, lnil2)
-//
-//  // fwd self l1
-//
-//  append(l1, l4)
-//  
-
+  x <- new append(l1, l2);        // result : cons(n1, cons(n2, nil))
+  fwd self x
+ 
 let getBin() : bin =
   n13 : 1 <- new close self;
   n12 : bin <- new self.e<n13>;
@@ -153,12 +124,17 @@ let consumeList(l : list) : 1 =
                             wait c;
                             close self)
 
-prc[a] : list = append123()
-// consume result/list
-prc[b] : 1 = yy <- new consumeList(a); 
-			wait yy;
-			print okkkkkk;
-			close self
+let printList(l : list) : 1 = 
+          y <- new consumeList(l); 
+          wait y;
+          close self
+
+// prc[a] : list = append123()
+// prc[b] : 1 = printList(a)
+
+// prc[c] : list = append123()
+// prc[c_rev] : list = reverse(c)
+// prc[d] : 1 = printList(c_rev)
 
 
 // prc[a] : bin = getBin()
@@ -166,3 +142,68 @@ prc[b] : 1 = yy <- new consumeList(a);
 
 // prc[a] : list = appendN1N2()
 // prc[b] : 1 = consumeList(a) // consume result
+
+
+type nat = +{zero : 1, succ : nat}
+
+let half(x : nat) : nat =
+  case x (
+      zero<x'> => self.zero<x'>
+    | succ<x'> => 
+            case x' (
+                zero<x''> => self.zero<x''>
+              | succ<x''> => h <- new half(h, x'');
+                             self.succ<h>
+            )
+  )
+
+// 5 : S(S(S(S(S(0)))))
+let nat5() : nat =
+  t : 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  s4 : nat <- new s4.succ<s3>; 
+  s5 : nat <- new s5.succ<s4>; 
+  fwd self s5
+
+let consumeNat(n : nat) : 1 = 
+        case n ( zero<c> => print zero; wait c; close self
+               | succ<c> => print succ; consumeNat(c))
+
+let printNat(n : nat) : 1 = 
+          y <- new consumeNat(n); 
+          wait y;
+          close self
+
+
+
+// prc[a] : nat = nat5()
+// prc[b] : 1 = printNat(a)
+
+// prc[a] : nat = nat5()
+// prc[b] : nat = half(a)
+// prc[c] : 1 = printNat(b)
+
+
+// 10 : S(S(S(S(S(S(S(S(S(S(0))))))))))
+let nat10() : nat =
+  t   : 1   <- new close t;
+  z   : nat <- new z.zero<t>;
+  s1  : nat <- new s1.succ<z>; 
+  s2  : nat <- new s2.succ<s1>; 
+  s3  : nat <- new s3.succ<s2>; 
+  s4  : nat <- new s4.succ<s3>; 
+  s5  : nat <- new s5.succ<s4>;
+  s6  : nat <- new s6.succ<s5>;
+  s7  : nat <- new s7.succ<s6>;
+  s8  : nat <- new s8.succ<s7>;
+  s9  : nat <- new s9.succ<s8>;
+  s10 : nat <- new s10.succ<s9>;
+  fwd self s10
+
+prc[a] : nat = nat10()
+prc[b] : nat = half(a)
+prc[c] : 1 = printNat(b)
+

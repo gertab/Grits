@@ -267,14 +267,22 @@ func (re *RuntimeEnvironment) StopMonitor() ([]Process, []MonitorRulesLog) {
 func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel context.CancelFunc) {
 	fullTimeout := re.Delay + timeout
 
+	t := time.NewTimer(fullTimeout)
+
 	for {
 		select {
-		case <-time.After(fullTimeout):
-			// todo do proper restart
+		case <-t.C:
+			// Timeout reached
 			cancel()
 			return
 		case <-re.heartbeat:
-			// Restart timer
+			// Restart timer, but stop the current one
+			t.Stop()
+			select {
+			case <-t.C:
+			default:
+			}
+			t.Reset(fullTimeout)
 		}
 	}
 }

@@ -23,8 +23,10 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 	// Increment ProcessCount atomically
 	atomic.AddUint64(&re.processCount, 1)
 
-	// notify monitor about new process
-	re.monitor.MonitorNewProcess(process)
+	if re.UseMonitor {
+		// notify monitor about new process
+		re.monitor.MonitorNewProcess(process)
+	}
 
 	go process.transitionLoop(re)
 }

@@ -867,7 +867,7 @@ func main() {
 	if executeRes {
 		re := &process.RuntimeEnvironment{
 			GlobalEnvironment: globalEnv,
-			UseMonitor:        true,
+			UseMonitor:        false,
 			Color:             true,
 			ExecutionVersion:  executionVersion,
 			Typechecked:       typecheckRes,

@@ -20,8 +20,11 @@ import (
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
-	// Increment ProcessCount atomically
-	atomic.AddUint64(&re.processCount, 1)
+	if !re.Benchmark {
+		// Increment ProcessCount atomically
+		// If timing is important, then skip
+		atomic.AddUint64(&re.processCount, 1)
+	}
 
 	if re.UseMonitor {
 		// notify monitor about new process
@@ -992,7 +995,10 @@ func (f *PrintForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of print: %s\n", f.String())
 
 	printRule := func() {
-		fmt.Printf("> %s\n", f.label.String())
+		if !re.Benchmark {
+			fmt.Printf("> %s\n", f.label.String())
+		}
+
 		process.finishedRule(PRINT, "[print]", "", re)
 
 		process.Body = f.continuation_e
@@ -1043,8 +1049,10 @@ func (process *Process) terminate(re *RuntimeEnvironment) {
 		re.monitor.MonitorProcessTerminated(process)
 	}
 
-	// Update dead process count
-	atomic.AddUint64(&re.deadProcessCount, 1)
+	if !re.Benchmark {
+		// Update dead process count. Ignore if timing processes
+		atomic.AddUint64(&re.deadProcessCount, 1)
+	}
 }
 
 // A forward process will terminate, but its providers will be used by other processes being forwarded
@@ -1090,8 +1098,10 @@ func (process *Process) terminateBeforeRename(oldProviders, newProviders []Name,
 		re.monitor.MonitorProcessForwarded(process)
 	}
 
-	// Update dead process count
-	atomic.AddUint64(&re.deadProcessCount, 1)
+	if !re.Benchmark {
+		// Update dead process count
+		atomic.AddUint64(&re.deadProcessCount, 1)
+	}
 }
 
 func (process *Process) renamed(oldProviders, newProviders []Name, re *RuntimeEnvironment) {

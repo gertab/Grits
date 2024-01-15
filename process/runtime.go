@@ -44,6 +44,10 @@ type RuntimeEnvironment struct {
 	ExecutionVersion Execution_Version
 	// Flag to see whether the typechecker was used or not (i.e. if true, then all names have types)
 	Typechecked bool
+
+	// For benchmarking
+	Benchmark bool          // Timing is important, so skips debug info
+	timeTaken time.Duration // Stores the time taken during execution
 }
 
 type Execution_Version int
@@ -58,24 +62,30 @@ const (
 	// NON_POLARIZED_ASYNC /* problematic */
 )
 
-func NewRuntimeEnvironment() (*RuntimeEnvironment, context.CancelFunc) {
+func NewRuntimeEnvironment() (*RuntimeEnvironment, context.Context, context.CancelFunc) {
 	re := &RuntimeEnvironment{
-		UseMonitor:          false,
-		Color:               true,
-		ExecutionVersion:    NORMAL_ASYNC,
-		debugChannelCounter: 0,
+		GlobalEnvironment:   nil,
 		processCount:        0,
 		deadProcessCount:    0,
-		errorChan:           make(chan error),
-		Typechecked:         false,
 		heartbeat:           make(chan struct{}, 1),
+		UseMonitor:          false,
+		Color:               true,
+		debugChannelCounter: 0,
+		Delay:               0,
+		errorChan:           make(chan error),
+		ExecutionVersion:    NORMAL_ASYNC,
+		Typechecked:         false,
+		// ctx
+		// monitor
+		Benchmark: false,
+		timeTaken: 0,
 	}
 
 	// Prepare context with cancellation
 	var cancel context.CancelFunc
 	re.ctx, cancel = context.WithCancel(context.Background())
 
-	return re, cancel
+	return re, re.ctx, cancel
 }
 
 // Entry point for execution
@@ -88,6 +98,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 			Delay:            1000 * time.Millisecond,
 			ExecutionVersion: NORMAL_ASYNC,
 			Typechecked:      false,
+			Benchmark:        false,
 		}
 	}
 
@@ -111,6 +122,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	re.deadProcessCount = 0
 	re.debugChannelCounter = 0
 	re.errorChan = make(chan error)
+	re.timeTaken = 0
 
 	// Prepare context with cancellation
 	var cancel context.CancelFunc
@@ -138,24 +150,22 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 
 	go re.HeartbeatReceiver(heartbeatDelay, cancel)
 
-	var finish time.Duration
-	start := time.Now()
 	re.StartTransitions(processes)
 
 	select {
 	case <-re.ctx.Done():
-		finish = time.Since(start) - heartbeatDelay
 	case err := <-re.errorChan:
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Finished in %v\n", finish)
+	fmt.Printf("Finished in %v\n", re.TimeTaken())
 
 	re.logf(LOGINFO, "End process count: %d (%d)\n", re.ProcessCount(), re.DeadProcessCount())
 
 	return re
 }
 
+// If re.Benchmark is set to true, then ProcessCount and DeadProcessCount should not be used
 func (re *RuntimeEnvironment) ProcessCount() uint64 {
 	return re.processCount
 }
@@ -264,16 +274,26 @@ func (re *RuntimeEnvironment) StopMonitor() ([]Process, []MonitorRulesLog) {
 	return re.monitor.deadProcesses, re.monitor.rulesLog
 }
 
+// Makes sure that the processes are progress. If there is a timeout after the last process
+// update, then the Heartbeat stops, records the time elapsed, and finally calls the
+// ctx cancel function to garbage collect any remaining processes.
 func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel context.CancelFunc) {
+	defer cancel()
+
 	fullTimeout := re.Delay + timeout
 
 	t := time.NewTimer(fullTimeout)
 
+	start := time.Now()
+
 	for {
 		select {
 		case <-t.C:
-			// Timeout reached
-			cancel()
+			// Send time elapsed on the re.timeTaken channel
+			finish := time.Since(start) - fullTimeout
+			re.timeTaken = finish
+
+			// Timeout reached (call cancel and terminate)
 			return
 		case <-re.heartbeat:
 			// Restart timer, but stop the current one
@@ -293,6 +313,12 @@ func (re *RuntimeEnvironment) Ctx() context.Context {
 
 func (re *RuntimeEnvironment) ErrorChan() chan error {
 	return re.errorChan
+}
+
+// Returns the time taken for the processes to finish executing.
+// If used before the processes terminate (i.e. <-ctx.Done()), then this returns 0
+func (re *RuntimeEnvironment) TimeTaken() time.Duration {
+	return re.timeTaken
 }
 
 type Message struct {

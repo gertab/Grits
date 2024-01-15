@@ -808,11 +808,18 @@ func main() {
 	execute := flag.Bool("execute", true, "execute processes")
 	noExecute := flag.Bool("noexecute", false, "do not execute processes")
 	logLevel := flag.Int("verbosity", 3, "verbosity level (1 = least, 3 = most)")
+	doBenchmarks := flag.Bool("benchmark", false, "start benchmarks")
 	startWebserver := flag.Bool("webserver", false, "start webserver")
 
 	// todo: add execute synchronous vs asynchronous and with polarities
 
 	flag.Parse()
+
+	if *doBenchmarks {
+		// Run benchmarks and terminate
+		// benchmarks.Benchmark()
+		return
+	}
 
 	typecheckRes := !*noTypecheck && *typecheck
 	executeRes := !*noExecute && *execute
@@ -872,6 +879,7 @@ func main() {
 			ExecutionVersion:  executionVersion,
 			Typechecked:       typecheckRes,
 			Delay:             0 * time.Millisecond,
+			Benchmark:         false,
 		}
 
 		process.InitializeProcesses(processes, nil, nil, re)

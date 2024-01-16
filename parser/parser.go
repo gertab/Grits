@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"phi/position"
 	"phi/process"
@@ -42,20 +43,7 @@ type incompleteProcess struct {
 
 func ParseString(program string) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
 	r := strings.NewReader(program)
-
-	allEnvironment, err := Parse(r)
-
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	expandedProcesses, assumedFreeNames, globalEnv, err := expandProcesses(allEnvironment)
-
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return expandedProcesses, assumedFreeNames, globalEnv, nil
+	return ParseReader(r)
 }
 
 func ParseFile(fileName string) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
@@ -63,8 +51,13 @@ func ParseFile(fileName string) ([]*process.Process, []process.Name, *process.Gl
 	if err != nil {
 		panic(err)
 	}
+
+	return ParseReader(file)
+}
+
+func ParseReader(r io.Reader) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
 	// LexAndPrintTokens(file)
-	allEnvironment, err := Parse(file)
+	allEnvironment, err := Parse(r)
 
 	if err != nil {
 		return nil, nil, nil, err

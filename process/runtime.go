@@ -295,6 +295,7 @@ func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel co
 			// require the deduction of the last fullTimeout -- involving the time.NewTimer in the
 			// computation is not a good idea since it is inherently inaccurate (https://go-review.googlesource.com/c/go/+/514275)
 			re.timeTaken = lastUpdate.Sub(start)
+			// re.timeTaken = time.Since(start) - fullTimeout
 
 			// Timeout reached (call cancel and terminate)
 			return
@@ -307,6 +308,7 @@ func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel co
 			}
 			t.Reset(fullTimeout)
 			// Update the time of the last update
+			// fmt.Printf("Updated timer... time elapsed: %v \n", time.Since(start))
 			lastUpdate = time.Now()
 		}
 	}

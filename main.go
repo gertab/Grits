@@ -803,22 +803,40 @@ const development = false
 const executionVersion = process.NORMAL_ASYNC
 
 func main() {
-	// Flags
+	// Execution Flags
 	typecheck := flag.Bool("typecheck", true, "run typechecker")
 	noTypecheck := flag.Bool("notypecheck", false, "skip typechecker")
 	execute := flag.Bool("execute", true, "execute processes")
 	noExecute := flag.Bool("noexecute", false, "do not execute processes")
 	logLevel := flag.Int("verbosity", 3, "verbosity level (1 = least, 3 = most)")
-	doBenchmarks := flag.Bool("benchmark", false, "start benchmarks")
+
+	// Benchmarking flags
+	doAllBenchmarks := flag.Bool("benchmarks", false, "start all (pre-configured) benchmarks")
+	benchmark := flag.Bool("benchmark", false, "run benchmarks for current program")
+	benchmarkRepeatCount := flag.Uint("repeat", 1, "number of repetitions do when benchmarking")
+
+	// Webserver
 	startWebserver := flag.Bool("webserver", false, "start webserver")
 
 	// todo: add execute synchronous vs asynchronous and with polarities
 
 	flag.Parse()
 
-	if *doBenchmarks {
+	if *doAllBenchmarks {
 		// Run benchmarks and terminate
-		benchmarks.Benchmark()
+		benchmarks.Benchmark(*benchmarkRepeatCount)
+		return
+	}
+
+	args := flag.Args()
+
+	if *benchmark {
+		if len(args) < 1 {
+			fmt.Println("expected name of file to benchmark")
+			return
+		}
+
+		benchmarks.BenchmarkFile(args[0], *benchmarkRepeatCount)
 		return
 	}
 
@@ -831,9 +849,7 @@ func main() {
 		*logLevel = 3
 	}
 
-	fmt.Printf("typecheck: %t, execute: %t, verbosity: %d, webserver: %t\n", typecheckRes, executeRes, *logLevel, *startWebserver)
-
-	args := flag.Args()
+	fmt.Printf("typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v\n", typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
 
 	if *startWebserver {
 		// Run via API

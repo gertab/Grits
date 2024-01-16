@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var addr = flag.String("addr", ":8081", "http service address")
+var addr = flag.String("addr", ":8081", "webserver address")
 
 // func serveHome(w http.ResponseWriter, r *http.Request) {
 // 	log.Println(r.URL)

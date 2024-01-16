@@ -1,15 +1,73 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"log"
-	"phi/benchmarks"
+	"phi/cmd"
 	"phi/parser"
 	"phi/process"
-	"phi/webserver"
 	"time"
 )
+
+const development = false
+
+func main() {
+	if development {
+		p := `
+			prc[a] : 1 = wait b; print ok; close self
+			prc[b] : 1 = close self
+			`
+		dev(p)
+	} else {
+		cmd.Cli()
+	}
+}
+
+func dev(program string) {
+	// For DEVELOPMENT only: we can run programs directly, bypassing the CLI version
+	const (
+		executionVersion = process.NORMAL_ASYNC
+		typecheck        = true
+		execute          = true
+		delay            = 0 * time.Millisecond
+	)
+	var processes []*process.Process
+	var assumedFreeNames []process.Name
+	var globalEnv *process.GlobalEnvironment
+	var err error
+
+	processes, assumedFreeNames, globalEnv, err = parser.ParseString(program)
+
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// globalEnv.LogLevels = []process.LogLevel{}
+	globalEnv.LogLevels = []process.LogLevel{
+		process.LOGINFO,
+		process.LOGRULE,
+		process.LOGPROCESSING,
+		process.LOGRULEDETAILS,
+		process.LOGMONITOR,
+	}
+
+	if typecheck {
+		err = process.Typecheck(processes, assumedFreeNames, globalEnv)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+	}
+
+	if execute {
+		re, _, _ := process.NewRuntimeEnvironment()
+		re.GlobalEnvironment = globalEnv
+		re.Typechecked = typecheck
+		re.Delay = delay
+
+		process.InitializeProcesses(processes, nil, nil, re)
+	}
+}
 
 /* ignore sample programs -- used for development*/
 
@@ -798,148 +856,3 @@ prc[res_false]: close self
 // prc[pid2]: send self<pid3, self>
 // prc[pid3]: close self
 // `
-
-const development = false
-const executionVersion = process.NORMAL_ASYNC
-
-func main() {
-	// Execution Flags
-	typecheck := flag.Bool("typecheck", true, "run typechecker")
-	noTypecheck := flag.Bool("notypecheck", false, "skip typechecker")
-	execute := flag.Bool("execute", true, "execute processes")
-	noExecute := flag.Bool("noexecute", false, "do not execute processes")
-	logLevel := flag.Int("verbosity", 3, "verbosity level (1 = least, 3 = most)")
-
-	// Benchmarking flags
-	doAllBenchmarks := flag.Bool("benchmarks", false, "start all (pre-configured) benchmarks")
-	benchmark := flag.Bool("benchmark", false, "run benchmarks for current program")
-	benchmarkRepeatCount := flag.Uint("repeat", 1, "number of repetitions do when benchmarking")
-
-	// Webserver
-	startWebserver := flag.Bool("webserver", false, "start webserver")
-
-	// todo: add execute synchronous vs asynchronous and with polarities
-
-	flag.Parse()
-
-	if *doAllBenchmarks {
-		// Run benchmarks and terminate
-		benchmarks.Benchmark(*benchmarkRepeatCount)
-		return
-	}
-
-	args := flag.Args()
-
-	if *benchmark {
-		if len(args) < 1 {
-			fmt.Println("expected name of file to benchmark")
-			return
-		}
-
-		benchmarks.BenchmarkFile(args[0], *benchmarkRepeatCount)
-		return
-	}
-
-	typecheckRes := !*noTypecheck && *typecheck
-	executeRes := !*noExecute && *execute
-
-	if *logLevel < 1 {
-		*logLevel = 1
-	} else if *logLevel > 3 {
-		*logLevel = 3
-	}
-
-	fmt.Printf("typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v\n", typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
-
-	if *startWebserver {
-		// Run via API
-		webserver.SetupAPI()
-		return
-	}
-
-	var processes []*process.Process
-	var assumedFreeNames []process.Name
-	var globalEnv *process.GlobalEnvironment
-	var err error
-
-	if development {
-		processes, assumedFreeNames, globalEnv, err = parser.ParseString(program)
-	} else {
-		if len(args) < 1 {
-			fmt.Println("expected name of file to be executed")
-			return
-		}
-
-		processes, assumedFreeNames, globalEnv, err = parser.ParseFile(args[0])
-	}
-
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	globalEnv.LogLevels = generateLogLevel(*logLevel)
-
-	if typecheckRes {
-		err = process.Typecheck(processes, assumedFreeNames, globalEnv)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-	}
-
-	if executeRes {
-		re := &process.RuntimeEnvironment{
-			GlobalEnvironment: globalEnv,
-			UseMonitor:        false,
-			Color:             true,
-			ExecutionVersion:  executionVersion,
-			Typechecked:       typecheckRes,
-			Delay:             0 * time.Millisecond,
-			Benchmark:         false,
-		}
-
-		process.InitializeProcesses(processes, nil, nil, re)
-	}
-}
-
-func generateLogLevel(logLevel int) []process.LogLevel {
-	switch logLevel {
-	case 1:
-		return []process.LogLevel{
-			process.LOGINFO,
-			// process.LOGRULE,
-			// process.LOGPROCESSING,
-			// process.LOGRULEDETAILS,
-			// process.LOGMONITOR,
-		}
-	case 2:
-		return []process.LogLevel{
-			process.LOGINFO,
-			process.LOGRULE,
-			// process.LOGPROCESSING,
-			// process.LOGRULEDETAILS,
-			// process.LOGMONITOR,
-		}
-	case 3:
-		return []process.LogLevel{
-			process.LOGINFO,
-			process.LOGRULE,
-			process.LOGPROCESSING,
-			process.LOGRULEDETAILS,
-			process.LOGMONITOR,
-		}
-	default:
-		return []process.LogLevel{
-			process.LOGINFO,
-			process.LOGRULE,
-			process.LOGPROCESSING,
-			process.LOGRULEDETAILS,
-			process.LOGMONITOR,
-		}
-	}
-}
-
-// func executionVersion() process.Execution_Version {
-
-// }

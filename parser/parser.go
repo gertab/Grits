@@ -49,7 +49,7 @@ func ParseString(program string) ([]*process.Process, []process.Name, *process.G
 func ParseFile(fileName string) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		panic(err)
+		return nil, nil, nil, err
 	}
 
 	return ParseReader(file)

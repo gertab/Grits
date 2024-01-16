@@ -285,13 +285,16 @@ func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel co
 	t := time.NewTimer(fullTimeout)
 
 	start := time.Now()
+	lastUpdate := time.Now()
 
 	for {
 		select {
 		case <-t.C:
-			// Send time elapsed on the re.timeTaken channel
-			finish := time.Since(start) - fullTimeout
-			re.timeTaken = finish
+			// Set the time elapsed on the re.timeTaken (taken from the lastUpdate value).
+			// We avoid using the `time.Since(start)` here since it add an extra heartbeat,
+			// require the deduction of the last fullTimeout -- involving the time.NewTimer in the
+			// computation is not a good idea since it is inherently inaccurate (https://go-review.googlesource.com/c/go/+/514275)
+			re.timeTaken = lastUpdate.Sub(start)
 
 			// Timeout reached (call cancel and terminate)
 			return
@@ -303,6 +306,8 @@ func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel co
 			default:
 			}
 			t.Reset(fullTimeout)
+			// Update the time of the last update
+			lastUpdate = time.Now()
 		}
 	}
 }

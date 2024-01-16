@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"phi/benchmarks"
 	"phi/parser"
 	"phi/process"
 	"phi/webserver"
@@ -817,7 +818,7 @@ func main() {
 
 	if *doBenchmarks {
 		// Run benchmarks and terminate
-		// benchmarks.Benchmark()
+		benchmarks.Benchmark()
 		return
 	}
 

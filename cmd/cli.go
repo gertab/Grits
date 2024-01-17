@@ -62,8 +62,13 @@ func Cli() {
 	args := flag.Args()
 
 	if *doAllBenchmarks {
+		if len(args) >= 1 {
+			fmt.Println("Will run pre-configured benchmarks. Avoid including filename")
+			return
+		}
+
 		// Run benchmarks and terminate
-		benchmarks.Benchmark(*benchmarkRepeatCount)
+		benchmarks.Benchmarks(*benchmarkRepeatCount)
 		return
 	}
 
@@ -130,7 +135,7 @@ func Cli() {
 			ExecutionVersion:  executionVersion,
 			Typechecked:       typecheckRes,
 			Delay:             0 * time.Millisecond,
-			Benchmark:         false,
+			Quiet:             false,
 		}
 
 		process.InitializeProcesses(processes, nil, nil, re)

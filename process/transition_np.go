@@ -17,11 +17,8 @@ import (
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransitionNP(re *RuntimeEnvironment) {
-	if !re.Benchmark {
-		// Increment ProcessCount atomically
-		// If timing is important, then skip
-		atomic.AddUint64(&re.processCount, 1)
-	}
+	// Increment ProcessCount atomically
+	atomic.AddUint64(&re.processCount, 1)
 
 	if re.UseMonitor {
 		// notify monitor about new process
@@ -790,7 +787,7 @@ func (f *PrintForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of print: %s\n", f.String())
 
 	printRule := func() {
-		if !re.Benchmark {
+		if !re.Quiet {
 			fmt.Printf("> %s\n", f.label.String())
 		}
 		process.finishedRule(PRINT, "[print]", "", re)

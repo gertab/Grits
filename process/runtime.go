@@ -46,8 +46,10 @@ type RuntimeEnvironment struct {
 	Typechecked bool
 
 	// For benchmarking
-	Benchmark bool          // Timing is important, so skips debug info
 	timeTaken time.Duration // Stores the time taken during execution
+
+	Quiet bool // Suppresses 'print' output
+	// might be useful to replace with a buffer for the output
 }
 
 type Execution_Version int
@@ -77,7 +79,7 @@ func NewRuntimeEnvironment() (*RuntimeEnvironment, context.Context, context.Canc
 		Typechecked:         false,
 		// ctx
 		// monitor
-		Benchmark: false,
+		Quiet:     false,
 		timeTaken: 0,
 	}
 
@@ -98,7 +100,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 			Delay:            1000 * time.Millisecond,
 			ExecutionVersion: NORMAL_ASYNC,
 			Typechecked:      false,
-			Benchmark:        false,
+			Quiet:            false,
 		}
 	}
 
@@ -165,7 +167,6 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	return re
 }
 
-// If re.Benchmark is set to true, then ProcessCount and DeadProcessCount should not be used
 func (re *RuntimeEnvironment) ProcessCount() uint64 {
 	return re.processCount
 }
@@ -422,14 +423,14 @@ const (
 
 // Similar to Println
 func (re *RuntimeEnvironment) log(level LogLevel, message string) {
-	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
+	if !re.Quiet && slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		fmt.Println(message)
 	}
 }
 
 // Similar to Printf
 func (re *RuntimeEnvironment) logf(level LogLevel, message string, args ...interface{}) {
-	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
+	if !re.Quiet && slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		fmt.Printf(message, args...)
 	}
 }
@@ -445,7 +446,7 @@ const resetColor = "\033[0m"
 
 // Similar to Println
 func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, message string) {
-	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
+	if !re.Quiet && slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		var buffer bytes.Buffer
 
 		if re.Color {
@@ -474,7 +475,7 @@ func (re *RuntimeEnvironment) logProcess(level LogLevel, process *Process, messa
 
 // Similar to Printf
 func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, message string, args ...interface{}) {
-	if slices.Contains(re.GlobalEnvironment.LogLevels, level) {
+	if !re.Quiet && slices.Contains(re.GlobalEnvironment.LogLevels, level) {
 		var buffer bytes.Buffer
 
 		if re.Color {
@@ -541,7 +542,7 @@ func (re *RuntimeEnvironment) logProcessf(level LogLevel, process *Process, mess
 // }
 
 func (re *RuntimeEnvironment) logMonitorf(message string, args ...interface{}) {
-	if slices.Contains(re.GlobalEnvironment.LogLevels, LOGMONITOR) {
+	if !re.Quiet && slices.Contains(re.GlobalEnvironment.LogLevels, LOGMONITOR) {
 
 		var buf bytes.Buffer
 		if re.monitor.re.Color {

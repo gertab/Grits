@@ -1,68 +1,19 @@
 package benchmarks
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"phi/parser"
 	"phi/process"
 	"strings"
 	"time"
 )
 
-const program = `
-	
-let ff() : 1 =
-w : 1 <- new close w;
-wait w;
-close self
-
-prc[a, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12] : 1 =  f1 <- new ff();
-		   f2 <- new ff();
-		   f3 <- new ff();
-		   f4 <- new ff();
-		   f5 <- new ff();
-		   f6 <- new ff();
-		   f7 <- new ff();
-		   f8 <- new ff();
-		   f9 <- new ff();
-		   f10 <- new ff();
-		   f11 <- new ff();
-		   f12 <- new ff();
-		   f13 <- new ff();
-		   f14 <- new ff();
-		   f15 <- new ff();
-		   f16 <- new ff();
-		   f17 <- new ff();
-		   f18 <- new ff();
-		   f19 <- new ff();
-		   f20 <- new ff();
-		   wait f1; 
-		   wait f19;
-		   wait f3; 
-		   wait f4; 
-		   wait f17;
-		   wait f6; 
-		   wait f7; 
-		   wait f15;
-		   wait f9; 
-		   wait f10;
-		   wait f11;
-		   wait f8; 
-		   wait f12;
-		   wait f13;
-		   wait f14;
-		   wait f5; 
-		   wait f16;
-		   wait f2; 
-		   wait f18;
-		   wait f20;
-		   print ok;
-		   close self
-	`
-
-const prog2 = `
+const programExample = `
 type A = &{label : 1}
 type B = 1 -* 1
 
@@ -77,6 +28,7 @@ prc[pid1] : 1
 				drop v; 
 				close self`
 
+// Runs benchmark for one file
 func BenchmarkFile(fileName string, repetitions uint) {
 	programFile, err := os.Open(fileName)
 	if err != nil {
@@ -84,28 +36,148 @@ func BenchmarkFile(fileName string, repetitions uint) {
 		return
 	}
 
-	timeTaken, err := runTiming(programFile, process.NORMAL_ASYNC)
+	programFileBytes, _ := io.ReadAll(programFile)
 
-	if err != nil {
-		fmt.Println(err)
+	fmt.Printf("Running benchmark for %s\n", filepath.Base(fileName))
+
+	// timeTaken, processCount, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+
+	// fmt.Printf("Finished in %vµs (%v) -- %v processes \n", timeTaken.Microseconds(), timeTaken, processCount)
+
+	// Run all timings repeatedly
+	var allResults []TimingResult
+
+	for i := 0; i < int(repetitions); i++ {
+		result := runAllTimingsOnce(bytes.NewReader(programFileBytes))
+
+		if result != nil {
+			fmt.Println(result)
+			allResults = append(allResults, *result)
+		}
 	}
 
-	fmt.Printf("Finished in %vµs (%v) \n", timeTaken.Microseconds(), timeTaken)
+	fmt.Println("Obtained", len(allResults), "results:")
+	fmt.Println(csvHeader())
+	for _, row := range allResults {
+		fmt.Println(row.csvRow())
+	}
 }
 
-func Benchmark(repetitions uint) {
+// Runs pre-configured benchmarks
+func Benchmarks(repetitions uint) {
 	fmt.Println("Benchmarking...")
 
-	timeTaken, err := runTiming(strings.NewReader(prog2), process.NORMAL_ASYNC)
+	timeTaken, processCount, err := runTiming(strings.NewReader(programExample), process.NORMAL_ASYNC)
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	fmt.Printf("Finished in %vµs (%v) \n", timeTaken.Microseconds(), timeTaken)
+	fmt.Printf("Finished in %vµs (%v) -- %v processes \n", timeTaken.Microseconds(), timeTaken, processCount)
 }
 
-func runTiming(program io.Reader, executionVersion process.Execution_Version) (time.Duration, error) {
+func runAllTimingsOnce(program io.Reader) *TimingResult {
+	programFileBytes, _ := io.ReadAll(program)
+
+	var result TimingResult
+
+	// Version 1:
+	timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
+	if err != nil {
+		return nil
+	}
+
+	result.timeNonPolarizedSync = timeTaken
+	result.processCountNonPolarizedSync = count
+
+	// Version 2 (Async):
+	timeTaken2, count2, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
+	if err != nil {
+		return nil
+	}
+
+	result.timeNormalAsync = timeTaken2
+	result.processCountNormalAsync = count2
+
+	// Version 2 (Sync):
+	timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
+	if err != nil {
+		return nil
+	}
+
+	result.timeNormalSync = timeTaken3
+	result.processCountNormalSync = count3
+
+	return &result
+}
+
+type TimingResult struct {
+	name                         string
+	timeNonPolarizedSync         time.Duration
+	processCountNonPolarizedSync uint64
+	timeNormalAsync              time.Duration
+	processCountNormalAsync      uint64
+	timeNormalSync               time.Duration
+	processCountNormalSync       uint64
+}
+
+func (t *TimingResult) String() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(fmt.Sprintf("File: %v\n", t.name))
+	buffer.WriteString(fmt.Sprintf("\tv1: \t\t%vµs (%v) -- %d processes\n", t.timeNonPolarizedSync.Microseconds(), t.timeNonPolarizedSync, t.processCountNonPolarizedSync))
+	buffer.WriteString(fmt.Sprintf("\tv2(async):\t%vµs (%v) -- %d processes\n", t.timeNormalAsync.Microseconds(), t.timeNormalAsync, t.processCountNormalAsync))
+	buffer.WriteString(fmt.Sprintf("\tv2(sync):\t%vµs (%v) -- %d processes\n", t.timeNormalSync.Microseconds(), t.timeNormalSync, t.processCountNormalSync))
+
+	return buffer.String()
+}
+
+const separator = ","
+
+func csvHeader() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString("name")
+	buffer.WriteString(separator)
+	buffer.WriteString("timeNonPolarizedSync")
+	buffer.WriteString(separator)
+	buffer.WriteString("processCountNonPolarizedSync")
+	buffer.WriteString(separator)
+	buffer.WriteString("timeNormalAsync")
+	buffer.WriteString(separator)
+	buffer.WriteString("processCountNormalAsync")
+	buffer.WriteString(separator)
+	buffer.WriteString("timeNormalSync")
+	buffer.WriteString(separator)
+	buffer.WriteString("processCountNormalSync")
+
+	return buffer.String()
+}
+
+func (t *TimingResult) csvRow() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(t.name)
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%v", t.timeNonPolarizedSync.Microseconds()))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%d", t.processCountNonPolarizedSync))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalAsync.Microseconds()))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalAsync))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalSync.Microseconds()))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalSync))
+
+	return buffer.String()
+}
+
+func runTiming(program io.Reader, executionVersion process.Execution_Version) (time.Duration, uint64, error) {
 
 	var processes []*process.Process
 	var assumedFreeNames []process.Name
@@ -116,16 +188,13 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 
 	if err != nil {
 		// log.Fatal(err)
-		return 0, err
+		return 0, 0, err
 	}
-
-	globalEnv.LogLevels = []process.LogLevel{}
-	// globalEnv.LogLevels = []process.LogLevel{process.LOGINFO, process.LOGPROCESSING}
 
 	err = process.Typecheck(processes, assumedFreeNames, globalEnv)
 	if err != nil {
 		// log.Fatal(err)
-		return 0, err
+		return 0, 0, err
 	}
 
 	re, ctx, cancel := process.NewRuntimeEnvironment()
@@ -134,8 +203,10 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 	re.ExecutionVersion = executionVersion
 	re.Typechecked = true
 
-	// Will run the benchmarks
-	re.Benchmark = false
+	// Suppress print and log outputs
+	re.Quiet = true
+	globalEnv.LogLevels = []process.LogLevel{}
+	// globalEnv.LogLevels = []process.LogLevel{process.LOGINFO, process.LOGPROCESSING}
 
 	// fmt.Printf("Initializing %d processes\n", len(processes))
 
@@ -154,5 +225,5 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 		log.Fatal(err)
 	}
 
-	return re.TimeTaken(), nil
+	return re.TimeTaken(), re.ProcessCount(), nil
 }

@@ -13,7 +13,7 @@ import (
 const (
 	fileName  = "nat-double"
 	extension = ".phi"
-	count     = 20
+	count     = 22
 )
 
 // Script to generate the nat-double files
@@ -56,20 +56,10 @@ let plus1(y : nat) : nat =
 
 // 1 : S(0)
 let nat1() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s0 : nat <- new s0.succ<z>; 
-  fwd self s0
-
-// Print result
-let printNat(n : nat) : 1 = 
-          y <- new consumeNat(n); 
-          wait y;
-          close self
-
-let consumeNat(n : nat) : 1 = 
-        case n ( zero<c> => print zero; wait c; close self
-               | succ<c> => print succ; consumeNat(c))
+    t : 1 <- new close t;
+    z  : nat <- new z.zero<t>;
+    s0 : nat <- new s0.succ<z>; 
+    fwd self s0
 
 `
 
@@ -83,7 +73,6 @@ let consumeNat(n : nat) : 1 =
 			         d1 <- new double(d0);
 			         d2 <- new double(d1);
 			         fwd self d2
-			  prc[c] : 1 = printNat(b)
 	*/
 
 	const processPart1 = `// Initiate execution
@@ -94,14 +83,12 @@ prc[b] : nat =
 	// const processPart2 = `       d1 <- new double(d0);`
 
 	for i := 1; i <= n; i += 1 {
-		processPart2 := fmt.Sprintf("       d%d <- new double(d%d);\n", i, i-1)
+		processPart2 := fmt.Sprintf("    d%d <- new double(d%d);\n", i, i-1)
 		buffer.WriteString(processPart2)
 	}
 
-	processPart3 := fmt.Sprintf("       fwd self d%d\n", n)
+	processPart3 := fmt.Sprintf("    fwd self d%d\n", n)
 	buffer.WriteString(processPart3)
-	const processPart4 = `prc[c] : 1 = printNat(b)`
-	buffer.WriteString(processPart4)
 
 	return buffer
 }

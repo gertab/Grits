@@ -1,0 +1,52 @@
+
+type nat = +{zero : 1, succ : nat}
+
+let double(x : nat) : nat =
+    case x (
+          zero<x'> => self.zero<x'>
+        | succ<x'> => h <- new double(x');
+                      d : nat <- new d.succ<h>;
+                      self.succ<d>
+    )
+
+let plus1(y : nat) : nat = 
+    case y (
+          zero<x'> => x'' : nat <- new x''.zero<x'>;
+                      self.succ<x''>
+        | succ<x'> => x'' <- new plus1(x');
+                      self.succ<x''>
+    )
+
+// 1 : S(0)
+let nat1() : nat =
+    t : 1 <- new close t;
+    z  : nat <- new z.zero<t>;
+    s0 : nat <- new s0.succ<z>; 
+    fwd self s0
+
+// Initiate execution
+prc[d0] : nat = nat1()
+prc[b] : nat = 
+    d1 <- new double(d0);
+    d2 <- new double(d1);
+    d3 <- new double(d2);
+    d4 <- new double(d3);
+    d5 <- new double(d4);
+    d6 <- new double(d5);
+    d7 <- new double(d6);
+    d8 <- new double(d7);
+    d9 <- new double(d8);
+    d10 <- new double(d9);
+    d11 <- new double(d10);
+    d12 <- new double(d11);
+    d13 <- new double(d12);
+    d14 <- new double(d13);
+    d15 <- new double(d14);
+    d16 <- new double(d15);
+    d17 <- new double(d16);
+    d18 <- new double(d17);
+    d19 <- new double(d18);
+    d20 <- new double(d19);
+    d21 <- new double(d20);
+    d22 <- new double(d21);
+    fwd self d22

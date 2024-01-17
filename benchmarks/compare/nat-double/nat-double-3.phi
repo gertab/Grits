@@ -1,0 +1,33 @@
+
+type nat = +{zero : 1, succ : nat}
+
+let double(x : nat) : nat =
+    case x (
+          zero<x'> => self.zero<x'>
+        | succ<x'> => h <- new double(x');
+                      d : nat <- new d.succ<h>;
+                      self.succ<d>
+    )
+
+let plus1(y : nat) : nat = 
+    case y (
+          zero<x'> => x'' : nat <- new x''.zero<x'>;
+                      self.succ<x''>
+        | succ<x'> => x'' <- new plus1(x');
+                      self.succ<x''>
+    )
+
+// 1 : S(0)
+let nat1() : nat =
+    t : 1 <- new close t;
+    z  : nat <- new z.zero<t>;
+    s0 : nat <- new s0.succ<z>; 
+    fwd self s0
+
+// Initiate execution
+prc[d0] : nat = nat1()
+prc[b] : nat = 
+    d1 <- new double(d0);
+    d2 <- new double(d1);
+    d3 <- new double(d2);
+    fwd self d3

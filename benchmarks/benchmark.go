@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"phi/parser"
 	"phi/process"
-	"strings"
+	"runtime"
 	"time"
 )
 
@@ -30,6 +30,8 @@ prc[pid1] : 1
 
 // Runs benchmark for one file
 func BenchmarkFile(fileName string, repetitions uint) {
+	runtime.GOMAXPROCS(1)
+
 	programFile, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println("Couldn't open file: ", err)
@@ -64,19 +66,23 @@ func BenchmarkFile(fileName string, repetitions uint) {
 	for _, row := range allResults {
 		fmt.Println(row.csvRow())
 	}
+
+	// fmt.Println("sssssss", runtime.NumCPU())
 }
 
 // Runs pre-configured benchmarks
 func Benchmarks(repetitions uint) {
 	fmt.Println("Benchmarking...")
 
-	timeTaken, processCount, err := runTiming(strings.NewReader(programExample), process.NORMAL_ASYNC)
+	BenchmarkFile("./benchmarks/compare/nat-double/nat-double-20.phi", repetitions)
 
-	if err != nil {
-		fmt.Println(err)
-	}
+	// timeTaken, processCount, err := runTiming(strings.NewReader(programExample), process.NORMAL_ASYNC)
 
-	fmt.Printf("Finished in %vµs (%v) -- %v processes \n", timeTaken.Microseconds(), timeTaken, processCount)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+
+	// fmt.Printf("Finished in %vµs (%v) -- %v processes \n", timeTaken.Microseconds(), timeTaken, processCount)
 }
 
 func runAllTimingsOnce(program io.Reader) *TimingResult {
@@ -84,14 +90,14 @@ func runAllTimingsOnce(program io.Reader) *TimingResult {
 
 	var result TimingResult
 
-	// Version 1:
-	timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
-	if err != nil {
-		return nil
-	}
+	// // Version 1:
+	// timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
+	// if err != nil {
+	// 	return nil
+	// }
 
-	result.timeNonPolarizedSync = timeTaken
-	result.processCountNonPolarizedSync = count
+	// result.timeNonPolarizedSync = timeTaken
+	// result.processCountNonPolarizedSync = count
 
 	// Version 2 (Async):
 	timeTaken2, count2, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
@@ -102,14 +108,14 @@ func runAllTimingsOnce(program io.Reader) *TimingResult {
 	result.timeNormalAsync = timeTaken2
 	result.processCountNormalAsync = count2
 
-	// Version 2 (Sync):
-	timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
-	if err != nil {
-		return nil
-	}
+	// // Version 2 (Sync):
+	// timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
+	// if err != nil {
+	// 	return nil
+	// }
 
-	result.timeNormalSync = timeTaken3
-	result.processCountNormalSync = count3
+	// result.timeNormalSync = timeTaken3
+	// result.processCountNormalSync = count3
 
 	return &result
 }
@@ -204,7 +210,7 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 	re.Typechecked = true
 
 	// Suppress print and log outputs
-	re.Quiet = true
+	re.Quiet = false
 	globalEnv.LogLevels = []process.LogLevel{}
 	// globalEnv.LogLevels = []process.LogLevel{process.LOGINFO, process.LOGPROCESSING}
 

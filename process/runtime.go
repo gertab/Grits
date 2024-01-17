@@ -301,16 +301,30 @@ func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel co
 			// Timeout reached (call cancel and terminate)
 			return
 		case <-re.heartbeat:
-			// Restart timer, but stop the current one
+			// Update the time of the last update
+			// fmt.Printf("Updated timer... time elapsed: %v \n", time.Since(start))
+			lastUpdate = time.Now()
+
+			// Restart timer, but stop the current one first
 			t.Stop()
 			select {
 			case <-t.C:
 			default:
 			}
+
+			// Empty all queued up heartbeats
+			func() {
+				for {
+					select {
+					case <-re.heartbeat:
+					default:
+						return
+					}
+				}
+			}()
+
+			// Reset timer
 			t.Reset(fullTimeout)
-			// Update the time of the last update
-			// fmt.Printf("Updated timer... time elapsed: %v \n", time.Since(start))
-			lastUpdate = time.Now()
 		}
 	}
 }

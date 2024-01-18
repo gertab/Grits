@@ -51,7 +51,7 @@ func Cli() {
 	// Benchmarking flags
 	doAllBenchmarks := flag.Bool("benchmarks", false, "start all (pre-configured) benchmarks")
 	benchmark := flag.Bool("benchmark", false, "run benchmarks for current program")
-	benchmarkRepeatCount := flag.Uint("repeat", 10, "number of repetitions do when benchmarking")
+	benchmarkRepeatCount := flag.Uint("repeat", 3, "number of repetitions do when benchmarking")
 
 	// Webserver
 	startWebserver := flag.Bool("webserver", false, "start webserver")

@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"phi/parser"
 	"phi/process"
-	"runtime"
 	"time"
 )
 
@@ -29,8 +28,11 @@ prc[pid1] : 1
 				close self`
 
 // Runs benchmark for one file
+const detailed = false
+
 func BenchmarkFile(fileName string, repetitions uint) {
-	runtime.GOMAXPROCS(1)
+	// runtime.GOMAXPROCS(1)
+	fileNameBase := filepath.Base(fileName)
 
 	programFile, err := os.Open(fileName)
 	if err != nil {
@@ -40,7 +42,7 @@ func BenchmarkFile(fileName string, repetitions uint) {
 
 	programFileBytes, _ := io.ReadAll(programFile)
 
-	fmt.Printf("Running benchmark for %s\n", filepath.Base(fileName))
+	fmt.Printf("Running benchmark for %s\n", fileNameBase)
 
 	// timeTaken, processCount, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
 	// if err != nil {
@@ -56,25 +58,42 @@ func BenchmarkFile(fileName string, repetitions uint) {
 		result := runAllTimingsOnce(bytes.NewReader(programFileBytes))
 
 		if result != nil {
-			fmt.Println(result)
+			// fmt.Println(result)
 			allResults = append(allResults, *result)
 		}
 	}
 
-	fmt.Println("Obtained", len(allResults), "results:")
-	fmt.Println(csvHeader())
-	for _, row := range allResults {
-		fmt.Println(row.csvRow())
+	if detailed {
+		fmt.Println("Obtained", len(allResults), "results:")
+		fmt.Println(csvHeader())
+		for _, row := range allResults {
+			fmt.Println(row.csvRow())
+		}
 	}
 
-	// fmt.Println("sssssss", runtime.NumCPU())
+	// err = saveToFileCSV(fileNameBase, allResults)
+
+	// if err != nil {
+	// 	fmt.Println("Could save to file", err)
+	// }
+
+	average := getAverage(allResults)
+	average.name = fileNameBase
+	fmt.Println(average)
+	// fmt.Println(average.csvRow())
+
+	err = saveToFileCSV(fileNameBase, []TimingResult{*average})
+
+	if err != nil {
+		fmt.Println("Could save to file", err)
+	}
 }
 
 // Runs pre-configured benchmarks
 func Benchmarks(repetitions uint) {
 	fmt.Println("Benchmarking...")
 
-	BenchmarkFile("./benchmarks/compare/nat-double/nat-double-20.phi", repetitions)
+	BenchmarkFile("./benchmarks/compare/nat-double/nat-double-13.phi", repetitions)
 
 	// timeTaken, processCount, err := runTiming(strings.NewReader(programExample), process.NORMAL_ASYNC)
 
@@ -85,19 +104,20 @@ func Benchmarks(repetitions uint) {
 	// fmt.Printf("Finished in %vµs (%v) -- %v processes \n", timeTaken.Microseconds(), timeTaken, processCount)
 }
 
+// Run the same program using all transition variations
 func runAllTimingsOnce(program io.Reader) *TimingResult {
 	programFileBytes, _ := io.ReadAll(program)
 
 	var result TimingResult
 
-	// // Version 1:
-	// timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
-	// if err != nil {
-	// 	return nil
-	// }
+	// Version 1:
+	timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
+	if err != nil {
+		return nil
+	}
 
-	// result.timeNonPolarizedSync = timeTaken
-	// result.processCountNonPolarizedSync = count
+	result.timeNonPolarizedSync = timeTaken
+	result.processCountNonPolarizedSync = count
 
 	// Version 2 (Async):
 	timeTaken2, count2, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
@@ -108,14 +128,14 @@ func runAllTimingsOnce(program io.Reader) *TimingResult {
 	result.timeNormalAsync = timeTaken2
 	result.processCountNormalAsync = count2
 
-	// // Version 2 (Sync):
-	// timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
-	// if err != nil {
-	// 	return nil
-	// }
+	// Version 2 (Sync):
+	timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
+	if err != nil {
+		return nil
+	}
 
-	// result.timeNormalSync = timeTaken3
-	// result.processCountNormalSync = count3
+	result.timeNormalSync = timeTaken3
+	result.processCountNormalSync = count3
 
 	return &result
 }
@@ -137,6 +157,26 @@ func (t *TimingResult) String() string {
 	buffer.WriteString(fmt.Sprintf("\tv1: \t\t%vµs (%v) -- %d processes\n", t.timeNonPolarizedSync.Microseconds(), t.timeNonPolarizedSync, t.processCountNonPolarizedSync))
 	buffer.WriteString(fmt.Sprintf("\tv2(async):\t%vµs (%v) -- %d processes\n", t.timeNormalAsync.Microseconds(), t.timeNormalAsync, t.processCountNormalAsync))
 	buffer.WriteString(fmt.Sprintf("\tv2(sync):\t%vµs (%v) -- %d processes\n", t.timeNormalSync.Microseconds(), t.timeNormalSync, t.processCountNormalSync))
+
+	return buffer.String()
+}
+
+func (t *TimingResult) csvRow() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(t.name)
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%v", t.timeNonPolarizedSync.Microseconds()))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%d", t.processCountNonPolarizedSync))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalAsync.Microseconds()))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalAsync))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalSync.Microseconds()))
+	buffer.WriteString(separator)
+	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalSync))
 
 	return buffer.String()
 }
@@ -163,24 +203,51 @@ func csvHeader() string {
 	return buffer.String()
 }
 
-func (t *TimingResult) csvRow() string {
-	var buffer bytes.Buffer
+func saveToFileCSV(fileName string, results []TimingResult) error {
+	const extension = ".csv"
+	name := fileName + "-benchmark" + extension
+	f, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-	buffer.WriteString(t.name)
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%v", t.timeNonPolarizedSync.Microseconds()))
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%d", t.processCountNonPolarizedSync))
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalAsync.Microseconds()))
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalAsync))
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalSync.Microseconds()))
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalSync))
+	f.Write([]byte(csvHeader()))
+	f.Write([]byte("\n"))
 
-	return buffer.String()
+	for _, row := range results {
+		f.Write([]byte(row.csvRow()))
+		f.Write([]byte("\n"))
+	}
+
+	return nil
+}
+
+func getAverage(allResults []TimingResult) *TimingResult {
+	result := allResults[0]
+
+	count := len(allResults)
+
+	if count > 1 {
+		for i := 1; i < count; i += 1 {
+			result.timeNonPolarizedSync += allResults[i].timeNonPolarizedSync
+			result.processCountNonPolarizedSync += allResults[i].processCountNonPolarizedSync
+			result.timeNormalAsync += allResults[i].timeNormalAsync
+			result.processCountNormalAsync += allResults[i].processCountNormalAsync
+			result.timeNormalSync += allResults[i].timeNormalSync
+			result.processCountNormalSync += allResults[i].processCountNormalSync
+		}
+
+		// Get average
+		result.timeNonPolarizedSync /= time.Duration(count)
+		result.processCountNonPolarizedSync /= uint64(count)
+		result.timeNormalAsync /= time.Duration(count)
+		result.processCountNormalAsync /= uint64(count)
+		result.timeNormalSync /= time.Duration(count)
+		result.processCountNormalSync /= uint64(count)
+	}
+
+	return &result
 }
 
 func runTiming(program io.Reader, executionVersion process.Execution_Version) (time.Duration, uint64, error) {
@@ -220,7 +287,7 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 
 	re.SubstituteNameInitialization(processes, channels)
 
-	const heartbeatDelay = 50 * time.Millisecond
+	const heartbeatDelay = 500 * time.Millisecond
 	go re.HeartbeatReceiver(heartbeatDelay, cancel)
 
 	re.StartTransitions(processes)

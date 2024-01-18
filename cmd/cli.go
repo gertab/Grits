@@ -68,7 +68,7 @@ func Cli() {
 		}
 
 		// Run benchmarks and terminate
-		benchmarks.Benchmarks(*benchmarkRepeatCount)
+		benchmarks.Benchmarks()
 		return
 	}
 

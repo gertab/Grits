@@ -13,7 +13,7 @@ import (
 const (
 	fileName  = "nat-double"
 	extension = ".phi"
-	count     = 22
+	count     = 18
 )
 
 // Script to generate the nat-double files

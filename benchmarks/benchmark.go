@@ -25,8 +25,8 @@ import (
 //   - timeNormalSync               : time taken to evaluate file (using v2-sync)
 //   - processCountNormalSync       : number of processes spawn (when using v2-sync)
 const (
-	detailedOutput      = true
-	GoMaxProcs          = 10
+	detailedOutput = true
+	// GoMaxProcs          = 4
 	outputFileExtension = ".csv"
 )
 
@@ -46,8 +46,8 @@ prc[pid1] : 1
 				close self`
 
 // Runs benchmark for one file
-func BenchmarkFile(fileName string, repetitions uint) {
-	runtime.GOMAXPROCS(GoMaxProcs)
+func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
+	runtime.GOMAXPROCS(maxCores)
 
 	fileNameBase := filepath.Base(fileName)
 
@@ -58,7 +58,7 @@ func BenchmarkFile(fileName string, repetitions uint) {
 		return
 	}
 
-	fmt.Printf("Running benchmarks for %s (%d cores) - ", fileNameBase, GoMaxProcs)
+	fmt.Printf("Running benchmarks for %s (using %d cores out of %v). ", fileNameBase, maxCores, runtime.NumCPU())
 
 	if repetitions > 1 {
 		fmt.Printf("Repeating runs for %d times\n", repetitions)
@@ -78,23 +78,26 @@ func BenchmarkFile(fileName string, repetitions uint) {
 
 	for i := 0; i < int(repetitions); i++ {
 		result := runAllTimingsOnce(bytes.NewReader(programFileBytes))
-		fmt.Print(".")
+		// fmt.Print(".")
 
 		if result != nil {
-			// fmt.Println(result)
+			if detailedOutput {
+				fmt.Println(result)
+			}
 			allResults = append(allResults, *result)
 		}
 	}
 
-	fmt.Println()
+	// fmt.Println()
 
-	if detailedOutput {
-		fmt.Println("Obtained", len(allResults), "results:")
-		fmt.Println(csvHeader())
-		for _, row := range allResults {
-			fmt.Println(row.csvRow())
-		}
-	}
+	// if detailedOutput {
+	// 	fmt.Println("Obtained", len(allResults), "results:")
+	// 	fmt.Println(csvHeader())
+	// 	for _, row := range allResults {
+	// 		fmt.Println(row.csvRow())
+	// 		fmt.Println(row)
+	// 	}
+	// }
 
 	// err = saveToFileCSV(fileNameBase, allResults)
 
@@ -104,34 +107,61 @@ func BenchmarkFile(fileName string, repetitions uint) {
 
 	average := getAverage(allResults)
 	average.name = fileNameBase
-	fmt.Println(average)
 	// fmt.Println(average.csvRow())
 
-	err = saveToFileCSV(fileNameBase, []TimingResult{*average})
+	if len(allResults) > 1 {
+		fmt.Println("Average times:")
+		fmt.Println(average)
+	}
 
+	fileName, err = saveToFileCSV(fileNameBase, "benchmark", []TimingResult{*average}, maxCores)
 	if err != nil {
 		fmt.Println("Could save to file", err)
+		return
 	}
+
+	fileNameDetailed, err := saveToFileCSV(fileNameBase, "benchmark-detailed", allResults, maxCores)
+	if err != nil {
+		fmt.Println("Could save to file", err)
+		return
+	}
+
+	fmt.Printf("Saved results in %v (and detailed version in %s)\n", fileName, fileNameDetailed)
 }
 
 // Runs pre-configured benchmarks
 // todo remove reps
-func Benchmarks() {
-	runtime.GOMAXPROCS(GoMaxProcs)
-	fmt.Printf("Benchmarking... (using %d cores out of %v)\n\n", GoMaxProcs, runtime.NumCPU())
+func Benchmarks(maxCores int) {
+	runtime.GOMAXPROCS(maxCores)
+	fmt.Printf("Benchmarking... (using %d cores out of %v)\n\n", maxCores, runtime.NumCPU())
 
 	benchmarkCases := []benchmarkCase{
-		{"./benchmarks/compare/nat-double/nat-double-122.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-2.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-4.phi", 4},
+		{"./benchmarks/compare/nat-double/nat-double-1.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-2.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-3.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-4.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-5.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-6.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-7.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-8.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-9.phi", 25},
+		{"./benchmarks/compare/nat-double/nat-double-10.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-11.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-12.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-13.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-14.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-15.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-16.phi", 10},
+		{"./benchmarks/compare/nat-double/nat-double-17.phi", 10},
+		{"./benchmarks/compare/nat-double/nat-double-18.phi", 10},
 	}
 
-	runGroupedBenchmarks(benchmarkCases, "nat")
+	runGroupedBenchmarks(benchmarkCases, "nat", maxCores)
 }
 
-func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string) {
+func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores int) {
 	// Start writing result to file
-	benchmarksFilename := name + "-benchmarks-" + fmt.Sprint(GoMaxProcs) + outputFileExtension
+	benchmarksFilename := name + "-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
 	f, err := os.Create(benchmarksFilename)
 	if err != nil {
 		fmt.Println("Couldn't open file: ", err)
@@ -147,7 +177,7 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string) {
 		if file.repetitions > 1 {
 			repeat = fmt.Sprintf("(%d repetitions)", file.repetitions)
 		}
-		fmt.Print("Benchmarking ", file.baseName(), repeat)
+		fmt.Printf("Benchmarking %s %s", file.baseName(), repeat)
 
 		// Prepare result
 		currentBenchmarkCaseResult := NewBenchmarkCaseResult(file.fileName)
@@ -179,7 +209,7 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string) {
 		currentBenchmarkCaseResult.results = allTimingResults
 		currentBenchmarkCaseResult.repetitionsDone = uint(len(allTimingResults))
 
-		fmt.Printf("\n%s\n\n", currentBenchmarkCaseResult)
+		fmt.Printf("\n%s\n", currentBenchmarkCaseResult)
 
 		average := getAverage(currentBenchmarkCaseResult.results)
 		f.WriteString(average.csvRow() + "\n")
@@ -191,12 +221,12 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string) {
 	// 	fmt.Println(i, res.String())
 	// }
 
-	saveDetailedBenchmarks(name, benchmarkCaseResults)
+	saveDetailedBenchmarks(name, benchmarkCaseResults, maxCores)
 }
 
 // Saves all individual runs to a file
-func saveDetailedBenchmarks(fileName string, benchmarkCaseResults []benchmarkCaseResult) error {
-	name := fileName + "-detailed-benchmarks-" + fmt.Sprint(GoMaxProcs) + outputFileExtension
+func saveDetailedBenchmarks(fileName string, benchmarkCaseResults []benchmarkCaseResult, maxCores int) error {
+	name := fileName + "-detailed-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
 	f, err := os.Create(name)
 	if err != nil {
 		return err
@@ -376,11 +406,11 @@ func csvHeader() string {
 	return buffer.String()
 }
 
-func saveToFileCSV(fileName string, results []TimingResult) error {
-	name := fileName + "-benchmark" + outputFileExtension
+func saveToFileCSV(fileName string, title string, results []TimingResult, maxCores int) (string, error) {
+	name := fileName + "-" + title + "-" + fmt.Sprint(maxCores) + outputFileExtension
 	f, err := os.Create(name)
 	if err != nil {
-		return err
+		return name, err
 	}
 	defer f.Close()
 
@@ -392,7 +422,7 @@ func saveToFileCSV(fileName string, results []TimingResult) error {
 		f.Write([]byte("\n"))
 	}
 
-	return nil
+	return name, nil
 }
 
 func getAverage(allResults []TimingResult) *TimingResult {
@@ -471,7 +501,7 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 
 	re.SubstituteNameInitialization(processes, channels)
 
-	const heartbeatDelay = 500 * time.Millisecond
+	const heartbeatDelay = 600 * time.Millisecond
 	go re.HeartbeatReceiver(heartbeatDelay, cancel)
 
 	re.StartTransitions(processes)

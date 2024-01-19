@@ -8,6 +8,7 @@ import (
 	"phi/parser"
 	"phi/process"
 	"phi/webserver"
+	"runtime"
 	"time"
 )
 
@@ -21,6 +22,8 @@ Usage of ./phi:
 	      run benchmarks for current program
 	-benchmarks
 	      start all (pre-configured) benchmarks
+	-maxcores
+		  sets the maximum number of cores to utilise while doing the benchmarks (0 = maximum number of available cores)
 	-execute
 	      execute processes (default true)
 	-noexecute
@@ -30,7 +33,7 @@ Usage of ./phi:
 	-notypecheck
 	      skip typechecker (equivalent to -typecheck=false)
 	-repeat uint
-	      number of repetitions do when benchmarking (default 10)
+	      number of repetitions do when benchmarking (default 1)
 	-verbosity int
 	      verbosity level (1 = least, 3 = most) (default 2)
 	-webserver
@@ -51,7 +54,8 @@ func Cli() {
 	// Benchmarking flags
 	doAllBenchmarks := flag.Bool("benchmarks", false, "start all (pre-configured) benchmarks")
 	benchmark := flag.Bool("benchmark", false, "run benchmarks for current program")
-	benchmarkRepeatCount := flag.Uint("repeat", 3, "number of repetitions do when benchmarking")
+	benchmarkRepeatCount := flag.Uint("repeat", 1, "number of repetitions do when benchmarking")
+	maxCores := flag.Int("maxcores", 0, "sets the maximum number of cores to utilise while doing the benchmarks (0 = maximum number of available cores)")
 
 	// Webserver
 	startWebserver := flag.Bool("webserver", false, "start webserver")
@@ -61,6 +65,11 @@ func Cli() {
 	flag.Parse()
 	args := flag.Args()
 
+	if *maxCores <= 0 || *maxCores > runtime.NumCPU() {
+		// if maxCores is set beyond the number of available cores, reset it to the max
+		*maxCores = runtime.NumCPU()
+	}
+
 	if *doAllBenchmarks {
 		if len(args) >= 1 {
 			fmt.Println("Will run pre-configured benchmarks. Avoid including filename")
@@ -68,7 +77,7 @@ func Cli() {
 		}
 
 		// Run benchmarks and terminate
-		benchmarks.Benchmarks()
+		benchmarks.Benchmarks(*maxCores)
 		return
 	}
 
@@ -78,7 +87,7 @@ func Cli() {
 			return
 		}
 
-		benchmarks.BenchmarkFile(args[0], *benchmarkRepeatCount)
+		benchmarks.BenchmarkFile(args[0], *benchmarkRepeatCount, *maxCores)
 		return
 	}
 

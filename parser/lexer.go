@@ -50,11 +50,10 @@ func LexAndPrintTokens(file io.Reader) {
 
 	// prc, err := parser.Parse(file)
 
-	// fmt.Println(prc)
+	fmt.Println("DEBUG")
 	lexer := newLexer(file)
 	val := &phiSymType{}
 	for {
-
 		tok := lexer.Lex(val)
 		if tok == EOF {
 			break

@@ -81,6 +81,7 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		var result TimingResult
+		result.invalid = false
 		go runAllTimingsOnce(bytes.NewReader(programFileBytes), &wg, &result)
 		wg.Wait()
 
@@ -146,20 +147,18 @@ func Benchmarks(maxCores int) {
 		{"./benchmarks/compare/nat-double/nat-double-2.phi", 25},
 		{"./benchmarks/compare/nat-double/nat-double-3.phi", 25},
 		{"./benchmarks/compare/nat-double/nat-double-4.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-5.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-6.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-7.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-8.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-9.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-10.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-11.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-12.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-13.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-14.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-15.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-5.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-6.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-7.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-8.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-9.phi", 20},
+		{"./benchmarks/compare/nat-double/nat-double-10.phi", 15},
+		{"./benchmarks/compare/nat-double/nat-double-11.phi", 15},
+		{"./benchmarks/compare/nat-double/nat-double-12.phi", 15},
+		{"./benchmarks/compare/nat-double/nat-double-13.phi", 15},
+		{"./benchmarks/compare/nat-double/nat-double-14.phi", 15},
+		{"./benchmarks/compare/nat-double/nat-double-15.phi", 10},
 		{"./benchmarks/compare/nat-double/nat-double-16.phi", 10},
-		{"./benchmarks/compare/nat-double/nat-double-17.phi", 10},
-		{"./benchmarks/compare/nat-double/nat-double-18.phi", 5},
 	}
 
 	runGroupedBenchmarks(benchmarkCases, "nat", maxCores)
@@ -231,15 +230,21 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores 
 	// 	fmt.Println(i, res.String())
 	// }
 
-	saveDetailedBenchmarks(name, benchmarkCaseResults, maxCores)
+	fileName, err := saveDetailedBenchmarks(name, benchmarkCaseResults, maxCores)
+	if err != nil {
+		fmt.Println("Could save to file", err)
+		return
+	}
+
+	fmt.Printf("Saved results in %v\n", fileName)
 }
 
 // Saves all individual runs to a file
-func saveDetailedBenchmarks(fileName string, benchmarkCaseResults []benchmarkCaseResult, maxCores int) error {
-	name := fileName + "-detailed-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
-	f, err := os.Create(name)
+func saveDetailedBenchmarks(name string, benchmarkCaseResults []benchmarkCaseResult, maxCores int) (string, error) {
+	fileName := name + "-detailed-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
+	f, err := os.Create(fileName)
 	if err != nil {
-		return err
+		return fileName, err
 	}
 	defer f.Close()
 
@@ -256,7 +261,7 @@ func saveDetailedBenchmarks(fileName string, benchmarkCaseResults []benchmarkCas
 		}
 	}
 
-	return nil
+	return fileName, nil
 }
 
 // Input for each case
@@ -318,6 +323,7 @@ func runAllTimingsOnce(program io.Reader, wg *sync.WaitGroup, result *TimingResu
 	timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
 	if err != nil {
 		result.invalid = true
+		fmt.Println(err)
 		return
 	}
 
@@ -440,28 +446,29 @@ func saveToFileCSV(fileName string, title string, results []TimingResult, maxCor
 
 func getAverage(allResults []TimingResult) *TimingResult {
 	// allResults are not modified
-	result := TimingResult{allResults[0].name, false, allResults[0].timeNonPolarizedSync, allResults[0].processCountNonPolarizedSync, allResults[0].timeNormalAsync, allResults[0].processCountNormalAsync, allResults[0].timeNormalSync, allResults[0].processCountNormalSync}
-
 	count := len(allResults)
 
-	if count > 1 {
-		for i := 1; i < count; i += 1 {
-			result.timeNonPolarizedSync += allResults[i].timeNonPolarizedSync
-			result.processCountNonPolarizedSync += allResults[i].processCountNonPolarizedSync
-			result.timeNormalAsync += allResults[i].timeNormalAsync
-			result.processCountNormalAsync += allResults[i].processCountNormalAsync
-			result.timeNormalSync += allResults[i].timeNormalSync
-			result.processCountNormalSync += allResults[i].processCountNormalSync
-		}
-
-		// Get average
-		result.timeNonPolarizedSync /= time.Duration(count)
-		result.processCountNonPolarizedSync /= uint64(count)
-		result.timeNormalAsync /= time.Duration(count)
-		result.processCountNormalAsync /= uint64(count)
-		result.timeNormalSync /= time.Duration(count)
-		result.processCountNormalSync /= uint64(count)
+	if count == 0 {
+		return &TimingResult{}
 	}
+
+	result := TimingResult{allResults[0].name, false, allResults[0].timeNonPolarizedSync, allResults[0].processCountNonPolarizedSync, allResults[0].timeNormalAsync, allResults[0].processCountNormalAsync, allResults[0].timeNormalSync, allResults[0].processCountNormalSync}
+	for i := 1; i < count; i += 1 {
+		result.timeNonPolarizedSync += allResults[i].timeNonPolarizedSync
+		result.processCountNonPolarizedSync += allResults[i].processCountNonPolarizedSync
+		result.timeNormalAsync += allResults[i].timeNormalAsync
+		result.processCountNormalAsync += allResults[i].processCountNormalAsync
+		result.timeNormalSync += allResults[i].timeNormalSync
+		result.processCountNormalSync += allResults[i].processCountNormalSync
+	}
+
+	// Get average
+	result.timeNonPolarizedSync /= time.Duration(count)
+	result.processCountNonPolarizedSync /= uint64(count)
+	result.timeNormalAsync /= time.Duration(count)
+	result.processCountNormalAsync /= uint64(count)
+	result.timeNormalSync /= time.Duration(count)
+	result.processCountNormalSync /= uint64(count)
 
 	return &result
 }

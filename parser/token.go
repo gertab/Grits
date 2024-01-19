@@ -82,7 +82,7 @@ func (p TokenPos) String() string {
 }
 
 func isWhitespace(ch rune) bool {
-	return ch == ' ' || ch == '\t' || ch == '\n'
+	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\v' || ch == '\r'
 }
 
 func isAlphaNum(ch rune) bool {

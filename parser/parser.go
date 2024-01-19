@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const debug = false
+
 type allEnvironment struct {
 	procsAndFuns []unexpandedProcessOrFunction
 }
@@ -56,7 +58,11 @@ func ParseFile(fileName string) ([]*process.Process, []process.Name, *process.Gl
 }
 
 func ParseReader(r io.Reader) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
-	// LexAndPrintTokens(file)
+	if debug {
+		LexAndPrintTokens(r)
+		return nil, nil, nil, fmt.Errorf("Debugging the lexer")
+	}
+
 	allEnvironment, err := Parse(r)
 
 	if err != nil {

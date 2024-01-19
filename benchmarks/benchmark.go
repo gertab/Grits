@@ -10,6 +10,7 @@ import (
 	"phi/parser"
 	"phi/process"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -77,14 +78,19 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 	var allResults []TimingResult
 
 	for i := 0; i < int(repetitions); i++ {
-		result := runAllTimingsOnce(bytes.NewReader(programFileBytes))
+		var wg sync.WaitGroup
+		wg.Add(1)
+		var result TimingResult
+		go runAllTimingsOnce(bytes.NewReader(programFileBytes), &wg, &result)
+		wg.Wait()
+
 		// fmt.Print(".")
 
-		if result != nil {
+		if !result.invalid {
 			if detailedOutput {
 				fmt.Println(result)
 			}
-			allResults = append(allResults, *result)
+			allResults = append(allResults, result)
 		}
 	}
 
@@ -153,7 +159,7 @@ func Benchmarks(maxCores int) {
 		{"./benchmarks/compare/nat-double/nat-double-15.phi", 20},
 		{"./benchmarks/compare/nat-double/nat-double-16.phi", 10},
 		{"./benchmarks/compare/nat-double/nat-double-17.phi", 10},
-		{"./benchmarks/compare/nat-double/nat-double-18.phi", 10},
+		{"./benchmarks/compare/nat-double/nat-double-18.phi", 5},
 	}
 
 	runGroupedBenchmarks(benchmarkCases, "nat", maxCores)
@@ -196,13 +202,17 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores 
 		var allTimingResults []TimingResult
 
 		for i := 0; i < int(file.repetitions); i++ {
-			result := runAllTimingsOnce(bytes.NewReader(programFileBytes))
+			var wg sync.WaitGroup
+			wg.Add(1)
+			var result TimingResult
+			go runAllTimingsOnce(bytes.NewReader(programFileBytes), &wg, &result)
+			wg.Wait()
 			fmt.Print(".")
 
-			if result != nil {
+			if !result.invalid {
 				// fmt.Prixntln(result)
 				result.name = file.baseName()
-				allTimingResults = append(allTimingResults, *result)
+				allTimingResults = append(allTimingResults, result)
 			}
 		}
 
@@ -298,15 +308,17 @@ func NewBenchmarkCaseResult(fileName string) *benchmarkCaseResult {
 }
 
 // Run the same program using all transition variations
-func runAllTimingsOnce(program io.Reader) *TimingResult {
-	programFileBytes, _ := io.ReadAll(program)
+// This should run in a separate goroutine, storing the final results in 'result'
+func runAllTimingsOnce(program io.Reader, wg *sync.WaitGroup, result *TimingResult) {
+	defer wg.Done()
 
-	var result TimingResult
+	programFileBytes, _ := io.ReadAll(program)
 
 	// Version 1:
 	timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
 	if err != nil {
-		return nil
+		result.invalid = true
+		return
 	}
 
 	result.timeNonPolarizedSync = timeTaken
@@ -315,7 +327,8 @@ func runAllTimingsOnce(program io.Reader) *TimingResult {
 	// Version 2 (Async):
 	timeTaken2, count2, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
 	if err != nil {
-		return nil
+		result.invalid = true
+		return
 	}
 
 	result.timeNormalAsync = timeTaken2
@@ -324,17 +337,17 @@ func runAllTimingsOnce(program io.Reader) *TimingResult {
 	// Version 2 (Sync):
 	timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
 	if err != nil {
-		return nil
+		result.invalid = true
+		return
 	}
 
 	result.timeNormalSync = timeTaken3
 	result.processCountNormalSync = count3
-
-	return &result
 }
 
 type TimingResult struct {
 	name                         string
+	invalid                      bool
 	timeNonPolarizedSync         time.Duration
 	processCountNonPolarizedSync uint64
 	timeNormalAsync              time.Duration
@@ -427,7 +440,7 @@ func saveToFileCSV(fileName string, title string, results []TimingResult, maxCor
 
 func getAverage(allResults []TimingResult) *TimingResult {
 	// allResults are not modified
-	result := TimingResult{allResults[0].name, allResults[0].timeNonPolarizedSync, allResults[0].processCountNonPolarizedSync, allResults[0].timeNormalAsync, allResults[0].processCountNormalAsync, allResults[0].timeNormalSync, allResults[0].processCountNormalSync}
+	result := TimingResult{allResults[0].name, false, allResults[0].timeNonPolarizedSync, allResults[0].processCountNonPolarizedSync, allResults[0].timeNormalAsync, allResults[0].processCountNormalAsync, allResults[0].timeNormalSync, allResults[0].processCountNormalSync}
 
 	count := len(allResults)
 

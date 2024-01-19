@@ -89,7 +89,7 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 
 		if !result.invalid {
 			if detailedOutput {
-				fmt.Println(result)
+				fmt.Println(i+1, result.StringShort())
 			}
 			allResults = append(allResults, result)
 		}
@@ -158,7 +158,7 @@ func Benchmarks(maxCores int) {
 		{"./benchmarks/compare/nat-double/nat-double-13.phi", 15},
 		{"./benchmarks/compare/nat-double/nat-double-14.phi", 15},
 		{"./benchmarks/compare/nat-double/nat-double-15.phi", 10},
-		{"./benchmarks/compare/nat-double/nat-double-16.phi", 10},
+		{"./benchmarks/compare/nat-double/nat-double-16.phi", 8},
 	}
 
 	runGroupedBenchmarks(benchmarkCases, "nat", maxCores)
@@ -204,6 +204,7 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores 
 			var wg sync.WaitGroup
 			wg.Add(1)
 			var result TimingResult
+			// Timing are obtained from heres
 			go runAllTimingsOnce(bytes.NewReader(programFileBytes), &wg, &result)
 			wg.Wait()
 			fmt.Print(".")
@@ -310,45 +311,6 @@ func NewBenchmarkCaseResult(fileName string) *benchmarkCaseResult {
 		repetitionsDone: 0,
 		results:         nil,
 	}
-}
-
-// Run the same program using all transition variations
-// This should run in a separate goroutine, storing the final results in 'result'
-func runAllTimingsOnce(program io.Reader, wg *sync.WaitGroup, result *TimingResult) {
-	defer wg.Done()
-
-	programFileBytes, _ := io.ReadAll(program)
-
-	// Version 1:
-	timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
-	if err != nil {
-		result.invalid = true
-		fmt.Println(err)
-		return
-	}
-
-	result.timeNonPolarizedSync = timeTaken
-	result.processCountNonPolarizedSync = count
-
-	// Version 2 (Async):
-	timeTaken2, count2, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
-	if err != nil {
-		result.invalid = true
-		return
-	}
-
-	result.timeNormalAsync = timeTaken2
-	result.processCountNormalAsync = count2
-
-	// Version 2 (Sync):
-	timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
-	if err != nil {
-		result.invalid = true
-		return
-	}
-
-	result.timeNormalSync = timeTaken3
-	result.processCountNormalSync = count3
 }
 
 type TimingResult struct {
@@ -483,6 +445,46 @@ func readFile(fileName string) ([]byte, error) {
 	return io.ReadAll(programFile)
 }
 
+// Run the same program using all transition variations
+// This should run in a separate goroutine, storing the final results in 'result'
+func runAllTimingsOnce(program io.Reader, wg *sync.WaitGroup, result *TimingResult) {
+	defer wg.Done()
+
+	programFileBytes, _ := io.ReadAll(program)
+
+	// Version 1:
+	timeTaken, count, err := runTiming(bytes.NewReader(programFileBytes), process.NON_POLARIZED_SYNC)
+	if err != nil {
+		result.invalid = true
+		fmt.Println(err)
+		return
+	}
+
+	result.timeNonPolarizedSync = timeTaken
+	result.processCountNonPolarizedSync = count
+
+	// Version 2 (Async):
+	timeTaken2, count2, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
+	if err != nil {
+		result.invalid = true
+		return
+	}
+
+	result.timeNormalAsync = timeTaken2
+	result.processCountNormalAsync = count2
+
+	// Version 2 (Sync):
+	timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
+	if err != nil {
+		result.invalid = true
+		return
+	}
+
+	result.timeNormalSync = timeTaken3
+	result.processCountNormalSync = count3
+	result.invalid = false
+}
+
 // Performs the actual execution
 func runTiming(program io.Reader, executionVersion process.Execution_Version) (time.Duration, uint64, error) {
 
@@ -532,5 +534,11 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 		log.Fatal(err)
 	}
 
-	return re.TimeTaken(), re.ProcessCount(), nil
+	timeTaken := re.TimeTaken()
+	processCount := re.ProcessCount()
+
+	re = nil
+	processes = nil
+	assumedFreeNames = nil
+	return timeTaken, processCount, nil
 }

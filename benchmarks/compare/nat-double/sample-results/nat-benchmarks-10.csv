@@ -1,0 +1,17 @@
+name,timeNonPolarizedSync,processCountNonPolarizedSync,timeNormalAsync,processCountNormalAsync,timeNormalSync,processCountNormalSync
+nat-double-1.phi,147,8,177,8,144,8
+nat-double-2.phi,494,13,318,13,355,13
+nat-double-3.phi,632,22,482,22,527,22
+nat-double-4.phi,1057,39,975,39,1085,39
+nat-double-5.phi,1937,72,1566,72,1538,72
+nat-double-6.phi,2992,137,3257,137,3327,137
+nat-double-7.phi,5132,266,4691,266,5084,266
+nat-double-8.phi,9419,523,8904,523,9754,523
+nat-double-9.phi,19218,1036,14848,1036,16318,1036
+nat-double-10.phi,31766,2061,29236,2061,29923,2061
+nat-double-11.phi,49850,4110,49865,4110,48157,4110
+nat-double-12.phi,92524,8207,86478,8207,89208,8207
+nat-double-13.phi,163628,16400,141294,16400,146846,16400
+nat-double-14.phi,292761,32785,250612,32785,275073,32785
+nat-double-15.phi,558114,65554,516969,65554,516765,65554
+nat-double-16.phi,1668326,131091,1145323,131091,1844763,131091

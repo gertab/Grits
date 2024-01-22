@@ -1,0 +1,134 @@
+
+// Examples from the sax language
+
+type bin = +{b0 : bin, b1 : bin, e : 1}
+type list = +{cons : bin * list, nil : 1}
+
+let append(L : list, K : list) : list =
+  case L ( cons<c> => 
+                <x, L2> <- recv c;
+                R <- new append(L2, K);
+                zz : bin * list <- new (send self<x, R>);
+                self.cons<zz>
+         | nil<c> => wait c; 
+                     fwd self K)
+
+let append2(L : list, K : list) : list =
+  case L ( cons<p> => 
+                <x, L2> <- recv p;
+                R2 <- new append2(L2, K);
+                p2 : bin * list <- new send p2<x, R2>;
+                self.cons<p2>  
+         | nil<u> => 
+                wait u; 
+                fwd self K)
+
+let rev(l : list, accum : list) : list =
+  case l ( cons<p> =>      
+                <x, l'> <- recv p;
+                t : bin * list <- new send t<x, accum>;
+                accum2 : list <- new accum2.cons<t>;
+                rev(l', accum2)
+         | nil<u> => 
+                wait u;
+                fwd self accum
+  )
+
+let reverse(l : list) : list =
+  a : list <- new nilList();
+  rev(l, a)
+
+// Nil list
+let nilList() : list = 
+  c : 1 <- new close self;
+  self.nil<c>
+
+// Appends two lists creating: 
+//   cons(1, cons(2, cons(3, nil))), 
+//    where 1, 2 and 3 are represented as a boolean structure
+let append123() : list =
+  // n1 : 1
+  n1 : bin <- new bin1();
+  // n2 : 10
+  n2 : bin <- new bin2();
+  // n3 : 11
+  n3 : bin <- new bin3();
+
+  // l1 : cons(n1, nil) 
+  l1nil <- new nilList();
+  l1' : bin * list <- new send self<n1, l1nil>;
+  l1 : list <- new self.cons<l1'>;    
+ 
+  // l2 : cons(n2, n3)
+  l23nil <- new nilList();
+  l23''' : bin * list <- new send self<n3, l23nil>;
+  l23'' : list <- new self.cons<l23'''>;
+  l23' : bin * list <- new send self<n2, l23''>;
+  l23 : list <- new self.cons<l23'>;
+
+  // result : cons(n1, cons(n2, nil))
+  x <- new append(l1, l23);        
+  fwd self x
+
+prc[a] : list = append123()
+prc[b] : 1 = printList(a)
+
+//prc[c] : list = append123()
+//prc[c_rev] : list = reverse(c)
+//prc[d] : 1 = printList(c_rev)
+
+///////// Printing Helpers /////////
+
+let consumeBin(b : bin) : 1 = 
+        case b ( b0<c> => print b0; consumeBin(c)
+               | b1<c> => print b1; consumeBin(c)
+               | e<c>  => print e; wait c; close self)
+
+let consumeList(l : list) : 1 = 
+        case l ( cons<c> => print _cons_;
+                            <b, L2> <- recv c;
+                            bConsume <- new consumeBin(b);
+                            wait bConsume;
+                            consumeList(L2)
+               | nil<c>  => print _nil_;
+                            wait c;
+                            close self)
+
+let printList(l : list) : 1 = 
+          y <- new consumeList(l); 
+          wait y;
+          close self
+
+///////// BINARY EXAMPLES /////////
+
+// b1 e = 1
+let bin1() : bin =   
+  cls : 1 <- new close self;
+  n0 : bin <- new self.e<cls>;
+  n1 : bin <- new self.b1<n0> ;  
+  fwd self n1
+
+// b0 b1 e = 10
+let bin2() : bin =   
+  cls : 1 <- new close self;
+  n0 : bin <- new self.e<cls>;
+  n1 : bin <- new self.b1<n0>;  
+  n2 : bin <- new self.b0<n1>;  
+  fwd self n2
+
+// b1 b1 e = 11
+let bin3() : bin =   
+  cls : 1 <- new close self;
+  n0 : bin <- new self.e<cls>;
+  n1 : bin <- new self.b1<n0>;  
+  n2 : bin <- new self.b1<n1>;  
+  fwd self n2
+
+// b0 b0 b1 e = 100
+let bin4() : bin =   
+  cls : 1 <- new close self;
+  n0 : bin <- new self.e<cls>;
+  n1 : bin <- new self.b1<n0>;  
+  n2 : bin <- new self.b0<n1>;  
+  n3 : bin <- new self.b0<n2>;  
+  fwd self n3

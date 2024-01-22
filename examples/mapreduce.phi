@@ -1,12 +1,14 @@
+// Mapreduce is discussed in 'Lecture Notes on Adjoint SAX - 15-836' by F. Pfenning
+
 // Natural number types (linear and unrestricted versions)
 type nat = linear +{zero : 1, succ : nat}
 type treeNat = linear +{node : treeNat * treeNat, leaf : nat}
 
 
 // Takes a tree of natural numbers, doubles them and adds the results
-// Takes a tree of natural numbers, doubles them and adds the results
-// A = treeNat, B = nat
-let mapreduce(fs : linear /\ unrestricted ((nat * nat) -* nat), hs : linear /\ unrestricted (nat -* nat), t : treeNat) : nat =
+type A = treeNat
+type B = nat
+let mapreduce(fs : linear /\ unrestricted ((B * B) -* B), hs : linear /\ unrestricted (A -* B), t : treeNat) : B =
   case t (
         node<t'> => <l, r> <- recv t';
                     <fs', fs''> <- split fs;
@@ -24,10 +26,12 @@ let mapreduce(fs : linear /\ unrestricted ((nat * nat) -* nat), hs : linear /\ u
                     send hl<t', self>
   )
 
+
+// Create an instance of a treeNat: [S(Z), [S(S(Z)), S(S(S(Z)))]node]node
 let treeNatEx() : treeNat = 
   nat1 <- new nat1();
   nat2 <- new nat2();
-  nat3 <- new nat1();
+  nat3 <- new nat3();
 
   left : treeNat <- new self.leaf<nat1>;
   left2 : treeNat <- new self.leaf<nat2>;

@@ -1,0 +1,156 @@
+// Natural number types (linear and unrestricted versions)
+type nat = linear +{zero : 1, succ : nat}
+type treeNat = linear +{node : treeNat * treeNat, leaf : nat}
+
+
+// Takes a tree of natural numbers, doubles them and adds the results
+// Takes a tree of natural numbers, doubles them and adds the results
+// A = treeNat, B = nat
+let mapreduce(fs : linear /\ unrestricted ((nat * nat) -* nat), hs : linear /\ unrestricted (nat -* nat), t : treeNat) : nat =
+  case t (
+        node<t'> => <l, r> <- recv t';
+                    <fs', fs''> <- split fs;
+                    <fs'', fs'''> <- split fs'';
+                    <hs', hs''> <- split hs;
+                    y1 <- new mapreduce(fs', hs', l);
+                    y2 <- new mapreduce(fs'', hs'', r);
+
+                    p : nat * nat <- new send p<y1, y2>;
+                    fl : ((nat * nat) -* nat) <- new cast fs'''<fl>;
+                    send fl<p, self>
+      | leaf<t'> =>
+                    hl : lin (nat -* nat) <- new cast hs<hl>;
+                    drop fs;
+                    send hl<t', self>
+  )
+
+let treeNatEx() : treeNat = 
+  nat1 <- new nat1();
+  nat2 <- new nat2();
+  nat3 <- new nat1();
+
+  left : treeNat <- new self.leaf<nat1>;
+  left2 : treeNat <- new self.leaf<nat2>;
+  right2 : treeNat <- new self.leaf<nat3>;
+  nodes2 : treeNat * treeNat <- new send self<left2, right2>;
+  right : treeNat <- new self.node<nodes2>;
+  nodes : treeNat * treeNat <- new send self<left, right>;
+  self.node<nodes>
+
+
+let reduceByAdding() : linear /\ unrestricted ((nat * nat) -* nat) = 
+  s <- shift self;
+  <tree, result> <- recv s;
+  <left, right> <- recv tree;
+  currRes <- new addNats(left, right);
+  fwd result currRes
+
+let mapByDoubling() : linear /\ unrestricted (nat -* nat)  = 
+  s <- shift self;
+  <toDouble, result> <- recv s;
+  doubled <- new double(toDouble);
+  fwd result doubled
+
+prc[t] : treeNat = treeNatEx()
+//prc[c] : 1 = printTreeNat(t)
+prc[fs] : linear /\ unrestricted ((nat * nat) -* nat) =  reduceByAdding()
+prc[hs] : linear /\ unrestricted (nat -* nat) =  mapByDoubling()
+prc[b] : nat = mapreduce(fs, hs, t) 
+prc[c] : 1 = printNat(b)
+
+
+///////// Natural Number Operations /////////
+
+// Adds two natural numbers
+let addNats(x : nat, y : nat) : nat =
+    case x (
+          zero<x'> => // print zeeeeee;
+                      wait x'; fwd self y
+        | succ<x'> => // print sccccc;
+                      y'' : nat <- new y''.succ<y>;
+                      addNats(x', y'')
+    )
+
+// Returns the double value for a natural number
+let double(x : nat) : nat =
+    case x (
+          zero<x'> => self.zero<x'>
+        | succ<x'> => h <- new double(x');
+                      d : nat <- new d.succ<h>;
+                      self.succ<d>
+    )
+
+
+// 1 : S(0)
+let nat1() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  fwd self s1
+
+// 2 : S(S(0))
+let nat2() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  fwd self s2
+
+// 3 : S(S(S(0)))
+let nat3() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  fwd self s3
+
+// 4 : S(S(S(S(0))))
+let nat4() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  s4 : nat <- new s4.succ<s3>; 
+  fwd self s4
+
+// 5 : S(S(S(S(S(0)))))
+let nat5() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  s4 : nat <- new s4.succ<s3>; 
+  s5 : nat <- new s5.succ<s4>; 
+  fwd self s5
+
+///////// Printing Helpers /////////
+
+let consumeTreeNat(l : treeNat) : 1 = 
+        case l ( node<c> => print _node_;
+                            <left, right> <- recv c;
+                            leftDone <- new consumeTreeNat(left);
+                            wait leftDone;
+                            print _left_right_;
+                            rightDone <- new consumeTreeNat(right);
+                            wait rightDone;
+                            close self
+               | leaf<c> => printNat(c)
+        )
+
+let printTreeNat(l : treeNat) : 1 = 
+          y <- new consumeTreeNat(l); 
+          wait y;
+          close self
+
+let consumeNat(n : nat) : 1 = 
+        case n ( zero<c> => print zero; wait c; close self
+               | succ<c> => print succ; consumeNat(c))
+
+let printNat(n : nat) : 1 = 
+          y <- new consumeNat(n); 
+          wait y;
+          close self
+

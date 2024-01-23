@@ -35,7 +35,7 @@ Usage of ./phi:
 	-repeat uint
 	      number of repetitions do when benchmarking (default 1)
 	-verbosity int
-	      verbosity level (1 = least, 3 = most) (default 2)
+	      verbosity level (1 = least, 3 = most) (default 1)
 	-webserver
 	      start webserver
 	-addr string
@@ -49,7 +49,7 @@ func Cli() {
 	noTypecheck := flag.Bool("notypecheck", false, "skip typechecker (equivalent to -typecheck=false)")
 	execute := flag.Bool("execute", true, "execute processes")
 	noExecute := flag.Bool("noexecute", false, "do not execute processes (equivalent to -execute=false)")
-	logLevel := flag.Int("verbosity", 2, "verbosity level (1 = least, 3 = most)")
+	logLevel := flag.Int("verbosity", 1, "verbosity level (1 = least, 3 = most)")
 
 	// Benchmarking flags
 	doAllBenchmarks := flag.Bool("benchmarks", false, "start all (pre-configured) benchmarks")

@@ -1,5 +1,5 @@
 
-// Examples from the sax language
+// Examples from the Sax language
 
 type bin = +{b0 : bin, b1 : bin, e : 1}
 type list = +{cons : bin * list, nil : 1}
@@ -23,6 +23,10 @@ let append2(L : list, K : list) : list =
                 wait u; 
                 fwd self K)
 
+let reverse(l : list) : list =
+  a : list <- new nilList();
+  rev(l, a)
+
 let rev(l : list, accum : list) : list =
   case l ( cons<p> =>      
                 <x, l'> <- recv p;
@@ -33,10 +37,6 @@ let rev(l : list, accum : list) : list =
                 wait u;
                 fwd self accum
   )
-
-let reverse(l : list) : list =
-  a : list <- new nilList();
-  rev(l, a)
 
 // Nil list
 let nilList() : list = 

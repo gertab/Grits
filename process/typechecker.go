@@ -136,6 +136,13 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 		if err := types.SanityChecksType(typesToCheck, *globalEnv.Types); err != nil {
 			return fmt.Errorf("(%s) type error in function definition %s; %s", f.Position.String(), f.String(), err)
 		}
+
+		// Ensure that for Γ ⊢ P :: (a : A), Γ ≥ A
+		succedentType := f.Type
+		antecedents := f.Parameters
+		if err := declationOfIndependence(antecedents, succedentType); err != nil {
+			return fmt.Errorf("(%s) type error in function definition %s; %s", f.Position.String(), f.String(), err)
+		}
 	}
 
 	return nil
@@ -245,11 +252,24 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 				return fmt.Errorf("(%s) in process definition %s, the process name %s is already used elsewhere", processes[i].Position.String(), processes[i].OutlineString(), fn.Ident)
 			}
 		}
+
+		// todo check for the declaration of independence here as well
 	}
 
 	for name, remainingName := range remainingAssumedFreeNames {
 		if remainingName {
 			return fmt.Errorf("the assume name %s has never been used", name)
+		}
+	}
+
+	return nil
+}
+
+// Ensure that for Γ ⊢ P :: (a : A), Γ ≥ A
+func declationOfIndependence(antecedents []Name, succedentType types.SessionType) error {
+	for _, antecedentName := range antecedents {
+		if !antecedentName.Type.Modality().CanBeDownshiftedTo(succedentType.Modality()) {
+			return fmt.Errorf("declaration of independence error: %s must have a stronger mode than %s", antecedentName.Type.StringWithOuterModality(), succedentType.StringWithOuterModality())
 		}
 	}
 

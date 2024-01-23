@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"fmt"
 	"phi/position"
 	"reflect"
 
@@ -585,7 +584,7 @@ func innerEqualType(type1, type2 SessionType, snapshots map[string]bool, labelle
 		}
 	}
 
-	fmt.Printf("issue in EqualType for type %s\n", a)
+	// fmt.Printf("issue in EqualType for type %s\n", a)
 	return false
 }
 

@@ -12,7 +12,9 @@ let binToNat(x : bin) : nat =
     z : lin 1 <- new close self;
     accum : nat <- new self.zero<z>;
 
-    natProducer : natCounter <- new natProducerInitializer();
+    nat1unr <- new nat1unrestricted();
+    natProducer <- new natProducer(nat1unr);
+    //natProducer : natCounter <- new natProducerInitializer();
 
     binToNatInternal(x, accum, natProducer)
 
@@ -31,24 +33,38 @@ let binToNatInternal(x : bin, accum : nat, natProducer : natCounter) : nat =
     )
 
 type natCounter = linear &{terminate : 1, one : nat * natCounter, zero : natCounter}
-let natProducer(curr : uNat) : natCounter = 
+let natProducer(curr : linear /\ unrestricted nat) : natCounter = 
     case self (
         terminate<x> => drop curr;
                         close self
         | one<x>     => <curr1, curr2> <- split curr;
-                        curr1' <- new double(curr1);
-                        curr2' : nat <- new uNatToLinear(curr2);
-                        cont <- new natProducer(curr1');
-                        send self<curr2', cont>
+
+                        curr1lin : nat <- new cast curr1<curr1lin>;
+                       // send curr1lin<p, self>;
+                        curr1' <- new double(curr1lin);
+
+                        curr1'' : linear /\ unrestricted nat <- new cast curr1''<curr1'>;
+
+                        ///curr1'' <- shift curr1';
+
+                        cont <- new natProducer(curr1'');
+                        send self<curr2, cont>
         | zero<x>    => curr'' <- new double(curr);
                         natProducer(curr'')
     )
 
-let natProducerInitializer() : natCounter = 
-    curr'' : unr 1 <- new close self;
-    curr' : uNat <- new self.zero<curr''>;
-    curr : uNat <- new self.succ<curr'>;
-    natProducer(curr)
+let natUnrestricted() : linear /\ unrestricted nat =
+    s <- shift self;
+    fwd s curr
+
+
+let nat1unrestricted() : linear /\ unrestricted nat = 
+    curr'' : lin 1 <- new close self;
+    curr' : nat <- new self.zero<curr''>;
+    curr : nat <- new self.succ<curr'>;
+
+    s <- shift self;
+    fwd s curr
 
 
 let uNatToLinear(x : uNat) : nat = 
@@ -90,11 +106,11 @@ let addNats(x : nat, y : nat) : nat =
     )
 
 // Returns the double value for a natural number
-let double(x : uNat) : uNat =
+let double(x : nat) : nat =
     case x (
           zero<x'> => self.zero<x'>
         | succ<x'> => h <- new double(x');
-                      d : uNat <- new d.succ<h>;
+                      d : nat <- new d.succ<h>;
                       self.succ<d>
     )
 
@@ -120,16 +136,16 @@ let nat2() : nat =
 
 ///////// Printing Helpers /////////
 
-let printBin(b : bin) : 1 = 
+let printBin(b : bin) : lin 1 = 
         case b ( b0<c> => print b0; printBin(c)
                | b1<c> => print b1; printBin(c)
                | e<c>  => print e; wait c; close self)
 
-let consumeNat(n : nat) : 1 = 
+let consumeNat(n : nat) : lin 1 = 
         case n ( zero<c> => print zero; wait c; close self
                | succ<c> => print succ; consumeNat(c))
 
-let printNat(n : nat) : 1 = 
+let printNat(n : nat) : lin 1 = 
           y <- new consumeNat(n); 
           wait y;
           close self

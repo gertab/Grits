@@ -1,0 +1,9 @@
+
+prc[a] : 1 = <x1,y1> <- recv b1; 
+             <x2,y2> <- recv b2; 
+             wait x1; wait x2; 
+             wait y1; wait y2;
+             print ok;
+             close self
+prc[b1, b2] : aff 1 * 1 = send self<c,d>
+prc[c, d] : aff 1 = close self

@@ -1,9 +1,8 @@
 // Mapreduce is discussed in 'Lecture Notes on Adjoint SAX - 15-836' by F. Pfenning
 
-// Natural number types (linear and unrestricted versions)
+// Natural number types
 type nat = linear +{zero : 1, succ : nat}
 type treeNat = linear +{node : treeNat * treeNat, leaf : nat}
-
 
 // Takes a tree of natural numbers, doubles them and adds the results
 type A = treeNat
@@ -56,11 +55,11 @@ let mapByDoubling() : linear /\ unrestricted (nat -* nat)  =
   fwd result doubled
 
 prc[t] : treeNat = treeNatEx()
-//prc[c] : 1 = printTreeNat(t)
+//prc[c] : lin 1 = printTreeNat(t)
 prc[fs] : linear /\ unrestricted ((nat * nat) -* nat) =  reduceByAdding()
 prc[hs] : linear /\ unrestricted (nat -* nat) =  mapByDoubling()
 prc[b] : nat = mapreduce(fs, hs, t) 
-prc[c] : 1 = printNat(b)
+prc[c] : lin 1 = printNat(b)
 
 
 ///////// Natural Number Operations /////////
@@ -132,7 +131,7 @@ let nat5() : nat =
 
 ///////// Printing Helpers /////////
 
-let consumeTreeNat(l : treeNat) : 1 = 
+let consumeTreeNat(l : treeNat) : lin 1 = 
         case l ( node<c> => print _node_;
                             <left, right> <- recv c;
                             leftDone <- new consumeTreeNat(left);
@@ -144,16 +143,16 @@ let consumeTreeNat(l : treeNat) : 1 =
                | leaf<c> => printNat(c)
         )
 
-let printTreeNat(l : treeNat) : 1 = 
+let printTreeNat(l : treeNat) : lin 1 = 
           y <- new consumeTreeNat(l); 
           wait y;
           close self
 
-let consumeNat(n : nat) : 1 = 
+let consumeNat(n : nat) : lin 1 = 
         case n ( zero<c> => print zero; wait c; close self
                | succ<c> => print succ; consumeNat(c))
 
-let printNat(n : nat) : 1 = 
+let printNat(n : nat) : lin 1 = 
           y <- new consumeNat(n); 
           wait y;
           close self

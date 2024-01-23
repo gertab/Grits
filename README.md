@@ -28,6 +28,19 @@ After building the project (using `go  build .`), you can use the CLI version...
 
 <!-- show how the cli version works -->
 
+Run all pre-configured benchmarks
+
+```bash
+./phi --benchmarks
+```
+
+Run benchmark on a specific file (with optional flags to fine tune the tests)
+
+```bash
+./phi --benchmark ./benchmarks/compare/nat-double/nat-double-5.phi
+./phi --benchmark --maxcores 4 --repeat 5 ./benchmarks/compare/nat-double/nat-double-5.phi
+```
+
 ## Sample programs
 
 ## Grammar

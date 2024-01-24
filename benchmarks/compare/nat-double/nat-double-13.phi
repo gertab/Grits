@@ -23,6 +23,17 @@ let nat1() : nat =
     z  : nat <- new z.zero<t>;
     s0 : nat <- new s0.succ<z>; 
     fwd self s0
+	
+// Print result
+let printNat(n : nat) : 1 = 
+          y <- new consumeNat(n); 
+          wait y;
+          close self
+
+let consumeNat(n : nat) : 1 = 
+        case n ( zero<c> => print zero; wait c; close self
+               | succ<c> => print succ; consumeNat(c))
+
 
 // Initiate execution
 prc[d0] : nat = nat1()
@@ -41,3 +52,4 @@ prc[b] : nat =
     d12 <- new double(d11);
     d13 <- new double(d12);
     fwd self d13
+prc[c] : 1 = printNat(b)

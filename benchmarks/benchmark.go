@@ -143,22 +143,22 @@ func Benchmarks(maxCores int) {
 	fmt.Printf("Benchmarking... (using %d cores out of %v)\n\n", maxCores, runtime.NumCPU())
 
 	benchmarkCases := []benchmarkCase{
-		{"./benchmarks/compare/nat-double/nat-double-1.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-2.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-3.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-4.phi", 25},
-		{"./benchmarks/compare/nat-double/nat-double-5.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-6.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-7.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-8.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-9.phi", 20},
-		{"./benchmarks/compare/nat-double/nat-double-10.phi", 15},
-		{"./benchmarks/compare/nat-double/nat-double-11.phi", 15},
-		{"./benchmarks/compare/nat-double/nat-double-12.phi", 15},
-		{"./benchmarks/compare/nat-double/nat-double-13.phi", 15},
-		{"./benchmarks/compare/nat-double/nat-double-14.phi", 15},
-		{"./benchmarks/compare/nat-double/nat-double-15.phi", 10},
-		{"./benchmarks/compare/nat-double/nat-double-16.phi", 8},
+		{"./benchmarks/compare/nat-double/nat-double-1.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-2.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-3.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-4.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-5.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-6.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-7.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-8.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-9.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-10.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-11.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-12.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-13.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-14.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-15.phi", 2},
+		{"./benchmarks/compare/nat-double/nat-double-16.phi", 2},
 	}
 
 	runGroupedBenchmarks(benchmarkCases, "nat", maxCores)

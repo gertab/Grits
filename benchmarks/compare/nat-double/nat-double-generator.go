@@ -60,6 +60,17 @@ let nat1() : nat =
     z  : nat <- new z.zero<t>;
     s0 : nat <- new s0.succ<z>; 
     fwd self s0
+	
+// Print result
+let printNat(n : nat) : 1 = 
+          y <- new consumeNat(n); 
+          wait y;
+          close self
+
+let consumeNat(n : nat) : 1 = 
+        case n ( zero<c> => print zero; wait c; close self
+               | succ<c> => print succ; consumeNat(c))
+
 
 `
 
@@ -67,12 +78,14 @@ let nat1() : nat =
 
 	// The last part should be similar to: (where the number of calls to double is varied)
 	/*
-		    // Initiate execution
-			  prc[d0] : nat = nat1()
-			  prc[b] : nat =
-			         d1 <- new double(d0);
-			         d2 <- new double(d1);
-			         fwd self d2
+		// Initiate execution
+			prc[d0] : nat = nat1()
+			prc[b] : nat =
+					d1 <- new double(d0);
+					d2 <- new double(d1);
+					fwd self d2
+		    prc[c] : 1 = printNat(b)
+
 	*/
 
 	const processPart1 = `// Initiate execution
@@ -89,6 +102,9 @@ prc[b] : nat =
 
 	processPart3 := fmt.Sprintf("    fwd self d%d\n", n)
 	buffer.WriteString(processPart3)
+
+	const processPart4 = `prc[c] : 1 = printNat(b)`
+	buffer.WriteString(processPart4)
 
 	return buffer
 }

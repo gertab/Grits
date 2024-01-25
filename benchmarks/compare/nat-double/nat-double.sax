@@ -1,0 +1,172 @@
+% This should be executed using sax: http://www.cs.cmu.edu/~fp/courses/15836-f23/resources.html
+% ./sax -q nat-double.sax
+
+% Performs exponentiation for a variable exponent:
+% e.g. test_double3 produces 2^3 (8 = 'succ.'succ.'succ.'succ.'succ.'succ.'succ.'succ.'zero.())
+
+type nat = +{'zero : 1, 'succ : nat}
+
+proc double (r : nat) (x : nat) =
+  recv x ( 'zero() => send r 'zero()
+         | 'succ(x') => 
+            x'' <- call double x'' x';
+            send r 'succ('succ(x''))
+  )
+
+proc test_double1 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  fwd r d1
+
+proc test_double2 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  fwd r d2
+
+proc test_double3 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  fwd r d3
+
+proc test_double4 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  fwd r d4
+
+proc test_double5 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  fwd r d5
+
+proc test_double6 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  fwd r d6
+
+proc test_double7 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  d7 <- call double d7 d6;
+  fwd r d7
+
+proc test_double8 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  d7 <- call double d7 d6;
+  d8 <- call double d8 d7;
+  fwd r d8
+
+proc test_double9 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  d7 <- call double d7 d6;
+  d8 <- call double d8 d7;
+  d9 <- call double d9 d8;
+  fwd r d9
+
+proc test_double10 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  d7 <- call double d7 d6;
+  d8 <- call double d8 d7;
+  d9 <- call double d9 d8;
+  d10 <- call double d10 d9;
+  fwd r d10
+
+proc test_double11 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  d7 <- call double d7 d6;
+  d8 <- call double d8 d7;
+  d9 <- call double d9 d8;
+  d10 <- call double d10 d9;
+  d11 <- call double d11 d10;
+  fwd r d11
+
+proc test_double12 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  d7 <- call double d7 d6;
+  d8 <- call double d8 d7;
+  d9 <- call double d9 d8;
+  d10 <- call double d10 d9;
+  d11 <- call double d11 d10;
+  d12 <- call double d12 d11;
+  fwd r d12
+
+
+proc test_double13 (r : nat) =
+  x : nat <- send x 'succ('zero()) ;
+  d1 <- call double d1 x;
+  d2 <- call double d2 d1;
+  d3 <- call double d3 d2;
+  d4 <- call double d4 d3;
+  d5 <- call double d5 d4;
+  d6 <- call double d6 d5;
+  d7 <- call double d7 d6;
+  d8 <- call double d8 d7;
+  d9 <- call double d9 d8;
+  d10 <- call double d10 d9;
+  d11 <- call double d11 d10;
+  d12 <- call double d12 d11;
+  d13 <- call double d13 d12;
+  fwd r d13
+
+exec test_double1
+exec test_double2
+exec test_double3
+exec test_double4
+exec test_double5
+exec test_double6
+exec test_double7
+exec test_double8
+exec test_double9
+exec test_double10
+exec test_double11
+exec test_double12
+exec test_double13

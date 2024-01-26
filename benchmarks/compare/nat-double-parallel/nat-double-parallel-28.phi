@@ -57,6 +57,20 @@ let runTests() : listNat =
     instance12 <- new performSomeDoubling();
     instance13 <- new performSomeDoubling();
     instance14 <- new performSomeDoubling();
+    instance15 <- new performSomeDoubling();
+    instance16 <- new performSomeDoubling();
+    instance17 <- new performSomeDoubling();
+    instance18 <- new performSomeDoubling();
+    instance19 <- new performSomeDoubling();
+    instance20 <- new performSomeDoubling();
+    instance21 <- new performSomeDoubling();
+    instance22 <- new performSomeDoubling();
+    instance23 <- new performSomeDoubling();
+    instance24 <- new performSomeDoubling();
+    instance25 <- new performSomeDoubling();
+    instance26 <- new performSomeDoubling();
+    instance27 <- new performSomeDoubling();
+    instance28 <- new performSomeDoubling();
 
     // Ask all instances to start
     instance1result : nat <- new instance1.start<instance1result>;
@@ -73,6 +87,20 @@ let runTests() : listNat =
     instance12result : nat <- new instance12.start<instance12result>;
     instance13result : nat <- new instance13.start<instance13result>;
     instance14result : nat <- new instance14.start<instance14result>;
+    instance15result : nat <- new instance15.start<instance15result>;
+    instance16result : nat <- new instance16.start<instance16result>;
+    instance17result : nat <- new instance17.start<instance17result>;
+    instance18result : nat <- new instance18.start<instance18result>;
+    instance19result : nat <- new instance19.start<instance19result>;
+    instance20result : nat <- new instance20.start<instance20result>;
+    instance21result : nat <- new instance21.start<instance21result>;
+    instance22result : nat <- new instance22.start<instance22result>;
+    instance23result : nat <- new instance23.start<instance23result>;
+    instance24result : nat <- new instance24.start<instance24result>;
+    instance25result : nat <- new instance25.start<instance25result>;
+    instance26result : nat <- new instance26.start<instance26result>;
+    instance27result : nat <- new instance27.start<instance27result>;
+    instance28result : nat <- new instance28.start<instance28result>;
 
     // Collect all results in one list
     list0  <- new emptyList();
@@ -90,9 +118,23 @@ let runTests() : listNat =
     list12 <- new appendElement(instance12result, list11);
     list13 <- new appendElement(instance13result, list12);
     list14 <- new appendElement(instance14result, list13);
+    list15 <- new appendElement(instance15result, list14);
+    list16 <- new appendElement(instance16result, list15);
+    list17 <- new appendElement(instance17result, list16);
+    list18 <- new appendElement(instance18result, list17);
+    list19 <- new appendElement(instance19result, list18);
+    list20 <- new appendElement(instance20result, list19);
+    list21 <- new appendElement(instance21result, list20);
+    list22 <- new appendElement(instance22result, list21);
+    list23 <- new appendElement(instance23result, list22);
+    list24 <- new appendElement(instance24result, list23);
+    list25 <- new appendElement(instance25result, list24);
+    list26 <- new appendElement(instance26result, list25);
+    list27 <- new appendElement(instance27result, list26);
+    list28 <- new appendElement(instance28result, list27);
 
     // Forward the list result
-    fwd self list14
+    fwd self list28
 
 ///////// Natural numbers constants /////////
 

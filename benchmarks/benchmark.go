@@ -162,6 +162,36 @@ func Benchmarks(maxCores int) {
 	}
 
 	runGroupedBenchmarks(benchmarkCases, "nat", maxCores)
+
+	benchmarkCases = []benchmarkCase{
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-2.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-4.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-6.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-8.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-10.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-12.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-14.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-16.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-18.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-20.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-22.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-24.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-26.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-28.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-30.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-32.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-34.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-36.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-38.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-40.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-42.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-44.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-46.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-48.phi", 2},
+		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-50.phi", 2},
+	}
+
+	runGroupedBenchmarks(benchmarkCases, "nat-parallel", maxCores)
 }
 
 func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores int) {
@@ -523,7 +553,7 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 
 	re.SubstituteNameInitialization(processes, channels)
 
-	const heartbeatDelay = 600 * time.Millisecond
+	const heartbeatDelay = 200 * time.Millisecond
 	go re.HeartbeatReceiver(heartbeatDelay, cancel)
 
 	re.StartTransitions(processes)

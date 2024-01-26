@@ -27,7 +27,7 @@ let appendElement(elem : nat, K : listNat) : listNat =
   next : nat * listNat <- new (send self<elem, K>);
   self.cons<next>
 
-// Doubles a number 6 times (i.e. produces 2^6). It needs to receive a 'start' message to initiate execution
+// Doubles a number 5 times (i.e. produces 2^5). It needs to receive a 'start' message to initiate execution
 let performSomeDoubling() : &{start : nat} =
 	case self (
 		start<result> =>
@@ -37,8 +37,7 @@ let performSomeDoubling() : &{start : nat} =
 		d3 <- new double(d2);
 		d4 <- new double(d3);
 		d5 <- new double(d4);
-		d6 <- new double(d5);
-		fwd result d6
+		fwd result d5
 	)
 	
 // Creates the testing environment

@@ -13,8 +13,8 @@ import (
 const (
 	fileName  = "nat-double-parallel"
 	extension = ".phi"
-	upto      = 20
-	every     = 1
+	upto      = 50
+	every     = 2
 )
 
 // Script to generate the nat-double files
@@ -82,7 +82,7 @@ let appendElement(elem : nat, K : listNat) : listNat =
 	buffer.WriteString(commonFunctions)
 
 	const useDoublingFunc = `
-// Doubles a number 6 times (i.e. produces 2^6). It needs to receive a 'start' message to initiate execution
+// Doubles a number 5 times (i.e. produces 2^5). It needs to receive a 'start' message to initiate execution
 let performSomeDoubling() : &{start : nat} =
 	case self (
 		start<result> =>
@@ -92,8 +92,7 @@ let performSomeDoubling() : &{start : nat} =
 		d3 <- new double(d2);
 		d4 <- new double(d3);
 		d5 <- new double(d4);
-		d6 <- new double(d5);
-		fwd result d6
+		fwd result d5
 	)
 	`
 	buffer.WriteString(useDoublingFunc)
@@ -197,7 +196,7 @@ proc double (r : nat) (x : nat) =
             send r 'succ('succ(x''))
   )
 
-% Doubles a number 6 times. It needs to receive a 'start' message to initiate execution
+% Doubles a number 5 times. It needs to receive a 'start' message to initiate execution
 proc performSomeDoubling (r : &{'start : nat}) = 
     recv r (
       'start(result) => 
@@ -207,8 +206,7 @@ proc performSomeDoubling (r : &{'start : nat}) =
         d3 <- call double d3 d2;
         d4 <- call double d4 d3;
         d5 <- call double d5 d4;
-        d6 <- call double d6 d5;
-        fwd result d6
+        fwd result d5
     )
 
 % Creates an empty list

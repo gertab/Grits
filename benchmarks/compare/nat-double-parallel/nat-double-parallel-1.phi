@@ -27,11 +27,10 @@ let appendElement(elem : nat, K : listNat) : listNat =
   next : nat * listNat <- new (send self<elem, K>);
   self.cons<next>
 
-// Doubles a number X times. It needs to receive a 'start' message to initiate execution
+// Doubles a number 6 times (i.e. produces 2^6). It needs to receive a 'start' message to initiate execution
 let performSomeDoubling() : &{start : nat} =
 	case self (
 		start<result> =>
-		// print starting;
 		a <- new nat1();
 		d1 <- new double(a);
 		d2 <- new double(d1);
@@ -39,9 +38,7 @@ let performSomeDoubling() : &{start : nat} =
 		d4 <- new double(d3);
 		d5 <- new double(d4);
 		d6 <- new double(d5);
-		d7 <- new double(d6);
-		d8 <- new double(d7);
-		fwd result d8
+		fwd result d6
 	)
 	
 // Creates the testing environment
@@ -67,33 +64,6 @@ let nat1() : nat =
   z  : nat <- new z.zero<t>;
   s0 : nat <- new s0.succ<z>;
   fwd self s0
-
-// 5 : S(S(S(S(S(0)))))
-let nat5() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s1 : nat <- new s1.succ<z>;
-  s2 : nat <- new s2.succ<s1>;
-  s3 : nat <- new s3.succ<s2>;
-  s4 : nat <- new s4.succ<s3>;
-  s5 : nat <- new s5.succ<s4>;
-  fwd self s5
-
-// 10 : S(S(S(S(S(S(S(S(S(S(0))))))))))
-let nat10() : nat =
-  t   : 1   <- new close t;
-  z   : nat <- new z.zero<t>;
-  s1  : nat <- new s1.succ<z>;
-  s2  : nat <- new s2.succ<s1>;
-  s3  : nat <- new s3.succ<s2>;
-  s4  : nat <- new s4.succ<s3>;
-  s5  : nat <- new s5.succ<s4>;
-  s6  : nat <- new s6.succ<s5>;
-  s7  : nat <- new s7.succ<s6>;
-  s8  : nat <- new s8.succ<s7>;
-  s9  : nat <- new s9.succ<s8>;
-  s10 : nat <- new s10.succ<s9>;
-  fwd self s10
 
 ///////// Printing Helpers /////////
 

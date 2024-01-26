@@ -1,0 +1,907 @@
+
+% ./sax -q nat-double-parallel.sax
+
+type nat = +{'zero : 1, 'succ : nat}
+type listNat = +{'cons : nat * listNat, 'nil : 1}
+
+proc double (r : nat) (x : nat) =
+  recv x ( 'zero() => send r 'zero()
+         | 'succ(x') => 
+            x'' <- call double x'' x';
+            send r 'succ('succ(x''))
+  )
+
+% Doubles a number 6 times. It needs to receive a 'start' message to initiate execution
+proc performSomeDoubling (r : &{'start : nat}) = 
+    recv r (
+      'start(result) => 
+        x : nat <- send x 'succ('zero()) ;
+        d1 <- call double d1 x;
+        d2 <- call double d2 d1;
+        d3 <- call double d3 d2;
+        d4 <- call double d4 d3;
+        d5 <- call double d5 d4;
+        d6 <- call double d6 d5;
+        fwd result d6
+    )
+
+% Creates an empty list
+proc emptyList (l : listNat) = 
+  send l 'nil()
+
+% Appends an element to an existing list
+proc appendElement (l : listNat) (elem : nat) (K : listNat) =
+  send l 'cons(elem, K)
+
+
+% Creates the testing environment
+proc runTests1 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+
+    %% Forward the list result
+    fwd result list1
+
+proc runTests2 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+
+    %% Forward the list result
+    fwd result list2
+
+proc runTests3 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+
+    %% Forward the list result
+    fwd result list3
+
+proc runTests4 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+
+    %% Forward the list result
+    fwd result list4
+
+proc runTests5 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+
+    %% Forward the list result
+    fwd result list5
+
+proc runTests6 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+
+    %% Forward the list result
+    fwd result list6
+
+proc runTests7 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+
+    %% Forward the list result
+    fwd result list7
+
+proc runTests8 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+
+    %% Forward the list result
+    fwd result list8
+
+proc runTests9 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+
+    %% Forward the list result
+    fwd result list9
+
+proc runTests10 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+
+    %% Forward the list result
+    fwd result list10
+
+proc runTests11 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+
+    %% Forward the list result
+    fwd result list11
+
+proc runTests12 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+
+    %% Forward the list result
+    fwd result list12
+
+proc runTests13 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+
+    %% Forward the list result
+    fwd result list13
+
+proc runTests14 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+    instance14 <- call performSomeDoubling instance14;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+    instance14result : nat <- send instance14 'start(instance14result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+    list14 <- call appendElement list14 instance14result list13;
+
+    %% Forward the list result
+    fwd result list14
+
+proc runTests15 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+    instance14 <- call performSomeDoubling instance14;
+    instance15 <- call performSomeDoubling instance15;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+    instance14result : nat <- send instance14 'start(instance14result);
+    instance15result : nat <- send instance15 'start(instance15result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+    list14 <- call appendElement list14 instance14result list13;
+    list15 <- call appendElement list15 instance15result list14;
+
+    %% Forward the list result
+    fwd result list15
+
+proc runTests16 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+    instance14 <- call performSomeDoubling instance14;
+    instance15 <- call performSomeDoubling instance15;
+    instance16 <- call performSomeDoubling instance16;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+    instance14result : nat <- send instance14 'start(instance14result);
+    instance15result : nat <- send instance15 'start(instance15result);
+    instance16result : nat <- send instance16 'start(instance16result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+    list14 <- call appendElement list14 instance14result list13;
+    list15 <- call appendElement list15 instance15result list14;
+    list16 <- call appendElement list16 instance16result list15;
+
+    %% Forward the list result
+    fwd result list16
+
+proc runTests17 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+    instance14 <- call performSomeDoubling instance14;
+    instance15 <- call performSomeDoubling instance15;
+    instance16 <- call performSomeDoubling instance16;
+    instance17 <- call performSomeDoubling instance17;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+    instance14result : nat <- send instance14 'start(instance14result);
+    instance15result : nat <- send instance15 'start(instance15result);
+    instance16result : nat <- send instance16 'start(instance16result);
+    instance17result : nat <- send instance17 'start(instance17result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+    list14 <- call appendElement list14 instance14result list13;
+    list15 <- call appendElement list15 instance15result list14;
+    list16 <- call appendElement list16 instance16result list15;
+    list17 <- call appendElement list17 instance17result list16;
+
+    %% Forward the list result
+    fwd result list17
+
+proc runTests18 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+    instance14 <- call performSomeDoubling instance14;
+    instance15 <- call performSomeDoubling instance15;
+    instance16 <- call performSomeDoubling instance16;
+    instance17 <- call performSomeDoubling instance17;
+    instance18 <- call performSomeDoubling instance18;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+    instance14result : nat <- send instance14 'start(instance14result);
+    instance15result : nat <- send instance15 'start(instance15result);
+    instance16result : nat <- send instance16 'start(instance16result);
+    instance17result : nat <- send instance17 'start(instance17result);
+    instance18result : nat <- send instance18 'start(instance18result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+    list14 <- call appendElement list14 instance14result list13;
+    list15 <- call appendElement list15 instance15result list14;
+    list16 <- call appendElement list16 instance16result list15;
+    list17 <- call appendElement list17 instance17result list16;
+    list18 <- call appendElement list18 instance18result list17;
+
+    %% Forward the list result
+    fwd result list18
+
+proc runTests19 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+    instance14 <- call performSomeDoubling instance14;
+    instance15 <- call performSomeDoubling instance15;
+    instance16 <- call performSomeDoubling instance16;
+    instance17 <- call performSomeDoubling instance17;
+    instance18 <- call performSomeDoubling instance18;
+    instance19 <- call performSomeDoubling instance19;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+    instance14result : nat <- send instance14 'start(instance14result);
+    instance15result : nat <- send instance15 'start(instance15result);
+    instance16result : nat <- send instance16 'start(instance16result);
+    instance17result : nat <- send instance17 'start(instance17result);
+    instance18result : nat <- send instance18 'start(instance18result);
+    instance19result : nat <- send instance19 'start(instance19result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+    list14 <- call appendElement list14 instance14result list13;
+    list15 <- call appendElement list15 instance15result list14;
+    list16 <- call appendElement list16 instance16result list15;
+    list17 <- call appendElement list17 instance17result list16;
+    list18 <- call appendElement list18 instance18result list17;
+    list19 <- call appendElement list19 instance19result list18;
+
+    %% Forward the list result
+    fwd result list19
+
+proc runTests20 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+    instance3 <- call performSomeDoubling instance3;
+    instance4 <- call performSomeDoubling instance4;
+    instance5 <- call performSomeDoubling instance5;
+    instance6 <- call performSomeDoubling instance6;
+    instance7 <- call performSomeDoubling instance7;
+    instance8 <- call performSomeDoubling instance8;
+    instance9 <- call performSomeDoubling instance9;
+    instance10 <- call performSomeDoubling instance10;
+    instance11 <- call performSomeDoubling instance11;
+    instance12 <- call performSomeDoubling instance12;
+    instance13 <- call performSomeDoubling instance13;
+    instance14 <- call performSomeDoubling instance14;
+    instance15 <- call performSomeDoubling instance15;
+    instance16 <- call performSomeDoubling instance16;
+    instance17 <- call performSomeDoubling instance17;
+    instance18 <- call performSomeDoubling instance18;
+    instance19 <- call performSomeDoubling instance19;
+    instance20 <- call performSomeDoubling instance20;
+
+    %% Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+    instance3result : nat <- send instance3 'start(instance3result);
+    instance4result : nat <- send instance4 'start(instance4result);
+    instance5result : nat <- send instance5 'start(instance5result);
+    instance6result : nat <- send instance6 'start(instance6result);
+    instance7result : nat <- send instance7 'start(instance7result);
+    instance8result : nat <- send instance8 'start(instance8result);
+    instance9result : nat <- send instance9 'start(instance9result);
+    instance10result : nat <- send instance10 'start(instance10result);
+    instance11result : nat <- send instance11 'start(instance11result);
+    instance12result : nat <- send instance12 'start(instance12result);
+    instance13result : nat <- send instance13 'start(instance13result);
+    instance14result : nat <- send instance14 'start(instance14result);
+    instance15result : nat <- send instance15 'start(instance15result);
+    instance16result : nat <- send instance16 'start(instance16result);
+    instance17result : nat <- send instance17 'start(instance17result);
+    instance18result : nat <- send instance18 'start(instance18result);
+    instance19result : nat <- send instance19 'start(instance19result);
+    instance20result : nat <- send instance20 'start(instance20result);
+
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+    list1 <- call appendElement list1 instance1result list0;
+    list2 <- call appendElement list2 instance2result list1;
+    list3 <- call appendElement list3 instance3result list2;
+    list4 <- call appendElement list4 instance4result list3;
+    list5 <- call appendElement list5 instance5result list4;
+    list6 <- call appendElement list6 instance6result list5;
+    list7 <- call appendElement list7 instance7result list6;
+    list8 <- call appendElement list8 instance8result list7;
+    list9 <- call appendElement list9 instance9result list8;
+    list10 <- call appendElement list10 instance10result list9;
+    list11 <- call appendElement list11 instance11result list10;
+    list12 <- call appendElement list12 instance12result list11;
+    list13 <- call appendElement list13 instance13result list12;
+    list14 <- call appendElement list14 instance14result list13;
+    list15 <- call appendElement list15 instance15result list14;
+    list16 <- call appendElement list16 instance16result list15;
+    list17 <- call appendElement list17 instance17result list16;
+    list18 <- call appendElement list18 instance18result list17;
+    list19 <- call appendElement list19 instance19result list18;
+    list20 <- call appendElement list20 instance20result list19;
+
+    %% Forward the list result
+    fwd result list20
+
+exec runTests1
+exec runTests2
+exec runTests3
+exec runTests4
+exec runTests5
+exec runTests6
+exec runTests7
+exec runTests8
+exec runTests9
+exec runTests10
+exec runTests11
+exec runTests12
+exec runTests13
+exec runTests14
+exec runTests15
+exec runTests16
+exec runTests17
+exec runTests18
+exec runTests19
+exec runTests20

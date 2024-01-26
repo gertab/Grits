@@ -13,12 +13,13 @@ import (
 const (
 	fileName  = "nat-double-parallel"
 	extension = ".phi"
-	count     = 16
+	upto      = 20
+	every     = 1
 )
 
 // Script to generate the nat-double files
 func main() {
-	for i := 1; i <= count; i++ {
+	for i := every; i <= upto; i += every {
 		name := fileName + "-" + fmt.Sprint(i) + extension
 		f, err := os.Create(name)
 		if err != nil {
@@ -26,13 +27,23 @@ func main() {
 		}
 		defer f.Close()
 
-		buffer := repeat(i)
+		buffer := synthesize(i)
 		f.Write(buffer.Bytes())
 	}
 
+	// Synthesize equivalent Sax program
+	name := fileName + ".sax"
+	f, err := os.Create(name)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	buffer := synthesizeSax(every, upto)
+	f.Write(buffer.Bytes())
 }
 
-func repeat(n int) bytes.Buffer {
+func synthesize(parallelThreads int) bytes.Buffer {
 	var buffer bytes.Buffer
 
 	const firstPart = `
@@ -71,11 +82,10 @@ let appendElement(elem : nat, K : listNat) : listNat =
 	buffer.WriteString(commonFunctions)
 
 	const useDoublingFunc = `
-// Doubles a number X times. It needs to receive a 'start' message to initiate execution
+// Doubles a number 6 times (i.e. produces 2^6). It needs to receive a 'start' message to initiate execution
 let performSomeDoubling() : &{start : nat} =
 	case self (
 		start<result> =>
-		// print starting;
 		a <- new nat1();
 		d1 <- new double(a);
 		d2 <- new double(d1);
@@ -83,18 +93,9 @@ let performSomeDoubling() : &{start : nat} =
 		d4 <- new double(d3);
 		d5 <- new double(d4);
 		d6 <- new double(d5);
-		d7 <- new double(d6);
-		d8 <- new double(d7);
-		fwd result d8
+		fwd result d6
 	)
 	`
-	// for i := 1; i <= n; i += 1 {
-	// 	processPart2 := fmt.Sprintf("    d%d <- new double(d%d);\n", i, i-1)
-	// 	buffer.WriteString(processPart2)
-	// }
-
-	// processPart3 := fmt.Sprintf("    fwd result d%d\n", n)
-	// buffer.WriteString(processPart3)
 	buffer.WriteString(useDoublingFunc)
 
 	const testPart1 = `
@@ -104,7 +105,7 @@ let runTests() : listNat =
 `
 	buffer.WriteString(testPart1)
 
-	for i := 1; i <= n; i += 1 {
+	for i := 1; i <= parallelThreads; i += 1 {
 		testPart2 := fmt.Sprintf("    instance%d <- new performSomeDoubling();\n", i)
 		buffer.WriteString(testPart2)
 	}
@@ -114,7 +115,7 @@ let runTests() : listNat =
 `
 	buffer.WriteString(testPart3)
 
-	for i := 1; i <= n; i += 1 {
+	for i := 1; i <= parallelThreads; i += 1 {
 		testPart4 := fmt.Sprintf("    instance%dresult : nat <- new instance%d.start<instance%dresult>;\n", i, i, i)
 		buffer.WriteString(testPart4)
 	}
@@ -125,7 +126,7 @@ let runTests() : listNat =
 `
 	buffer.WriteString(testPart5)
 
-	for i := 1; i <= n; i += 1 {
+	for i := 1; i <= parallelThreads; i += 1 {
 		testPart6 := fmt.Sprintf("    list%d <- new appendElement(instance%dresult, list%d);\n", i, i, i-1)
 		buffer.WriteString(testPart6)
 	}
@@ -135,7 +136,7 @@ let runTests() : listNat =
 `
 	buffer.WriteString(testPart7)
 
-	testPart8 := fmt.Sprintf("    fwd self list%d\n", n)
+	testPart8 := fmt.Sprintf("    fwd self list%d\n", parallelThreads)
 	buffer.WriteString(testPart8)
 
 	const remainingFunctions = `
@@ -147,33 +148,6 @@ let nat1() : nat =
   z  : nat <- new z.zero<t>;
   s0 : nat <- new s0.succ<z>;
   fwd self s0
-
-// 5 : S(S(S(S(S(0)))))
-let nat5() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s1 : nat <- new s1.succ<z>;
-  s2 : nat <- new s2.succ<s1>;
-  s3 : nat <- new s3.succ<s2>;
-  s4 : nat <- new s4.succ<s3>;
-  s5 : nat <- new s5.succ<s4>;
-  fwd self s5
-
-// 10 : S(S(S(S(S(S(S(S(S(S(0))))))))))
-let nat10() : nat =
-  t   : 1   <- new close t;
-  z   : nat <- new z.zero<t>;
-  s1  : nat <- new s1.succ<z>;
-  s2  : nat <- new s2.succ<s1>;
-  s3  : nat <- new s3.succ<s2>;
-  s4  : nat <- new s4.succ<s3>;
-  s5  : nat <- new s5.succ<s4>;
-  s6  : nat <- new s6.succ<s5>;
-  s7  : nat <- new s7.succ<s6>;
-  s8  : nat <- new s8.succ<s7>;
-  s9  : nat <- new s9.succ<s8>;
-  s10 : nat <- new s10.succ<s9>;
-  fwd self s10
 
 ///////// Printing Helpers /////////
 
@@ -202,6 +176,129 @@ let printList(l : listNat) : 1 =
           close self
 `
 	buffer.WriteString(remainingFunctions)
+
+	return buffer
+}
+
+// Creates equivalent Sax program
+func synthesizeSax(every, upto int) bytes.Buffer {
+	var buffer bytes.Buffer
+
+	const firstPart = `
+% ./sax -q nat-double-parallel.sax
+
+type nat = +{'zero : 1, 'succ : nat}
+type listNat = +{'cons : nat * listNat, 'nil : 1}
+
+proc double (r : nat) (x : nat) =
+  recv x ( 'zero() => send r 'zero()
+         | 'succ(x') => 
+            x'' <- call double x'' x';
+            send r 'succ('succ(x''))
+  )
+
+% Doubles a number 6 times. It needs to receive a 'start' message to initiate execution
+proc performSomeDoubling (r : &{'start : nat}) = 
+    recv r (
+      'start(result) => 
+        x : nat <- send x 'succ('zero()) ;
+        d1 <- call double d1 x;
+        d2 <- call double d2 d1;
+        d3 <- call double d3 d2;
+        d4 <- call double d4 d3;
+        d5 <- call double d5 d4;
+        d6 <- call double d6 d5;
+        fwd result d6
+    )
+
+% Creates an empty list
+proc emptyList (l : listNat) = 
+  send l 'nil()
+
+% Appends an element to an existing list
+proc appendElement (l : listNat) (elem : nat) (K : listNat) =
+  send l 'cons(elem, K)
+
+
+% Creates the testing environment
+`
+
+	buffer.WriteString(firstPart)
+
+	for i := every; i <= upto; i += every {
+		b := saxFunc(i)
+		buffer.Write(b.Bytes())
+	}
+
+	for i := every; i <= upto; i += every {
+		f1 := fmt.Sprintf("exec runTests%d\n", i)
+		buffer.WriteString(f1)
+	}
+
+	return buffer
+}
+
+/*
+Produces sax programs, similar to:
+
+proc runTests2 (result : listNat) =
+    % Spawn all parallel instances
+    instance1 <- call performSomeDoubling instance1;
+    instance2 <- call performSomeDoubling instance2;
+
+    % Ask all instances to start
+    instance1result : nat <- send instance1 'start(instance1result);
+    instance2result : nat <- send instance2 'start(instance2result);
+
+    % Collect all results in one list
+    list  <- call emptyList list;
+
+    list1 <- call appendElement list1 instance1result list;
+    list2 <- call appendElement list2 instance2result list1;
+
+    % Forward the list result
+    fwd result list2
+*/
+
+func saxFunc(parallelThreads int) bytes.Buffer {
+	var buffer bytes.Buffer
+
+	f1 := fmt.Sprintf("proc runTests%d (result : listNat) =\n    %% Spawn all parallel instances\n", parallelThreads)
+	buffer.WriteString(f1)
+
+	for i := 1; i <= parallelThreads; i += 1 {
+		f2 := fmt.Sprintf("    instance%d <- call performSomeDoubling instance%d;\n", i, i)
+		buffer.WriteString(f2)
+	}
+
+	f3 := `
+    %% Ask all instances to start
+`
+	buffer.WriteString(f3)
+
+	for i := 1; i <= parallelThreads; i += 1 {
+		f4 := fmt.Sprintf("    instance%dresult : nat <- send instance%d 'start(instance%dresult);\n", i, i, i)
+		buffer.WriteString(f4)
+	}
+
+	f5 := `
+    % Collect all results in one list
+    list0  <- call emptyList list0;
+`
+	buffer.WriteString(f5)
+
+	for i := 1; i <= parallelThreads; i += 1 {
+		f6 := fmt.Sprintf("    list%d <- call appendElement list%d instance%dresult list%d;\n", i, i, i, i-1)
+		buffer.WriteString(f6)
+	}
+
+	f7 := `
+    %% Forward the list result
+`
+	buffer.WriteString(f7)
+
+	f8 := fmt.Sprintf("    fwd result list%d\n\n", parallelThreads)
+	buffer.WriteString(f8)
 
 	return buffer
 }

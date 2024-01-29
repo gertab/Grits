@@ -1,8 +1,0 @@
-/* Send a channels to another process. Then it closes itself. */
-
-let
-in
-    prc[pid1] : send self<pid3, self>
-    prc[pid2] : <a, b> <- recv pid1; wait a; close self
-    prc[pid3] : close self
-end

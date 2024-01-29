@@ -17,13 +17,6 @@ let plus1(y : nat) : nat =
                       self.succ<x''>
     )
 
-// 1 : S(0)
-let nat1() : nat =
-    t : 1 <- new close t;
-    z  : nat <- new z.zero<t>;
-    s0 : nat <- new s0.succ<z>; 
-    fwd self s0
-	
 // Print result
 let printNat(n : nat) : 1 = 
           y <- new consumeNat(n); 
@@ -36,7 +29,10 @@ let consumeNat(n : nat) : 1 =
 
 
 // Initiate execution
-prc[d0] : nat = nat1()
+prc[d0] : nat =
+    t : 1 <- new close t;
+    z  : nat <- new z.zero<t>;
+    self.succ<z>
 prc[b] : nat = 
     d1 <- new double(d0);
     d2 <- new double(d1);

@@ -1,4 +1,0 @@
-   /* Splitting a process */
-prc[pid0]: <x, y> <- +split pid2; <a, b> <- recv x; <c, d> <- recv y; close d
-prc[pid2]: send self <xx, self>
-prc[xx]: close self

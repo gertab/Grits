@@ -1,49 +1,66 @@
-# Harruba
+# Phi
 
-[*Harruba is currently a placeholder for the language name*]
+[*Phi is currently a placeholder for the language name - other potential names: Harruba*]
 
 Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 
-## How to build project
-
-You need to [install the Go language](https://go.dev/doc/install).
-
-Then you can build the project using the following command:
-
-To get dependencies:
-
-`go get .`
-
-To build project:
-
-`go  build .`
-
-To run the project directly, use the following command:
-
-`go  run .`
-
 ## How to use
 
-After building the project (using `go  build .`), you can use the CLI version...
-
-<!-- show how the cli version works -->
-
-Run all pre-configured benchmarks
+You need to [install the Go language](https://go.dev/doc/install). Then, build the project as follows:
 
 ```bash
-./phi --benchmarks
+go build .
 ```
 
-Run benchmark on a specific file (with optional flags to fine tune the tests)
+This produces the executable `phi` file, which can be used to typecheck and run programs `./phi path/to/file.phi`.
+You can find some examples in the [`/examples`](/examples/) directory.
 
 ```bash
-./phi --benchmark ./benchmarks/compare/nat-double/nat-double-5.phi
-./phi --benchmark --maxcores 4 --repeat 5 ./benchmarks/compare/nat-double/nat-double-5.phi
+./phi examples/nat_double.phi
 ```
 
-## Sample programs
+The tool supports flags like `--notypecheck` to skip typechecking, `--noexecute` to skip execution and `--verbosity <level>` (where 1 is the least verbose and 3 is the most) to control verbosity.
+
+The `--benchmark` flag is used to evaluate the performance.
+It can be used with the optional flags `--maxcores <number of cores>` and `--repeat <number of times>` to fine tune the tests.
+
+```bash
+./phi --benchmark examples/nat_double.phi
+./phi --benchmark --maxcores 1 --repeat 5 ./examples/nat_double.phi
+```
+
+To run all pre-configured benchmarks, use `./phi --benchmarks`.
+Further details about the performance evaluation can be found [here](benchmarks/README.md).
+
+## Sample program
+
+The following program defines a type `nat` (representing natural number), a function `double` and initiates two processes.
+
+```text
+type nat = +{zero : 1, succ : nat}
+
+let double(x : nat) : nat =
+    case x (
+          zero<x'> => self.zero<x'>
+        | succ<x'> => h <- new double(x');
+                      d : nat <- new d.succ<h>;
+                      self.succ<d>
+    )
+
+// Initiate execution
+prc[d0] : nat =
+    t : 1 <- new close t;
+    z  : nat <- new z.zero<t>;
+    self.succ<z>
+prc[b] : nat = 
+    d1 <- new double(d0);
+    d2 <- new double(d1);
+    fwd self d2
+```
 
 ## Grammar
+
+The full grammar accepted by out compiler is the following:
 
 ```text
 <prog> ::= <statement>*
@@ -88,6 +105,7 @@ Run benchmark on a specific file (with optional flags to fine tune the tests)
         | wait <name> ; term                                    // wait for name to close
         | cast <name> '<' <name> '>'                            // send shift
         | <name> <- shift <name> ; <term>                       // receive shift
+        | print <label> ; <term>                                // output label
         | ( <term> ) 
 
 <branches> ::= <label> '<' <name> '>' => <term> [ '|' <branches> ] // term branches
@@ -102,20 +120,19 @@ Run benchmark on a specific file (with optional flags to fine tune the tests)
              | -                                                // negative polarity
 
 Others:
-    <name> refers to a channel called <channel_name> or 'self'
-    <label> ia an alpha-numeric combination, representing a choice option
+    <label> is an alpha-numeric combination (e.g. used to represent a choice option)
     // Single line comments
     /* Multi line comments */
     whitespace is ignored
 ```
 
-## Some examples
+## Development Details
 
-There are some examples in the `cmd/examples` folder.
+This project requires [Go](https://go.dev/doc/install) version 1.20 (or later).
+
+To get dependencies, run `go get .`, and the you can build the project using `go  build .`.
 
 ## Code Structure
-
-## General Folder Structure
 
 ```text
 phi/
@@ -126,6 +143,10 @@ phi/
 
 There are three main components.
 
+1. *Parser*
+2. *Typechecker*
+3. *Execution*
+
 - The `cmd` folder contains the entry point to either execute code from a file/string (`main.go`), or initiate a web-server (`web.go`) to compile and execute a program using an external interface.  
 - The `parser` folder contains the parser *package* which processes a string and outputs a list of processes, ready to be executed.
 - The `process` folder contains the *process* package which executes some given processes. It has several components:
@@ -133,12 +154,3 @@ There are three main components.
   - `process/form.go`: Contains the different forms that a process can take. Referred to as the abstract syntax tree of the processes.
   - `process/transition.go`: Defines how each form should execute.
   - `process/servers.go`: Sets up the concurrent servers (e.g. a monitor) that monitor or control the execution of the processes. Used to inform the web-server about the state of each process.
-
-### Other information
-
-To slow down execution speed:
-Set the delay property of the `RuntimeEnvironment` to a longer duration, e.g. `1000 * time.Millisecond`.
-
-Features not currently implemented:
-
-- [ ] Controller server to choose which transition do do

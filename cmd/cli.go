@@ -23,7 +23,7 @@ Usage of ./phi:
 	-benchmarks
 	      start all (pre-configured) benchmarks
 	-maxcores
-		  sets the maximum number of cores to utilise while doing the benchmarks (0 = maximum number of available cores)
+		  sets the maximum number of cores to use while doing the benchmarks (0 = maximum number of available cores)
 	-execute
 	      execute processes (default true)
 	-noexecute

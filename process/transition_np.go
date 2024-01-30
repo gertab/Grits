@@ -1,11 +1,17 @@
 package process
 
 /*
- * This NP version of the transition presents a transition semantics without the need for polarities. I.e. forwards act the same irrelevant of whether they are positive or negative.
- * This works by attaching a control channel to each name (in additional to the normal channel)
+ * This NP (non-polarized) transition version presents a transition semantics
+ * without using channel polarities. I.E. forwards operations behave the same,
+ * irrelevant whether the channels being forwarded are positive or negative.
+ * This works by attaching a dedicated control channel (i.e. ControlMessage
+ * channel) to each name (in additional to the normal channel).
  *
- * This is the version which uses parallel channels (i.e. ControlMessage channel) to pass FWD requests.
- * Works in a synchronous setting (using unbuffered channels), but fails in an asynchronous one (buffered channels).
+ * This only works in a synchronous setting (using unbuffered channels),
+ * but fails in an asynchronous one (buffered channels). An improver version
+ * that works with asynchronous (& synchronous) communication is found
+ * in `transition.go`. This uses polarities to identify the communication
+ * directions.
  */
 
 import (

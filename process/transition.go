@@ -7,16 +7,13 @@ import (
 	"time"
 )
 
-// send a <...>    <...> <- recv a; ...
-//  |              /|\
-//  |               |
-//  |               |
-//  -ve (ok-ish)    +ve (problematic)
-//  | (active)      | (passive)
-//  |               |
-//  |               |
-// \|/              |
-// recv self     send self <...>
+/*
+ * This transition version may use asynchronous communication (via buffered channels).
+ * It makes use of (esp. during forwarding) channel polarization to detect the
+ * direction of message flow. Polarities can be provided by the typechecker via
+ * the channel types (or by explicitly annotating the channels when skipping the
+ * typechecking phase).
+ */
 
 // Initiates new processes [new processes are spawned here]
 func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
@@ -32,7 +29,6 @@ func (process *Process) SpawnThenTransition(re *RuntimeEnvironment) {
 }
 
 // Entry point for each process transition
-// todo maybe rename to process.Transition
 func (process *Process) transitionLoop(re *RuntimeEnvironment) {
 	re.logProcessf(LOGPROCESSING, process, "Process transitioning: %s\n", process.Body.String())
 

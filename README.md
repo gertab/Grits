@@ -132,6 +132,8 @@ This project requires [Go](https://go.dev/doc/install) version 1.20 (or later).
 
 To get dependencies, run `go get .`, and the you can build the project using `go  build .`.
 
+To execute the test, run `go test ./...`.
+
 ## Code Structure
 
 ```text

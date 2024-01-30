@@ -6,6 +6,7 @@ import (
 	"phi/types"
 )
 
+// Entry point to typecheck programs
 func Typecheck(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment) error {
 	errorChan := make(chan error)
 	doneChan := make(chan bool)
@@ -28,6 +29,7 @@ func Typecheck(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalE
 
 func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment, errorChan chan error, doneChan chan bool) {
 	defer func() {
+		// No error found, notify parent
 		doneChan <- true
 	}()
 
@@ -50,8 +52,7 @@ func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Nam
 
 	globalEnv.log(LOGRULEDETAILS, "Preliminary checks ok")
 
-	// At this point, we can assume that all names and functions have a type,
-	// and such type is well formed
+	// At this point, we can assume that all names and functions have a type and such type is well formed
 
 	// So, we can initiate the more heavyweight typechecking on the function's and processes' bodies
 
@@ -71,6 +72,8 @@ func typecheckFunctionsAndProcesses(processes []*Process, assumedFreeNames []Nam
 }
 
 // Sets a common type to all provider names
+// E.g. the names a, b and c should all have the type nat:
+// >    prc[a, b, c] : nat = ...
 func assignTypesToProcessProviders(processes []*Process) {
 	for i := range processes {
 		SetTypesToNames(processes[i].Providers, processes[i].Type)
@@ -137,7 +140,7 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 			return fmt.Errorf("(%s) type error in function definition %s; %s", f.Position.String(), f.String(), err)
 		}
 
-		// Ensure that for Γ ⊢ P :: (a : A), Γ ≥ A
+		// Ensure that for Γ ⊢ P :: (a : A), the declaration of independence (Γ ≥ A) holds
 		succedentType := f.Type
 		antecedents := f.Parameters
 		if err := declationOfIndependence(antecedents, succedentType); err != nil {
@@ -150,7 +153,6 @@ func preliminaryFunctionDefinitionsChecks(globalEnv *GlobalEnvironment) error {
 
 // Perform similar preliminary checks on process definitions
 func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, globalEnv *GlobalEnvironment) error {
-	// copy(assumedFreeNames, assumedFreeNames)
 
 	// Make sure that the assumed free names are unique and have an assigned type
 	// These are defined using the 'assuming' keyword: assuming a : A, b : B, ...
@@ -276,6 +278,10 @@ func declationOfIndependence(antecedents []Name, succedentType types.SessionType
 	return nil
 }
 
+/////////////////////////////////////////////////////////
+///////////////// Initiate typechecking /////////////////
+/////////////////////////////////////////////////////////
+
 func typecheckFunctionDefinitions(globalEnv *GlobalEnvironment) error {
 	labelledTypesEnv := types.ProduceLabelledSessionTypeEnvironment(*globalEnv.Types)
 	functionDefinitionsEnv := produceFunctionDefinitionsEnvironment(*globalEnv.FunctionDefinitions, labelledTypesEnv)
@@ -328,7 +334,8 @@ func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv
 /////////////////// x: B, ... ⊢ P :: (a : A) ///////////////////
 ////////////////////////////////////////////////////////////////
 
-// Each form has a dedicated typechecking function
+// Each form has a dedicated typechecking function.
+// If a type error is found, typecheckForm returns a TypeError -- if there are no errors, the function succeeds, returning nothing
 
 // typecheckForm uses these parameters:
 // -> gammaNameTypesCtx   	<- Γ: names in context to be used (in case of linearity, ...)
@@ -350,7 +357,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !sendTypeOk {
 			// wrong type: A * B
-			return fmt.Errorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.String(), providerType.String())
 		}
 
 		expectedLeftType := providerSendType.Left
@@ -361,20 +368,20 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		foundRightType = types.Unfold(foundRightType, labelledTypesEnv)
 
 		if errorLeft != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorLeft)
+			return TypeErrorf("error in %s; %s", p.String(), errorLeft)
 		}
 
 		if errorRight != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorRight)
+			return TypeErrorf("error in %s; %s", p.String(), errorRight)
 		}
 
 		// The expected and found types must match
 		if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
-			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
+			return TypeErrorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
 		}
 
 		if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
-			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
+			return TypeErrorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
 		}
 
 		// Set the types for the names
@@ -388,7 +395,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+			return TypeErrorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -397,7 +404,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !clientTypeOk {
 			// wrong type: A -* B
-			return fmt.Errorf("expected '%s' to have a receive type (A -* B), but found type '%s' instead", p.to_c.String(), clientType.String())
+			return TypeErrorf("expected '%s' to have a receive type (A -* B), but found type '%s' instead", p.to_c.String(), clientType.String())
 		}
 
 		expectedLeftType := clientReceiveType.Left
@@ -411,20 +418,20 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		foundRightType = types.Unfold(foundRightType, labelledTypesEnv)
 
 		if errorLeft != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorLeft)
+			return TypeErrorf("error in %s; %s", p.String(), errorLeft)
 		}
 
 		if errorRight != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorRight)
+			return TypeErrorf("error in %s; %s", p.String(), errorRight)
 		}
 
 		// The expected and found types must match
 		if !types.EqualType(expectedLeftType, foundLeftType, labelledTypesEnv) {
-			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
+			return TypeErrorf("expected type of '%s' to be '%s', but found type '%s' instead", p.payload_c.String(), expectedLeftType.String(), foundLeftType.String())
 		}
 
 		if !types.EqualType(expectedRightType, foundRightType, labelledTypesEnv) {
-			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
+			return TypeErrorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedRightType.String(), foundRightType.String())
 		}
 
 		// Set the types for the names
@@ -432,19 +439,20 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		p.payload_c.Type = foundLeftType
 		p.continuation_c.Type = foundRightType
 	} else if isProvider(p.payload_c, providerShadowName) {
-		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was used as a payload", p.String())
+		return TypeErrorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was used as a payload", p.String())
 	} else {
-		return fmt.Errorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was not used appropriately", p.String())
+		return TypeErrorf("the send construct requires that you use the self name or send self as a continuation. In '%s', self was not used appropriately", p.String())
 	}
 
 	if polarityError := checkExplicitPolarityValidity(p, p.to_c, p.payload_c, p.continuation_c); polarityError != nil {
-		return polarityError
+		return TypeErrorE(polarityError)
 	}
 
 	// make sure that no variables are left in gamma
-	err := linearGammaContext(gammaNameTypesCtx)
-
-	return err
+	if err := linearGammaContext(gammaNameTypesCtx); err != nil {
+		return TypeErrorE(err)
+	}
+	return nil
 }
 
 // */-*: <x, y> <- recv w; P
@@ -459,7 +467,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 		if !receiveTypeOk {
 			// wrong type: A -* B
-			return fmt.Errorf("expected '%s' to have a receive type (A -* B), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a receive type (A -* B), but found type '%s' instead", p.String(), providerType.String())
 		}
 
 		newLeftType := providerReceiveType.Left
@@ -470,11 +478,11 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
 			nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
 			// Names are not fresh
-			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names in %s", p.payload_c.String(), p.continuation_c.String(), p.String())
+			return TypeErrorf("variable names <%s, %s> already defined. Use unique names in %s", p.payload_c.String(), p.continuation_c.String(), p.String())
 		}
 
 		if p.payload_c.Equal(p.continuation_c) {
-			return fmt.Errorf("variable names <%s, %s> are the same. Use unique names", p.payload_c.String(), p.continuation_c.String())
+			return TypeErrorf("variable names <%s, %s> are the same. Use unique names", p.payload_c.String(), p.continuation_c.String())
 		}
 
 		gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
@@ -491,14 +499,14 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 		return continuationError
 	} else if isProvider(p.payload_c, providerShadowName) || isProvider(p.continuation_c, providerShadowName) {
-		return fmt.Errorf("you cannot assign self to a new channel (%s)", p.String())
+		return TypeErrorf("you cannot assign self to a new channel (%s)", p.String())
 	} else {
 		// MulL: *
 		globalEnv.log(LOGRULEDETAILS, "rule MulL")
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+			return TypeErrorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -507,7 +515,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 
 		if !clientTypeOk {
 			// wrong type, expected A * B
-			return fmt.Errorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.from_c.String(), clientType.String())
+			return TypeErrorf("expected '%s' to have a send type (A * B), but found type '%s' instead", p.from_c.String(), clientType.String())
 		}
 
 		newLeftType := clientSendType.Left
@@ -518,13 +526,13 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		if nameTypeExists(gammaNameTypesCtx, p.payload_c.Ident) ||
 			nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
 			// Names are not fresh [todo check if needed]
-			return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
+			return TypeErrorf("variable names <%s, %s> already defined. Use unique names", p.payload_c.String(), p.continuation_c.String())
 		}
 
 		if isProvider(p.payload_c, providerShadowName) ||
 			isProvider(p.continuation_c, providerShadowName) {
 			// Unwanted reference to self
-			return fmt.Errorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
+			return TypeErrorf("variable names <%s, %s> should not refer to self", p.payload_c.String(), p.continuation_c.String())
 		}
 
 		gammaNameTypesCtx[p.payload_c.Ident] = NamesType{Type: newLeftType}
@@ -535,7 +543,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		p.continuation_c.Type = newRightType
 
 		if polarityError := checkExplicitPolarityValidity(p, p.from_c, p.payload_c, p.continuation_c); polarityError != nil {
-			return polarityError
+			return TypeErrorE(polarityError)
 		}
 
 		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
@@ -556,7 +564,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 
 		if !selectLabelTypeOk {
 			// wrong type, expected +{...}
-			return fmt.Errorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.String(), providerType.String())
 		}
 
 		// Match branch by label
@@ -566,18 +574,18 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			foundContinuationType, errorContinuationType := consumeName(p.continuation_c, gammaNameTypesCtx)
 
 			if errorContinuationType != nil {
-				return fmt.Errorf("error in %s; %s", p.String(), errorContinuationType)
+				return TypeErrorf("error in %s; %s", p.String(), errorContinuationType)
 			}
 
 			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
-				return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+				return TypeErrorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
 			}
 
 			p.to_c.Type = providerSelectLabelType
 			continuationType = types.Unfold(continuationType, labelledTypesEnv)
 			p.continuation_c.Type = continuationType
 		} else {
-			return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), providerSelectLabelType.String())
+			return TypeErrorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), providerSelectLabelType.String())
 		}
 	} else if isProvider(p.continuation_c, providerShadowName) {
 		// EChoiceL: &{label1: T1, ...}
@@ -585,7 +593,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+			return TypeErrorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -594,7 +602,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 
 		if !clientTypeOk {
 			// wrong type, expected &{...}
-			return fmt.Errorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.String(), clientType.String())
+			return TypeErrorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.String(), clientType.String())
 		}
 
 		// Match branch by label
@@ -604,11 +612,11 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			foundContinuationType, errorContinuationType := consumeNameMaybeSelf(p.continuation_c, providerShadowName, gammaNameTypesCtx, providerType)
 
 			if errorContinuationType != nil {
-				return fmt.Errorf("error in %s; %s", p.String(), errorContinuationType)
+				return TypeErrorf("error in %s; %s", p.String(), errorContinuationType)
 			}
 
 			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
-				return fmt.Errorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+				return TypeErrorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
 			}
 
 			// Type ok
@@ -617,21 +625,22 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			p.to_c.Type = clientBranchCaseType
 			p.continuation_c.Type = continuationType
 		} else {
-			return fmt.Errorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), clientBranchCaseType.String())
+			return TypeErrorf("could not match label '%s' (from '%s') with the labels from the type '%s'", p.label.String(), p.String(), clientBranchCaseType.String())
 		}
 	} else {
-		return fmt.Errorf("expected '%s' to either receive or send label on 'self', e.g. self.%s<%s> or %s.%s<self>", p.String(), p.label.String(), p.to_c.String(), p.continuation_c.String(), p.label.String())
+		return TypeErrorf("expected '%s' to either receive or send label on 'self', e.g. self.%s<%s> or %s.%s<self>", p.String(), p.label.String(), p.to_c.String(), p.continuation_c.String(), p.label.String())
 	}
 
 	// Ensure correct explicit polarities (if used)
 	if err := checkExplicitPolarityValidity(p, p.to_c, p.continuation_c); err != nil {
-		return err
+		return TypeErrorE(err)
 	}
 
 	// make sure that no variables are left in gamma
-	err := linearGammaContext(gammaNameTypesCtx)
-
-	return err
+	if err := linearGammaContext(gammaNameTypesCtx); err != nil {
+		return TypeErrorE(err)
+	}
+	return nil
 }
 
 // Case: case from_c ( branches )
@@ -646,7 +655,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !branchCaseTypeOk {
 			// wrong type, expected &{...}
-			return fmt.Errorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.StringShort(), providerType.String())
+			return TypeErrorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.StringShort(), providerType.String())
 		}
 
 		labelsChecked := []string{}
@@ -659,7 +668,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			labelsChecked = append(labelsChecked, curBranchForm.label.L)
 
 			if !typeFound {
-				return fmt.Errorf("branch labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), providerBranchCaseType.String())
+				return TypeErrorf("branch labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), providerBranchCaseType.String())
 			}
 
 			// Set type
@@ -667,7 +676,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			polarityError := checkExplicitPolarityValidity(p, curBranchForm.payload_c)
 			if polarityError != nil {
-				return polarityError
+				return TypeErrorE(polarityError)
 			}
 
 			// Copy gamma so that each branch has its own version
@@ -683,7 +692,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		if len(labelsChecked) < len(providerBranchCaseType.Branches) {
 			labels := extractUnusedLabels(providerBranchCaseType.Branches, labelsChecked)
 
-			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, providerBranchCaseType.String(), p.StringShort())
+			return TypeErrorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, providerBranchCaseType.String(), p.StringShort())
 		}
 
 		// Set type of case
@@ -694,7 +703,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.StringShort(), errorClient)
+			return TypeErrorf("error in %s; %s", p.StringShort(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -703,7 +712,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !clientTypeOk {
 			// wrong type, expected +{...}
-			return fmt.Errorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.StringShort(), clientType.String())
+			return TypeErrorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.StringShort(), clientType.String())
 		}
 
 		labelsChecked := []string{}
@@ -716,7 +725,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			labelsChecked = append(labelsChecked, curBranchForm.label.L)
 
 			if !typeFound {
-				return fmt.Errorf("case labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), clientSelectLabelType.String())
+				return TypeErrorf("case labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), clientSelectLabelType.String())
 			}
 
 			// Copy gamma so that each branch has its own version
@@ -730,7 +739,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			polarityError := checkExplicitPolarityValidity(p, curBranchForm.payload_c)
 			if polarityError != nil {
-				return polarityError
+				return TypeErrorE(polarityError)
 			}
 
 			continuationError := curBranchForm.continuation_e.typecheckForm(newGammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
@@ -743,7 +752,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		if len(labelsChecked) < len(clientSelectLabelType.Branches) {
 			labels := extractUnusedLabels(clientSelectLabelType.Branches, labelsChecked)
 
-			return fmt.Errorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, clientSelectLabelType.String(), p.StringShort())
+			return TypeErrorf("some labels (i.e. %s) from the type '%s' are not pattern matched in the case construct: %s", labels, clientSelectLabelType.String(), p.StringShort())
 		}
 
 		// Set type of case
@@ -752,7 +761,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 	polarityError := checkExplicitPolarityValidity(p, p.from_c)
 	if polarityError != nil {
-		return polarityError
+		return TypeErrorE(polarityError)
 	}
 
 	return nil
@@ -760,7 +769,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 // Branch: label<payload_c> => continuation_e
 func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
-	panic("typecheckForm on a branch should never be called directly")
+	return TypeErrorf("Cannot typecheck a case/receive branch directly")
 }
 
 // New: continuation_c <- new (body); continuation_e
@@ -770,7 +779,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 	if isProvider(p.continuation_c, providerShadowName) || nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
 		// Names are not fresh
-		return fmt.Errorf("the cut rule requires a new variable; %s is already assigned", p.continuation_c.String())
+		return TypeErrorf("the cut rule requires a new variable; %s is already assigned", p.continuation_c.String())
 	}
 
 	// When 'new' is used directly (i.e. not derived from a macro expansion), then we need to ensure
@@ -779,7 +788,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 		// check form of body
 		if FormHasContinuation(p.body) {
 			// Difficult to split gamma, so we show it as ill typed for now
-			return fmt.Errorf("cannot determine variable context splitting in '%s'. Expected the body to be a simple axiomatic rule (e.g. send), but found '%s'", p.StringShort(), p.body.String())
+			return TypeErrorf("cannot determine variable context splitting in '%s'. Expected the body to be a simple axiomatic rule (e.g. send), but found '%s'", p.StringShort(), p.body.String())
 		}
 
 		// We can infer which variables are used when typechecking p.body
@@ -791,13 +800,13 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, callForm.parameters, &p.continuation_c, labelledTypesEnv)
 
 			if gammaErr != nil {
-				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
+				return TypeErrorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
 			}
 
 			// Get function signature (incl. its type)
 			functionSignature, exists := sigma[callForm.functionName]
 			if !exists {
-				return fmt.Errorf("function '%s' is undefined", p.body.String())
+				return TypeErrorf("function '%s' is undefined", p.body.String())
 			}
 
 			functionSignatureType := types.CopyType(functionSignature.Type)
@@ -807,7 +816,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, functionSignatureType, labelledTypesEnv, sigma, globalEnv)
 
 			if callBodyError != nil {
-				return fmt.Errorf("problem in '%s': %s", p.StringShort(), callBodyError)
+				return callBodyError
 			}
 
 			// Add new channel name to gamma
@@ -817,7 +826,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			continuationError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
 
 			if continuationError != nil {
-				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationError)
+				return continuationError
 			}
 
 			// Set type
@@ -825,7 +834,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
 			if polarityError != nil {
-				return polarityError
+				return TypeErrorE(polarityError)
 			}
 		default:
 			// The type of p.continuation_c has to be provided by the user
@@ -834,11 +843,11 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, p.body.FreeNames(), &p.continuation_c, labelledTypesEnv)
 
 			if gammaErr != nil {
-				return fmt.Errorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
+				return TypeErrorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
 			}
 
 			if p.continuation_c.Type == nil {
-				return fmt.Errorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
+				return TypeErrorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
 			}
 
 			// Unfold if needed
@@ -850,14 +859,14 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			// Get type of inner provider
 			err := checkNameType(p.continuation_c, labelledTypesEnv)
 			if err != nil {
-				return fmt.Errorf("invalid type for %s in %s: %s", p.continuation_c.String(), p.StringShort(), err)
+				return TypeErrorf("invalid type for %s in %s: %s", p.continuation_c.String(), p.StringShort(), err)
 			}
 
 			// typecheck the body of the process being spawned
 			bodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, p.continuation_c.Type, labelledTypesEnv, sigma, globalEnv)
 
 			if bodyError != nil {
-				return fmt.Errorf("problem in '%s': %s", p.StringShort(), bodyError)
+				return bodyError
 			}
 
 			// Add new channel name to gamma
@@ -866,20 +875,20 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
 			if polarityError != nil {
-				return polarityError
+				return TypeErrorE(polarityError)
 			}
 
 			// typecheck the continuation of the cut rule
 			continuationBodyError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
 
 			if continuationBodyError != nil {
-				return fmt.Errorf("problem in '%s': %s", p.StringShort(), continuationBodyError)
+				return continuationBodyError
 			}
 		}
 
 	} else {
-		// Since it is derived from a macro, then we assume that the continuation_e is an axiomatic rule (e.g. send) instead of the body
-		panic("todo")
+		// Since it is derived from a macro, then we assume that the continuation_e is an axiomatic rule (e.g. send) instead of the body -- no macros are currently being used
+		panic("todo need to handle macros")
 	}
 
 	return nil
@@ -896,30 +905,31 @@ func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 		providerUnitType, unitTypeOk := providerType.(*types.UnitType)
 
 		if !unitTypeOk {
-			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
 		}
 
 		p.from_c.Type = providerUnitType
 
 		polarityError := checkExplicitPolarityValidity(p, p.from_c)
 		if polarityError != nil {
-			return polarityError
+			return TypeErrorE(polarityError)
 		}
 	} else {
 		// Closing on the wrong name
 		_, unitTypeOk := providerType.(*types.UnitType)
 
 		if unitTypeOk {
-			return fmt.Errorf("expected '%s' to close on 'self' instead", p.String())
+			return TypeErrorf("expected '%s' to close on 'self' instead", p.String())
 		} else {
-			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
 		}
 	}
 
 	// make sure that no variables are left in gamma
-	err := linearGammaContext(gammaNameTypesCtx)
-
-	return err
+	if err := linearGammaContext(gammaNameTypesCtx); err != nil {
+		return TypeErrorE(err)
+	}
+	return nil
 }
 
 // 1 : wait w; ...
@@ -934,15 +944,15 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		_, unitTypeOk := providerType.(*types.UnitType)
 
 		if unitTypeOk {
-			return fmt.Errorf("expected '%s' to have a wait on a 'non-self' channel instead (%s is acting as self)", p.String(), p.to_c.String())
+			return TypeErrorf("expected '%s' to have a wait on a 'non-self' channel instead (%s is acting as self)", p.String(), p.to_c.String())
 		} else {
-			return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.String(), providerType.String())
 		}
 	}
 
 	clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 	if errorClient != nil {
-		return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+		return TypeErrorf("error in %s; %s", p.String(), errorClient)
 	}
 
 	clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -955,7 +965,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		polarityError := checkExplicitPolarityValidity(p, p.to_c)
 		if polarityError != nil {
-			return polarityError
+			return TypeErrorE(polarityError)
 		}
 
 		// Continue checking the remaining process
@@ -963,7 +973,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		return continuationError
 	} else {
-		return fmt.Errorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientType.String())
+		return TypeErrorf("expected '%s' to have a unit type (1), but found type '%s' instead", p.to_c.String(), clientType.String())
 	}
 }
 
@@ -973,28 +983,28 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	globalEnv.log(LOGRULEDETAILS, "rule ID/FWD")
 
 	if isProvider(p.from_c, providerShadowName) {
-		return fmt.Errorf("forwarding to self (%s) is not allowed. Use 'fwd %s %s' instead)", p.String(), p.from_c.String(), p.to_c.String())
+		return TypeErrorf("forwarding to self (%s) is not allowed. Use 'fwd %s %s' instead)", p.String(), p.from_c.String(), p.to_c.String())
 	}
 
 	if !isProvider(p.to_c, providerShadowName) {
-		return fmt.Errorf("not forwarding on self (%s). Expected forward to refer to self (fwd %s %s)", p.String(), p.from_c.String(), p.to_c.String())
+		return TypeErrorf("not forwarding on self (%s). Expected forward to refer to self (fwd %s %s)", p.String(), p.from_c.String(), p.to_c.String())
 	}
 
 	clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 	clientType = types.Unfold(clientType, labelledTypesEnv)
 	if errorClient != nil {
-		return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+		return TypeErrorf("error in %s; %s", p.String(), errorClient)
 	}
 
 	if !types.EqualType(providerType, clientType, labelledTypesEnv) {
-		return fmt.Errorf("problem in %s. Type of %s (%s) and %s (%s) do do not match", p.String(), p.to_c.String(), providerType.String(), p.from_c.String(), clientType.String())
+		return TypeErrorf("problem in %s. Type of %s (%s) and %s (%s) do do not match", p.String(), p.to_c.String(), providerType.String(), p.from_c.String(), clientType.String())
 	}
 
 	// Check polarities
 	providerType = types.Unfold(providerType, labelledTypesEnv)
 	if clientType.Polarity() != providerType.Polarity() {
 		// Make sure that the polarities match
-		return fmt.Errorf("invalid polarities in %s: name '%s' is %s, while '%s' is %s", p.StringShort(), p.to_c.String(), types.PolarityMap[providerType.Polarity()], p.from_c.String(), types.PolarityMap[clientType.Polarity()])
+		return TypeErrorf("invalid polarities in %s: name '%s' is %s, while '%s' is %s", p.StringShort(), p.to_c.String(), types.PolarityMap[providerType.Polarity()], p.from_c.String(), types.PolarityMap[clientType.Polarity()])
 	}
 
 	// Set types
@@ -1002,15 +1012,15 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	p.from_c.Type = clientType
 
 	// compare annotated polarities
-	polarityError := checkExplicitPolarityValidity(p, p.to_c, p.from_c)
-	if polarityError != nil {
-		return polarityError
+	if polarityError := checkExplicitPolarityValidity(p, p.to_c, p.from_c); polarityError != nil {
+		return TypeErrorE(polarityError)
 	}
 
 	// make sure that no variables are left in gamma
-	err := linearGammaContext(gammaNameTypesCtx)
-
-	return err
+	if err := linearGammaContext(gammaNameTypesCtx); err != nil {
+		return TypeErrorE(err)
+	}
+	return nil
 }
 
 // drop w; ...
@@ -1022,7 +1032,7 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	if !isProvider(p.client_c, providerShadowName) {
 		clientType, errorClient := consumeName(p.client_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+			return TypeErrorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		if types.IsWeakenable(clientType) {
@@ -1040,11 +1050,11 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			return continuationError
 		} else {
-			return fmt.Errorf("expected '%s' to have a weakenable type, but found the non-weakenable type '%s' instead", p.client_c.String(), clientType.StringWithOuterModality())
+			return TypeErrorf("expected '%s' to have a weakenable type, but found the non-weakenable type '%s' instead", p.client_c.String(), clientType.StringWithOuterModality())
 		}
 	} else {
 		// Wrongly dropping self
-		return fmt.Errorf("expected '%s' to have a drop on a 'non-self' channel instead (i.e. incorrectly dropping '%s')", p.String(), p.client_c.String())
+		return TypeErrorf("expected '%s' to have a drop on a 'non-self' channel instead (i.e. incorrectly dropping '%s')", p.String(), p.client_c.String())
 	}
 }
 
@@ -1055,7 +1065,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	// Check that function exists
 	functionSignature, exists := sigma[p.functionName]
 	if !exists {
-		return fmt.Errorf("function '%s' is undefined", p.String())
+		return TypeErrorf("function '%s' is undefined", p.String())
 	}
 
 	// Check that the arity matches
@@ -1063,12 +1073,12 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		// Parameters being passed include a reference to 'self' as the first element
 
 		if !p.parameters[0].IsSelf && !(providerShadowName != nil && providerShadowName.Ident == p.parameters[0].Ident) {
-			return fmt.Errorf("error in %s; expected first parameter of function call to be 'self', but found '%s'", p.String(), p.parameters[0].String())
+			return TypeErrorf("error in %s; expected first parameter of function call to be 'self', but found '%s'", p.String(), p.parameters[0].String())
 		}
 
 		// Check type of self
 		if !types.EqualType(providerType, functionSignature.Type, labelledTypesEnv) {
-			return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[0].String(), providerType.String(), functionSignature.Type.String())
+			return TypeErrorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[0].String(), providerType.String(), functionSignature.Type.String())
 		}
 
 		// Check types of each parameter
@@ -1077,13 +1087,13 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			foundParamType, paramTypeError := consumeName(p.parameters[i], gammaNameTypesCtx)
 
 			if paramTypeError != nil {
-				return fmt.Errorf("error in %s; %s", p.String(), paramTypeError)
+				return TypeErrorf("error in %s; %s", p.String(), paramTypeError)
 			}
 
 			expectedType := functionSignature.Parameters[i-1].Type
 
 			if !types.EqualType(foundParamType, expectedType, labelledTypesEnv) {
-				return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
+				return TypeErrorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
 			}
 
 			// Set types
@@ -1092,7 +1102,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			// compare annotated polarities
 			polarityError := checkExplicitPolarityValidity(p, p.parameters[i])
 			if polarityError != nil {
-				return polarityError
+				return TypeErrorE(polarityError)
 			}
 		}
 	} else if len(functionSignature.Parameters) == len(p.parameters) {
@@ -1105,7 +1115,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 				providerName = providerShadowName.String()
 			}
 
-			return fmt.Errorf("type error in function call '%s'. Provider '%s' has type '%s', but %s expects '%s'", p.String(), providerName, providerType.String(), p.functionName, functionSignature.Type.String())
+			return TypeErrorf("type error in function call '%s'. Provider '%s' has type '%s', but %s expects '%s'", p.String(), providerName, providerType.String(), p.functionName, functionSignature.Type.String())
 		}
 
 		// Check types of each parameter
@@ -1113,13 +1123,13 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			foundParamType, paramTypeError := consumeName(p.parameters[i], gammaNameTypesCtx)
 
 			if paramTypeError != nil {
-				return fmt.Errorf("error in %s; %s", p.String(), paramTypeError)
+				return TypeErrorf("error in %s; %s", p.String(), paramTypeError)
 			}
 
 			expectedType := functionSignature.Parameters[i].Type
 
 			if !types.EqualType(foundParamType, expectedType, labelledTypesEnv) {
-				return fmt.Errorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
+				return TypeErrorf("type error in function call '%s'. Name '%s' has type '%s', but expected '%s'", p.String(), p.parameters[i].String(), foundParamType.String(), expectedType.String())
 			}
 
 			// Set types
@@ -1132,16 +1142,17 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		}
 	} else {
 		// Wrong number of parameters
-		return fmt.Errorf("wrong number of parameters in function call '%s'. Expected %d, but found %d parameters", p.String(), len(functionSignature.Parameters), len(p.parameters))
+		return TypeErrorf("wrong number of parameters in function call '%s'. Expected %d, but found %d parameters", p.String(), len(functionSignature.Parameters), len(p.parameters))
 	}
 
 	// Set type
 	p.ProviderType = functionSignature.Type
 
 	// make sure that no variables are left in gamma
-	err := linearGammaContext(gammaNameTypesCtx)
-
-	return err
+	if err := linearGammaContext(gammaNameTypesCtx); err != nil {
+		return TypeErrorE(err)
+	}
+	return nil
 }
 
 // Split: <channel_one, channel_two> <- recv from_c; P
@@ -1150,7 +1161,7 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 
 	// Can only wait for a client (not self)
 	if isProvider(p.from_c, providerShadowName) {
-		return fmt.Errorf("expected '%s' to have a split a client, not itself ('%s' is acting as self)", p.StringShort(), p.from_c.String())
+		return TypeErrorf("expected '%s' to have a split a client, not itself ('%s' is acting as self)", p.StringShort(), p.from_c.String())
 	}
 
 	foundType, err := consumeName(p.from_c, gammaNameTypesCtx)
@@ -1164,18 +1175,18 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	if nameTypeExists(gammaNameTypesCtx, p.channel_one.Ident) ||
 		nameTypeExists(gammaNameTypesCtx, p.channel_two.Ident) {
 		// Names are not fresh
-		return fmt.Errorf("variable names <%s, %s> already defined. Use unique names", p.channel_one.String(), p.channel_two.String())
+		return TypeErrorf("variable names <%s, %s> already defined. Use unique names", p.channel_one.String(), p.channel_two.String())
 	}
 
 	if p.channel_one.Equal(p.channel_two) {
-		return fmt.Errorf("variable names <%s, %s> are the same. Use unique names", p.channel_one.String(), p.channel_two.String())
+		return TypeErrorf("variable names <%s, %s> are the same. Use unique names", p.channel_one.String(), p.channel_two.String())
 	}
 
 	gammaNameTypesCtx[p.channel_one.Ident] = NamesType{Type: foundType}
 	gammaNameTypesCtx[p.channel_two.Ident] = NamesType{Type: foundType} //todo not sure if i need to use CopyType
 
 	if !types.IsContractable(foundType) {
-		return fmt.Errorf("expected '%s' to have a contractable type, but found the non-contractable type '%s' instead", p.from_c.String(), foundType.StringWithOuterModality())
+		return TypeErrorf("expected '%s' to have a contractable type, but found the non-contractable type '%s' instead", p.from_c.String(), foundType.StringWithOuterModality())
 	}
 
 	// Set type
@@ -1185,7 +1196,7 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 
 	// compare annotated polarities
 	if polarityError := checkExplicitPolarityValidity(p, p.from_c, p.channel_one, p.channel_two); polarityError != nil {
-		return polarityError
+		return TypeErrorE(polarityError)
 	}
 
 	// Continue checking the remaining process
@@ -1205,13 +1216,13 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !downTypeOk {
 			// wrong type: m \/ m A
-			return fmt.Errorf("expected '%s' to have a downshift type (i.e. \\/), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a downshift type (i.e. \\/), but found type '%s' instead", p.String(), providerType.String())
 		}
 
 		// Check that m1 can be downshifted to m2: m1 \/ m2
 		if !providerDownType.From.CanBeDownshiftedTo(providerDownType.To) {
 			// This should never happen if the type is well formed
-			return fmt.Errorf("the type '%s' of '%s' has an improper downshift type, i.e. '%s' cannot be downshifted to '%s'", providerDownType.String(), p.String(), providerDownType.From.String(), providerDownType.To.String())
+			return TypeErrorf("the type '%s' of '%s' has an improper downshift type, i.e. '%s' cannot be downshifted to '%s'", providerDownType.String(), p.String(), providerDownType.From.String(), providerDownType.To.String())
 		}
 
 		expectedContinuationType := providerDownType.Continuation
@@ -1220,17 +1231,17 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		foundContinuationType = types.Unfold(foundContinuationType, labelledTypesEnv)
 
 		if errorContinuation != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorContinuation)
+			return TypeErrorf("error in %s; %s", p.String(), errorContinuation)
 		}
 
 		// Expect that the modalities match
 		if !providerDownType.From.Equals(foundContinuationType.Modality()) {
-			return fmt.Errorf("expected mode of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), providerDownType.From.String(), foundContinuationType.Modality().String())
+			return TypeErrorf("expected mode of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), providerDownType.From.String(), foundContinuationType.Modality().String())
 		}
 
 		// The expected and found types must match
 		if !types.EqualType(expectedContinuationType, foundContinuationType, labelledTypesEnv) {
-			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedContinuationType.String(), foundContinuationType.String())
+			return TypeErrorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedContinuationType.String(), foundContinuationType.String())
 		}
 
 		// Set the types for the names
@@ -1242,7 +1253,7 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		clientType, errorClient := consumeName(p.to_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+			return TypeErrorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -1251,13 +1262,13 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 		if !clientTypeOk {
 			// wrong type: A /\ B
-			return fmt.Errorf("expected '%s' to have an upshift type (i.e. /\\), but found type '%s' instead", p.to_c.String(), clientType.String())
+			return TypeErrorf("expected '%s' to have an upshift type (i.e. /\\), but found type '%s' instead", p.to_c.String(), clientType.String())
 		}
 
 		// Check that m1 can be downshifted to m2: m1 \/ m2
 		if !clientUpType.From.CanBeUpshiftedTo(clientUpType.To) {
 			// This should never happen if the type is well formed
-			return fmt.Errorf("the type '%s' of '%s' has an improper upshift type, i.e. '%s' cannot be upshifted to '%s'", clientUpType.String(), p.String(), clientUpType.From.String(), clientUpType.To.String())
+			return TypeErrorf("the type '%s' of '%s' has an improper upshift type, i.e. '%s' cannot be upshifted to '%s'", clientUpType.String(), p.String(), clientUpType.From.String(), clientUpType.To.String())
 		}
 
 		expectedContinuationType := clientUpType.Continuation
@@ -1267,24 +1278,24 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 		foundContinuationType = types.Unfold(foundContinuationType, labelledTypesEnv)
 
 		if errorContinuation != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorContinuation)
+			return TypeErrorf("error in %s; %s", p.String(), errorContinuation)
 		}
 
 		// Expect that the modalities match
 		if !clientUpType.From.Equals(foundContinuationType.Modality()) {
-			return fmt.Errorf("expected mode of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), clientUpType.From.String(), foundContinuationType.Modality().String())
+			return TypeErrorf("expected mode of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), clientUpType.From.String(), foundContinuationType.Modality().String())
 		}
 
 		// The expected and found types must match
 		if !types.EqualType(expectedContinuationType, foundContinuationType, labelledTypesEnv) {
-			return fmt.Errorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedContinuationType.String(), foundContinuationType.String())
+			return TypeErrorf("expected type of '%s' to be '%s', but found type '%s' instead", p.continuation_c.String(), expectedContinuationType.String(), foundContinuationType.String())
 		}
 
 		// Set the types for the names
 		p.to_c.Type = clientUpType
 		p.continuation_c.Type = foundContinuationType
 	} else {
-		return fmt.Errorf("the case construct requires that you cast to 'self' or cast 'self' as the continuation. In '%s', 'self' was not used", p.String())
+		return TypeErrorf("the case construct requires that you cast to 'self' or cast 'self' as the continuation. In '%s', 'self' was not used", p.String())
 	}
 
 	if polarityError := checkExplicitPolarityValidity(p, p.to_c, p.continuation_c); polarityError != nil {
@@ -1292,9 +1303,10 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	}
 
 	// make sure that no variables are left in gamma
-	err := linearGammaContext(gammaNameTypesCtx)
-
-	return err
+	if err := linearGammaContext(gammaNameTypesCtx); err != nil {
+		return TypeErrorE(err)
+	}
+	return nil
 }
 
 func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
@@ -1308,13 +1320,13 @@ func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 
 		if !upTypeOk {
 			// wrong type: m /\ m A
-			return fmt.Errorf("expected '%s' to have an upshift type (i.e. /\\), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have an upshift type (i.e. /\\), but found type '%s' instead", p.String(), providerType.String())
 		}
 
 		// Check that m1 can be shifted to m2: m1 /\ m2
 		if !providerUpType.From.CanBeUpshiftedTo(providerUpType.To) {
 			// This should never happen if the type is well formed
-			return fmt.Errorf("the type '%s' of '%s' has an improper upshift type, i.e. '%s' cannot be upshifted to '%s'", providerUpType.String(), p.String(), providerUpType.From.String(), providerUpType.To.String())
+			return TypeErrorf("the type '%s' of '%s' has an improper upshift type, i.e. '%s' cannot be upshifted to '%s'", providerUpType.String(), p.String(), providerUpType.From.String(), providerUpType.To.String())
 		}
 
 		expectedContinuationType := providerUpType.Continuation
@@ -1322,28 +1334,28 @@ func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 
 		if nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
 			// Names are not fresh
-			return fmt.Errorf("variable names '%s' is already defined. Use unique name in %s", p.continuation_c.String(), p.String())
+			return TypeErrorf("variable names '%s' is already defined. Use unique name in %s", p.continuation_c.String(), p.String())
 		}
 
 		p.from_c.Type = providerUpType
 		p.continuation_c.Type = expectedContinuationType
 
 		if polarityError := checkExplicitPolarityValidity(p, p.from_c, p.continuation_c); polarityError != nil {
-			return polarityError
+			return TypeErrorE(polarityError)
 		}
 
 		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, expectedContinuationType, labelledTypesEnv, sigma, globalEnv)
 
 		return continuationError
 	} else if isProvider(p.continuation_c, providerShadowName) {
-		return fmt.Errorf("you cannot assign self to a new channel (%s)", p.String())
+		return TypeErrorf("you cannot assign self to a new channel (%s)", p.String())
 	} else {
 		// DnSL: \/
 		globalEnv.log(LOGRULEDETAILS, "rule DnSL (shift)")
 
 		clientType, errorClient := consumeName(p.from_c, gammaNameTypesCtx)
 		if errorClient != nil {
-			return fmt.Errorf("error in %s; %s", p.String(), errorClient)
+			return TypeErrorf("error in %s; %s", p.String(), errorClient)
 		}
 
 		clientType = types.Unfold(clientType, labelledTypesEnv)
@@ -1352,25 +1364,25 @@ func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 
 		if !clientTypeOk {
 			// wrong type, expected A \/ B
-			return fmt.Errorf("expected '%s' to have a downshift type (i.e. \\/), but found type '%s' instead", p.from_c.String(), clientType.String())
+			return TypeErrorf("expected '%s' to have a downshift type (i.e. \\/), but found type '%s' instead", p.from_c.String(), clientType.String())
 		}
 
 		// Check that m1 can be shifted to m2: m1 \/ m2
 		if !clientDownType.From.CanBeDownshiftedTo(clientDownType.To) {
 			// This should never happen if the type is well formed
-			return fmt.Errorf("the type '%s' of '%s' has an improper downshift type, i.e. '%s' cannot be upshifted to '%s'", clientDownType.String(), p.String(), clientDownType.From.String(), clientDownType.To.String())
+			return TypeErrorf("the type '%s' of '%s' has an improper downshift type, i.e. '%s' cannot be upshifted to '%s'", clientDownType.String(), p.String(), clientDownType.From.String(), clientDownType.To.String())
 		}
 
 		newContinuationType := clientDownType.Continuation
 		newContinuationType = types.Unfold(newContinuationType, labelledTypesEnv)
 
 		if nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
-			return fmt.Errorf("variable name '%s' is already defined. Use unique names", p.continuation_c.String())
+			return TypeErrorf("variable name '%s' is already defined. Use unique names", p.continuation_c.String())
 		}
 
 		if isProvider(p.continuation_c, providerShadowName) {
 			// Unwanted reference to self
-			return fmt.Errorf("variable names '%s' should not refer to self", p.continuation_c.String())
+			return TypeErrorf("variable names '%s' should not refer to self", p.continuation_c.String())
 		}
 
 		gammaNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: newContinuationType}
@@ -1379,7 +1391,7 @@ func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 		p.continuation_c.Type = newContinuationType
 
 		if polarityError := checkExplicitPolarityValidity(p, p.from_c, p.continuation_c); polarityError != nil {
-			return polarityError
+			return TypeErrorE(polarityError)
 		}
 
 		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
@@ -1457,7 +1469,36 @@ func copyContext(orig NamesTypesCtx) NamesTypesCtx {
 	return copy
 }
 
-// /// Util functions
+///////////////////////////////////////////////////////
+/////////////////// Error Structure ///////////////////
+///////////////////////////////////////////////////////
+
+// TypeError is the type of error when parsing a process.
+type TypeError struct {
+	Desc string
+}
+
+func (e *TypeError) Error() string {
+	return e.Desc
+}
+
+// Create type error by formatting a string
+func TypeErrorf(message string, args ...interface{}) *TypeError {
+	return &TypeError{
+		Desc: fmt.Sprintf(message, args...),
+	}
+}
+
+// Create TypeError from a generic error
+func TypeErrorE(err error) *TypeError {
+	return &TypeError{
+		Desc: err.Error(),
+	}
+}
+
+//////////////////////////////////////////////////////
+/////////////////// Util Functions ///////////////////
+//////////////////////////////////////////////////////
 
 // we check whether a channel is the provider (i.e. either self of same as the explicit provider name)
 // E.g. the channel being sent to is the provider for these cases:

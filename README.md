@@ -6,31 +6,40 @@ Type system and interpreter for intuitionistic session types written in Go, base
 
 ## How to use
 
-You need to [install the Go language](https://go.dev/doc/install). Then, build the project as follows:
+You need to [install the Go language](https://go.dev/doc/install).
+Then, build the project as follows:
 
 ```bash
 go build .
 ```
 
 This produces the executable `phi` file, which can be used to typecheck and run programs `./phi path/to/file.phi`.
-You can find some examples in the [`/examples`](/examples/) directory.
+You can find some examples in the [`examples`](/examples/) directory.
 
 ```bash
 ./phi examples/nat_double.phi
 ```
 
-The tool supports flags like `--notypecheck` to skip typechecking, `--noexecute` to skip execution and `--verbosity <level>` (where 1 is the least verbose and 3 is the most) to control verbosity.
+### Tool Flags
 
-The `--benchmark` flag is used to evaluate the performance.
-It can be used with the optional flags `--maxcores <number of cores>` and `--repeat <number of times>` to fine tune the tests.
+The tool supports various flags for customization:
+
+- `--notypecheck`: skip typechecking
+- `--noexecute`: skip execution
+- `--verbosity <level>`: control verbosity (1 is the least verbose, 3 is the most)
+
+### Benchmarking
+
+Use the `--benchmark` flag to evaluate performance.
+Optional flags include `--maxcores <number of cores>` and `--repeat <number of times>` for fine-tuning tests.
 
 ```bash
 ./phi --benchmark examples/nat_double.phi
-./phi --benchmark --maxcores 1 --repeat 5 ./examples/nat_double.phi
+./phi --benchmark --maxcores 1 --repeat 5 examples/nat_double.phi
 ```
 
-To run all pre-configured benchmarks, use `./phi --benchmarks`.
-Further details about the performance evaluation can be found [here](benchmarks/README.md).
+To run all pre-configured benchmarks: `./phi --benchmarks`.
+For detailed information on performance evaluation, refer to [benchmarks/readme](benchmarks/README.md).
 
 ## Sample program
 
@@ -60,7 +69,7 @@ prc[b] : nat =
 
 ## Grammar
 
-The full grammar accepted by out compiler is the following:
+The full grammar accepted by our compiler is as follows:
 
 ```text
 <prog> ::= <statement>*
@@ -130,29 +139,23 @@ Others:
 
 This project requires [Go](https://go.dev/doc/install) version 1.20 (or later).
 
-To get dependencies, run `go get .`, and the you can build the project using `go  build .`.
+### Building and Testing
 
-To execute the test, run `go test ./...`.
+To get dependencies, run `go get .`, and then build the project using `go build .`. To execute tests, run `go test ./...`.
 
-## Code Structure
+<!-- might be useful to include a makefile -->
 
-```text
-phi/
-├─ cmd/
-├─ parser/
-├─ process/
-```
+### Code Structure
 
 There are three main components.
 
-1. *Parser*
-2. *Typechecker*
-3. *Execution*
+- **Parser** - Parses a program into a list of types, functions and processes (refer to [`parser/parser.go`](parser/parser.go)).
+- **Typechecker** - Typechecks a programs using intuitionistic session types (refer to [`process/typechecker.go`](process/typechecker.go) and [`types/types.go`](types/types.go)).
+- **Interpreter** - Programs are executed using either the non-polarized transition semantics (v1, [`process/transition_np.go`](process/transition_np.go)) or the (async) polarized version (v2, [`process/transition.go`](process/transition.go)).
 
-- The `cmd` folder contains the entry point to either execute code from a file/string (`main.go`), or initiate a web-server (`web.go`) to compile and execute a program using an external interface.  
-- The `parser` folder contains the parser *package* which processes a string and outputs a list of processes, ready to be executed.
-- The `process` folder contains the *process* package which executes some given processes. It has several components:
-  - `process/runtime.go`: Entry point for the runtime environment. Sets up the processes, channels and monitors and initiates the execution.
-  - `process/form.go`: Contains the different forms that a process can take. Referred to as the abstract syntax tree of the processes.
-  - `process/transition.go`: Defines how each form should execute.
-  - `process/servers.go`: Sets up the concurrent servers (e.g. a monitor) that monitor or control the execution of the processes. Used to inform the web-server about the state of each process.
+Some other notable parts:
+
+- The entry point can be found in [`main.go`](/main.go). Cli commands are parsed in [`cmd/cli.go`](cmd/cli.go).
+- [`process/runtime.go`](/process/runtime.go): Entry point for the runtime environment. Sets up the processes, channels and monitors  before initiating execution.
+- [`process/form.go`](/process/form.go): contains the different forms that a process can take. They are used to create the AST of processes.
+- [`webserver/web_server.go`](/webserver/web_server.go): provides an external interface to compile and execute a program via a webserver (refer to the [docs](/webserver/web_server.md)) (wip)

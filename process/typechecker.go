@@ -346,7 +346,7 @@ func typecheckProcesses(processes []*Process, assumedFreeNames []Name, globalEnv
 // -> globalEnv           	<- [read-only] contains the logging capabilities
 
 // */-*: send w<u, v>
-func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	if isProvider(p.to_c, providerShadowName) {
 		// MulR: *
 		globalEnv.log(LOGRULEDETAILS, "rule MulR")
@@ -456,7 +456,7 @@ func (p *SendForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 }
 
 // */-*: <x, y> <- recv w; P
-func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	if isProvider(p.from_c, providerShadowName) {
 		// ImpR: -*
 		globalEnv.log(LOGRULEDETAILS, "rule ImpR")
@@ -492,7 +492,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 		p.continuation_c.Type = newRightType
 
 		if polarityError := checkExplicitPolarityValidity(p, p.from_c, p.payload_c, p.continuation_c); polarityError != nil {
-			return polarityError
+			return TypeErrorE(polarityError)
 		}
 
 		continuationError := p.continuation_e.typecheckForm(gammaNameTypesCtx, &p.continuation_c, newRightType, labelledTypesEnv, sigma, globalEnv)
@@ -553,7 +553,7 @@ func (p *ReceiveForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 }
 
 // Internal/External Choice: w.l<u>
-func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	if isProvider(p.to_c, providerShadowName) {
 		// IChoiceR: +{label1: T1, ...}
 		globalEnv.log(LOGRULEDETAILS, "rule IChoiceR")
@@ -644,7 +644,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 }
 
 // Case: case from_c ( branches )
-func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	if isProvider(p.from_c, providerShadowName) {
 		// EChoiceR: &{label1: T1, ...}
 		globalEnv.log(LOGRULEDETAILS, "rule EChoiceR")
@@ -658,17 +658,22 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			return TypeErrorf("expected '%s' to have a branching type (&{...}), but found type '%s' instead", p.StringShort(), providerType.String())
 		}
 
-		labelsChecked := []string{}
+		labelsChecked := make(map[string]bool)
 
 		// Check each branch individually
 		for _, curBranchForm := range p.branches {
 			// Pick each branch ast and match it with its type using the label
 			expectedBranchType, typeFound := types.LookupBranchByLabel(providerBranchCaseType.Branches, curBranchForm.label.L)
 
-			labelsChecked = append(labelsChecked, curBranchForm.label.L)
+			// Check for duplicated labels
+			if labelsChecked[curBranchForm.label.L] {
+				return TypeErrorf("label '%s' in the branch '%s' is duplicated", curBranchForm.label.L, curBranchForm.StringShort())
+			}
+
+			labelsChecked[curBranchForm.label.L] = true
 
 			if !typeFound {
-				return TypeErrorf("branch labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), providerBranchCaseType.String())
+				return TypeErrorf("branch labelled '%s' does not match the branches of type '%s'", curBranchForm.StringShort(), providerBranchCaseType.String())
 			}
 
 			// Set type
@@ -715,14 +720,19 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			return TypeErrorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.StringShort(), clientType.String())
 		}
 
-		labelsChecked := []string{}
+		labelsChecked := make(map[string]bool)
 
 		// Check each branch individually
 		for _, curBranchForm := range p.branches {
 			// Pick each branch ast and match it with its type using the label
 			expectedBranchType, typeFound := types.LookupBranchByLabel(clientSelectLabelType.Branches, curBranchForm.label.L)
 
-			labelsChecked = append(labelsChecked, curBranchForm.label.L)
+			// Check for duplicated labels
+			if labelsChecked[curBranchForm.label.L] {
+				return TypeErrorf("label '%s' in the branch '%s' is duplicated", curBranchForm.label.L, curBranchForm.StringShort())
+			}
+
+			labelsChecked[curBranchForm.label.L] = true
 
 			if !typeFound {
 				return TypeErrorf("case labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), clientSelectLabelType.String())
@@ -768,12 +778,12 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 }
 
 // Branch: label<payload_c> => continuation_e
-func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	return TypeErrorf("Cannot typecheck a case/receive branch directly")
 }
 
 // New: continuation_c <- new (body); continuation_e
-func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	// Cut
 	globalEnv.log(LOGRULEDETAILS, "rule Cut")
 
@@ -895,7 +905,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 }
 
 // 1 : close w
-func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	// EndR: 1
 	globalEnv.log(LOGRULEDETAILS, "rule EndR")
 
@@ -933,7 +943,7 @@ func (p *CloseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 }
 
 // 1 : wait w; ...
-func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	// EndL: 1
 	globalEnv.log(LOGRULEDETAILS, "rule EndL")
 
@@ -978,7 +988,7 @@ func (p *WaitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 }
 
 // fwd w u
-func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	// ID: 1
 	globalEnv.log(LOGRULEDETAILS, "rule ID/FWD")
 
@@ -997,7 +1007,7 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 	}
 
 	if !types.EqualType(providerType, clientType, labelledTypesEnv) {
-		return TypeErrorf("problem in %s. Type of %s (%s) and %s (%s) do do not match", p.String(), p.to_c.String(), providerType.String(), p.from_c.String(), clientType.String())
+		return TypeErrorf("problem in %s: type of %s (%s) and %s (%s) do not match", p.String(), p.to_c.String(), providerType.String(), p.from_c.String(), clientType.String())
 	}
 
 	// Check polarities
@@ -1024,7 +1034,7 @@ func (p *ForwardForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerSha
 }
 
 // drop w; ...
-func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	// Drop
 	globalEnv.log(LOGRULEDETAILS, "rule DROP")
 
@@ -1042,7 +1052,7 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			// compare annotated polarities
 			polarityError := checkExplicitPolarityValidity(p, p.client_c)
 			if polarityError != nil {
-				return polarityError
+				return TypeErrorE(polarityError)
 			}
 
 			// Continue checking the remaining process
@@ -1059,7 +1069,7 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 }
 
 // f(...)
-func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	globalEnv.log(LOGRULEDETAILS, "rule CALL")
 
 	// Check that function exists
@@ -1137,7 +1147,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			// compare annotated polarities
 			if polarityError := checkExplicitPolarityValidity(p, p.parameters[i]); polarityError != nil {
-				return polarityError
+				return TypeErrorE(polarityError)
 			}
 		}
 	} else {
@@ -1156,7 +1166,7 @@ func (p *CallForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 }
 
 // Split: <channel_one, channel_two> <- recv from_c; P
-func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	globalEnv.log(LOGRULEDETAILS, "rule SPLIT")
 
 	// Can only wait for a client (not self)
@@ -1168,7 +1178,7 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	foundType = types.Unfold(foundType, labelledTypesEnv)
 
 	if err != nil {
-		return err
+		return TypeErrorE(err)
 	}
 
 	// Ensure new names
@@ -1205,7 +1215,7 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	return continuationError
 }
 
-func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	if isProvider(p.to_c, providerShadowName) {
 		// Downshift DnSR: \/
 		globalEnv.log(LOGRULEDETAILS, "rule DnSR (Cast)")
@@ -1299,7 +1309,7 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	}
 
 	if polarityError := checkExplicitPolarityValidity(p, p.to_c, p.continuation_c); polarityError != nil {
-		return polarityError
+		return TypeErrorE(polarityError)
 	}
 
 	// make sure that no variables are left in gamma
@@ -1309,7 +1319,7 @@ func (p *CastForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 	return nil
 }
 
-func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	if isProvider(p.from_c, providerShadowName) {
 		// UpSR: /\
 		globalEnv.log(LOGRULEDETAILS, "rule UpSR (Shift)")
@@ -1400,7 +1410,7 @@ func (p *ShiftForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	}
 }
 
-func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) error {
+func (p *PrintForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	// Print
 	globalEnv.log(LOGRULEDETAILS, "rule PRINT")
 
@@ -1590,9 +1600,14 @@ func linearGammaContext(gammaNameTypesCtx NamesTypesCtx) error {
 }
 
 // Compares the given labels with the ones offered by the branches. Returns the unused ones
-func extractUnusedLabels(branches []types.Option, labels []string) string {
+func extractUnusedLabels(branches []types.Option, labels map[string]bool) string {
 	// One or more branches are not exhausted
-	uncheckedBranches := types.GetUncheckedBranches(branches, labels)
+	var labelsList []string
+	for l := range labels {
+		labelsList = append(labelsList, l)
+	}
+
+	uncheckedBranches := types.GetUncheckedBranches(branches, labelsList)
 
 	var labelsNotChecked bytes.Buffer
 	for i, j := range uncheckedBranches {

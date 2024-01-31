@@ -26,25 +26,9 @@ import (
 //   - timeNormalSync               : time taken to evaluate file (using v2-sync)
 //   - processCountNormalSync       : number of processes spawn (when using v2-sync)
 const (
-	detailedOutput = true
-	// GoMaxProcs          = 4
+	detailedOutput      = true
 	outputFileExtension = ".csv"
 )
-
-const programExample = `
-type A = &{label : 1}
-type B = 1 -* 1
-
-let f(y : A, z : B) : A * B = send self<y, z>
-
-assuming a : A, b : B
-
-prc[pid1] : 1
-       = x <- new f(a, b); 
-				<u, v> <- recv x;  
-				drop u; 
-				drop v; 
-				close self`
 
 // Runs benchmark for one file
 func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
@@ -67,13 +51,6 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 		fmt.Printf("\n")
 	}
 
-	// timeTaken, processCount, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_ASYNC)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// fmt.Printf("Finished in %vµs (%v) -- %v processes \n", timeTaken.Microseconds(), timeTaken, processCount)
-
 	// Run all timings repeatedly
 	var allResults []TimingResult
 
@@ -94,23 +71,6 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 			allResults = append(allResults, result)
 		}
 	}
-
-	// fmt.Println()
-
-	// if detailedOutput {
-	// 	fmt.Println("Obtained", len(allResults), "results:")
-	// 	fmt.Println(csvHeader())
-	// 	for _, row := range allResults {
-	// 		fmt.Println(row.csvRow())
-	// 		fmt.Println(row)
-	// 	}
-	// }
-
-	// err = saveToFileCSV(fileNameBase, allResults)
-
-	// if err != nil {
-	// 	fmt.Println("Could save to file", err)
-	// }
 
 	average := getAverage(allResults)
 	average.name = fileNameBase

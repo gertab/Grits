@@ -1,6 +1,6 @@
-# Phi
+# Phi/Harruba
 
-[*Phi is currently a placeholder for the language name - other potential names: Harruba*]
+[*Phi is currently a placeholder for the language name*]
 
 Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 
@@ -156,6 +156,6 @@ There are three main components.
 Some other notable parts:
 
 - The entry point can be found in [`main.go`](/main.go). Cli commands are parsed in [`cmd/cli.go`](cmd/cli.go).
-- [`process/runtime.go`](/process/runtime.go): Entry point for the runtime environment. Sets up the processes, channels and monitors  before initiating execution.
+- [`process/runtime.go`](/process/runtime.go): Entry point for the interpreter. Sets up the processes, channels and monitor before initiating execution.
 - [`process/form.go`](/process/form.go): contains the different forms that a process can take. They are used to create the AST of processes.
 - [`webserver/web_server.go`](/webserver/web_server.go): provides an external interface to compile and execute a program via a webserver (refer to the [docs](/webserver/web_server.md)) (wip)

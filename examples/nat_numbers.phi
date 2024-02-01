@@ -1,0 +1,133 @@
+// Natural numbers represented as the successor[s] of zero, eg 2 = +{succ: +{succ: +{zero: 1}}}
+type nat = +{zero : 1, succ : nat}
+
+// Provide double the value of x
+let double(x : nat) : nat =
+    case x (
+          zero<x'> => self.zero<x'>
+        | succ<x'> => h <- new double(x');
+                      d : nat <- new d.succ<h>;
+                      self.succ<d>
+    )
+
+// Provide half the value of x
+let half(x : nat) : nat =
+    case x (
+        zero<x'> => self.zero<x'>
+      | succ<x'> => 
+              case x' (
+                  zero<x''> => self.zero<x''>
+                | succ<x''> => h <- new half(h, x'');
+                               self.succ<h>
+              )
+    )
+
+// Add two numbers
+let add(x : nat, y : nat) : nat = 
+    case x ( zero<x'> => wait x';
+                         fwd self y
+           | succ<x'> => y' : nat <- new y'.succ<y>;
+                         add(x', y')
+    )
+
+// Add 1 to x
+let add1(x : nat) : nat =
+    self.succ<x>
+
+// prc[a] : nat = nat5()
+// prc[b] : nat = nat3()
+// prc[c] : nat = add(a, b)
+// prc[d] : 1 = printNat(c)
+
+// prc[a] : nat = nat4()
+// prc[b] : nat = half(a)
+// prc[c] : 1 = printNat(b)
+
+// prc[a] : nat = nat4()
+// prc[b] : nat = double(a)
+// prc[c] : nat = half(b)
+// prc[d] : 1 = printNat(c)
+
+// prc[a] : nat = nat2()
+// prc[b] : nat = add1(a)
+// prc[c] : 1 = printNat(b)
+
+///////// Printing Helpers /////////
+
+let consumeNat(n : nat) : 1 = 
+        case n ( zero<c> => print zero; wait c; close self
+               | succ<c> => print succ; consumeNat(c))
+
+let printNat(n : nat) : 1 = 
+          y <- new consumeNat(n); 
+          wait y;
+          close self
+
+///////// Natural numbers constants /////////
+
+// 0
+let nat0() : nat =
+  t : 1 <- new close t;
+  self.zero<t>
+
+// 1 : S(0)
+let nat1() : nat =
+  t : 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  fwd self s1
+
+// 2 : S(S(0))
+let nat2() : nat =
+  t : 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  fwd self s2
+
+// 3 : S(S(S(0)))
+let nat3() : nat =
+  t : 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  fwd self s3
+
+// 4 : S(S(S(S(0))))
+let nat4() : nat =
+  t : 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  s4 : nat <- new s4.succ<s3>; 
+  fwd self s4
+
+// 5 : S(S(S(S(S(0)))))
+let nat5() : nat =
+  t : 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  s4 : nat <- new s4.succ<s3>; 
+  s5 : nat <- new s5.succ<s4>; 
+  fwd self s5
+
+
+// 10 : S(S(S(S(S(S(S(S(S(S(0))))))))))
+let nat10() : nat =
+  t   : 1   <- new close t;
+  z   : nat <- new z.zero<t>;
+  s1  : nat <- new s1.succ<z>; 
+  s2  : nat <- new s2.succ<s1>; 
+  s3  : nat <- new s3.succ<s2>; 
+  s4  : nat <- new s4.succ<s3>; 
+  s5  : nat <- new s5.succ<s4>;
+  s6  : nat <- new s6.succ<s5>;
+  s7  : nat <- new s7.succ<s6>;
+  s8  : nat <- new s8.succ<s7>;
+  s9  : nat <- new s9.succ<s8>;
+  s10 : nat <- new s10.succ<s9>;
+  fwd self s10

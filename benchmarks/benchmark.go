@@ -96,67 +96,69 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 	fmt.Printf("Saved results in %v (and detailed version in %s)\n", fileName, fileNameDetailed)
 }
 
-// Runs pre-configured benchmarks
-// todo remove reps
+// Runs pre-configured benchmarks (stored in the folder benchmarks/compare)
 func Benchmarks(maxCores int) {
 	runtime.GOMAXPROCS(maxCores)
 	fmt.Printf("Benchmarking... (using %d cores out of %v)\n\n", maxCores, runtime.NumCPU())
 
+	folder := "nat-double"
 	benchmarkCases := []benchmarkCase{
-		{"./benchmarks/compare/nat-double/nat-double-1.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-2.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-3.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-4.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-5.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-6.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-7.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-8.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-9.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-10.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-11.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-12.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-13.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-14.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-15.phi", 2},
-		{"./benchmarks/compare/nat-double/nat-double-16.phi", 2},
+		{"nat-double-1.phi", 2},
+		{"nat-double-2.phi", 2},
+		{"nat-double-3.phi", 2},
+		{"nat-double-4.phi", 2},
+		{"nat-double-5.phi", 2},
+		{"nat-double-6.phi", 2},
+		{"nat-double-7.phi", 2},
+		{"nat-double-8.phi", 2},
+		{"nat-double-9.phi", 2},
+		{"nat-double-10.phi", 2},
+		{"nat-double-11.phi", 2},
+		{"nat-double-12.phi", 2},
+		{"nat-double-13.phi", 2},
+		{"nat-double-14.phi", 2},
+		{"nat-double-15.phi", 2},
+		{"nat-double-16.phi", 2},
 	}
 
-	runGroupedBenchmarks(benchmarkCases, "nat", maxCores)
+	runGroupedBenchmarks(folder, benchmarkCases, maxCores)
 
+	folder = "nat-double-parallel"
 	benchmarkCases = []benchmarkCase{
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-2.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-4.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-6.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-8.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-10.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-12.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-14.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-16.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-18.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-20.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-22.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-24.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-26.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-28.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-30.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-32.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-34.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-36.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-38.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-40.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-42.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-44.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-46.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-48.phi", 2},
-		{"./benchmarks/compare/nat-double-parallel/nat-double-parallel-50.phi", 2},
+		{"nat-double-parallel-2.phi", 2},
+		{"nat-double-parallel-4.phi", 2},
+		{"nat-double-parallel-6.phi", 2},
+		{"nat-double-parallel-8.phi", 2},
+		{"nat-double-parallel-10.phi", 2},
+		{"nat-double-parallel-12.phi", 2},
+		{"nat-double-parallel-14.phi", 2},
+		{"nat-double-parallel-16.phi", 2},
+		{"nat-double-parallel-18.phi", 2},
+		{"nat-double-parallel-20.phi", 2},
+		{"nat-double-parallel-22.phi", 2},
+		{"nat-double-parallel-24.phi", 2},
+		{"nat-double-parallel-26.phi", 2},
+		{"nat-double-parallel-28.phi", 2},
+		{"nat-double-parallel-30.phi", 2},
+		{"nat-double-parallel-32.phi", 2},
+		{"nat-double-parallel-34.phi", 2},
+		{"nat-double-parallel-36.phi", 2},
+		{"nat-double-parallel-38.phi", 2},
+		{"nat-double-parallel-40.phi", 2},
+		{"nat-double-parallel-42.phi", 2},
+		{"nat-double-parallel-44.phi", 2},
+		{"nat-double-parallel-46.phi", 2},
+		{"nat-double-parallel-48.phi", 2},
+		{"nat-double-parallel-50.phi", 2},
 	}
 
-	runGroupedBenchmarks(benchmarkCases, "nat-parallel", maxCores)
+	runGroupedBenchmarks(folder, benchmarkCases, maxCores)
 }
 
-func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores int) {
+// Fetches files from /benchmarks/compare/<folder>/
+func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCores int) {
 	// Start writing result to file
-	benchmarksFilename := name + "-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
+	benchmarksFilename := folder + "-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
 	f, err := os.Create(benchmarksFilename)
 	if err != nil {
 		fmt.Println("Couldn't open file: ", err)
@@ -174,11 +176,14 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores 
 		}
 		fmt.Printf("Benchmarking %s %s", file.baseName(), repeat)
 
+		// Look for files in benchmarks/compare/
+		fullPathName := filepath.Join("benchmarks", "compare", folder, file.fileName)
+
 		// Prepare result
-		currentBenchmarkCaseResult := NewBenchmarkCaseResult(file.fileName)
+		currentBenchmarkCaseResult := NewBenchmarkCaseResult(fullPathName)
 
 		// Open file
-		programFileBytes, err := readFile(file.fileName)
+		programFileBytes, err := readFile(fullPathName)
 
 		if err != nil {
 			fmt.Println("\nCouldn't read file: ", err)
@@ -221,7 +226,7 @@ func runGroupedBenchmarks(benchmarkCases []benchmarkCase, name string, maxCores 
 	// 	fmt.Println(i, res.String())
 	// }
 
-	fileName, err := saveDetailedBenchmarks(name, benchmarkCaseResults, maxCores)
+	fileName, err := saveDetailedBenchmarks(folder, benchmarkCaseResults, maxCores)
 	if err != nil {
 		fmt.Println("Could save to file", err)
 		return

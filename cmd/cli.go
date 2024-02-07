@@ -60,7 +60,7 @@ func Cli() {
 	// Webserver
 	startWebserver := flag.Bool("webserver", false, "start webserver")
 
-	// todo: add execute synchronous vs asynchronous and with polarities
+	// todo: add option to choose which execution to use (synchronous vs asynchronous with polarities)
 
 	flag.Parse()
 	args := flag.Args()
@@ -72,7 +72,7 @@ func Cli() {
 
 	if *doAllBenchmarks {
 		if len(args) >= 1 {
-			fmt.Println("Will run pre-configured benchmarks. Avoid including filename")
+			log.Fatal("To run pre-configured benchmarks, do not pass any filenames")
 			return
 		}
 
@@ -83,7 +83,7 @@ func Cli() {
 
 	if *benchmark {
 		if len(args) < 1 {
-			fmt.Println("expected name of file to benchmark")
+			log.Fatal("expected name of file to benchmark")
 			return
 		}
 
@@ -100,7 +100,9 @@ func Cli() {
 		*logLevel = 3
 	}
 
-	fmt.Printf("%v -- typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v\n", PHI, typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
+	if *logLevel > 1 {
+		fmt.Printf("%v -- typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v\n", PHI, typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
+	}
 
 	if *startWebserver {
 		// Run via API
@@ -114,7 +116,13 @@ func Cli() {
 	var err error
 
 	if len(args) < 1 {
-		err := fmt.Errorf("expected name of file to be executed")
+		err := fmt.Errorf("expected name of file to be executed (use -h for help)")
+		log.Fatal(err)
+		return
+	}
+
+	if len(args) > 1 {
+		err := fmt.Errorf("found extra arguments: %v", args[1:])
 		log.Fatal(err)
 		return
 	}

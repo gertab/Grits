@@ -132,7 +132,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 	re.heartbeat = make(chan struct{}, 1)
 	defer cancel()
 
-	re.logf(LOGINFO, "\nInitializing %d processes\n", len(processes))
+	re.logf(LOGINFO, "\nSpawning %d processes\n", len(processes))
 
 	channels := re.CreateChannelForEachProcess(processes)
 
@@ -160,8 +160,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Finished in %v\n", re.TimeTaken())
-
+	re.logf(LOGPROCESSING, "Finished in %v\n", re.TimeTaken())
 	re.logf(LOGINFO, "End process count: %d (%d)\n", re.ProcessCount(), re.DeadProcessCount())
 
 	return re

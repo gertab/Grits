@@ -688,8 +688,8 @@ func TestShifting(t *testing.T) {
 
 	input := ` 
 	prc[a] : lin 1 = x <- shift b; wait x; close self
-	prc[b] : unr \/ lin 1 = cast self<c>
-	prc[c] : unr 1 = close self`
+	prc[b] : rep \/ lin 1 = cast self<c>
+	prc[c] : rep 1 = close self`
 
 	expected := []traceOption{
 		{steps{{"a", process.CST}, {"a", process.CLS}}},

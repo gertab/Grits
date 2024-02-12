@@ -19,78 +19,20 @@ type Modality interface {
 	AllowsWeakening() bool
 }
 
-//           Unrestricted {W, C}             |
+//           Replicable {W, C}               |
 //          <            >                   |
-//   Affine {W}            Replicable {C} |
+//   Affine {W}            Multicast {C}     |
 //          >            <                   |
 //               Linear ø                   \/  Downshifts allowed in this direction (and vice versa for upshifts)
 //
-// E.g. Since Unrestricted > Linear, then you can downshift from Unrestricted to Linear (but not upshift)
+// E.g. Since Replicable > Linear, then you can downshift from Replicable to Linear (but not upshift)
 // You can upshift from Affine to Linear (since Affine > Linear)
 
-func DefaultMode() *UnrestrictedMode {
-	return NewUnrestrictedMode()
+func DefaultMode() *ReplicableMode {
+	return NewReplicableMode()
 }
 
-// Unrestricted => {W, C}
-type UnrestrictedMode struct{}
-
-func NewUnrestrictedMode() *UnrestrictedMode {
-	return &UnrestrictedMode{}
-}
-
-func (q *UnrestrictedMode) String() string {
-	return "unr"
-}
-
-func (q *UnrestrictedMode) Copy() Modality {
-	return NewUnrestrictedMode()
-}
-
-func (q *UnrestrictedMode) AllowsContraction() bool {
-	return true
-}
-
-func (q *UnrestrictedMode) AllowsWeakening() bool {
-	return true
-}
-
-func (q *UnrestrictedMode) CanBeUpshiftedTo(toMode Modality) bool {
-	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return true
-	case *ReplicableMode:
-		return false
-	case *AffineMode:
-		return false
-	case *LinearMode:
-		return false
-	default:
-		panic("todo")
-	}
-}
-
-func (q *UnrestrictedMode) CanBeDownshiftedTo(toMode Modality) bool {
-	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return true
-	case *ReplicableMode:
-		return true
-	case *AffineMode:
-		return true
-	case *LinearMode:
-		return true
-	default:
-		panic("todo")
-	}
-}
-
-func (q *UnrestrictedMode) Equals(other Modality) bool {
-	_, same := other.(*UnrestrictedMode)
-	return same
-}
-
-// Replicable => {C}
+// Replicable => {W, C}
 type ReplicableMode struct{}
 
 func NewReplicableMode() *ReplicableMode {
@@ -110,15 +52,15 @@ func (q *ReplicableMode) AllowsContraction() bool {
 }
 
 func (q *ReplicableMode) AllowsWeakening() bool {
-	return false
+	return true
 }
 
 func (q *ReplicableMode) CanBeUpshiftedTo(toMode Modality) bool {
 	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return true
 	case *ReplicableMode:
 		return true
+	case *MulticastMode:
+		return false
 	case *AffineMode:
 		return false
 	case *LinearMode:
@@ -130,9 +72,67 @@ func (q *ReplicableMode) CanBeUpshiftedTo(toMode Modality) bool {
 
 func (q *ReplicableMode) CanBeDownshiftedTo(toMode Modality) bool {
 	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return false
 	case *ReplicableMode:
+		return true
+	case *MulticastMode:
+		return true
+	case *AffineMode:
+		return true
+	case *LinearMode:
+		return true
+	default:
+		panic("todo")
+	}
+}
+
+func (q *ReplicableMode) Equals(other Modality) bool {
+	_, same := other.(*ReplicableMode)
+	return same
+}
+
+// Multicast => {C}
+type MulticastMode struct{}
+
+func NewMulticastMode() *MulticastMode {
+	return &MulticastMode{}
+}
+
+func (q *MulticastMode) String() string {
+	return "rep"
+}
+
+func (q *MulticastMode) Copy() Modality {
+	return NewMulticastMode()
+}
+
+func (q *MulticastMode) AllowsContraction() bool {
+	return true
+}
+
+func (q *MulticastMode) AllowsWeakening() bool {
+	return false
+}
+
+func (q *MulticastMode) CanBeUpshiftedTo(toMode Modality) bool {
+	switch interface{}(toMode).(type) {
+	case *ReplicableMode:
+		return true
+	case *MulticastMode:
+		return true
+	case *AffineMode:
+		return false
+	case *LinearMode:
+		return false
+	default:
+		panic("todo")
+	}
+}
+
+func (q *MulticastMode) CanBeDownshiftedTo(toMode Modality) bool {
+	switch interface{}(toMode).(type) {
+	case *ReplicableMode:
+		return false
+	case *MulticastMode:
 		return true
 	case *AffineMode:
 		return false // todo check with Adrian this relationship
@@ -143,8 +143,8 @@ func (q *ReplicableMode) CanBeDownshiftedTo(toMode Modality) bool {
 	}
 }
 
-func (q *ReplicableMode) Equals(other Modality) bool {
-	_, same := other.(*ReplicableMode)
+func (q *MulticastMode) Equals(other Modality) bool {
+	_, same := other.(*MulticastMode)
 	return same
 }
 
@@ -173,9 +173,9 @@ func (q *AffineMode) AllowsWeakening() bool {
 
 func (q *AffineMode) CanBeUpshiftedTo(toMode Modality) bool {
 	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return true
 	case *ReplicableMode:
+		return true
+	case *MulticastMode:
 		return false // todo check with Adrian this relationship
 	case *AffineMode:
 		return true
@@ -188,9 +188,9 @@ func (q *AffineMode) CanBeUpshiftedTo(toMode Modality) bool {
 
 func (q *AffineMode) CanBeDownshiftedTo(toMode Modality) bool {
 	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return false
 	case *ReplicableMode:
+		return false
+	case *MulticastMode:
 		return false
 	case *AffineMode:
 		return true
@@ -231,9 +231,9 @@ func (q *LinearMode) AllowsWeakening() bool {
 
 func (q *LinearMode) CanBeUpshiftedTo(toMode Modality) bool {
 	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return true
 	case *ReplicableMode:
+		return true
+	case *MulticastMode:
 		return true
 	case *AffineMode:
 		return true
@@ -246,9 +246,9 @@ func (q *LinearMode) CanBeUpshiftedTo(toMode Modality) bool {
 
 func (q *LinearMode) CanBeDownshiftedTo(toMode Modality) bool {
 	switch interface{}(toMode).(type) {
-	case *UnrestrictedMode:
-		return false
 	case *ReplicableMode:
+		return false
+	case *MulticastMode:
 		return false
 	case *AffineMode:
 		return false
@@ -348,18 +348,18 @@ func StringToMode(input string) Modality {
 	input = strings.ToLower(input)
 
 	switch input {
-	case "u":
-		return &UnrestrictedMode{}
-	case "unr":
-		return &UnrestrictedMode{}
-	case "unrestricted":
-		return &UnrestrictedMode{}
 	case "r":
 		return &ReplicableMode{}
 	case "rep":
 		return &ReplicableMode{}
 	case "replicable":
 		return &ReplicableMode{}
+	case "m":
+		return &MulticastMode{}
+	case "mul":
+		return &MulticastMode{}
+	case "multicast":
+		return &MulticastMode{}
 	case "a":
 		return &AffineMode{}
 	case "aff":
@@ -673,7 +673,7 @@ func commonMode(modes ...Modality) Modality {
 
 // Ensure that a type is constructed well, with respect to modalities
 // E.g. if there is an upshift/downshift, the shift should be allowed by the mode.
-// Also, the only modes allowed should be Unrestricted/Affine/Replicable/Linear --
+// Also, the only modes allowed should be Replicable/Affine/Multicast/Linear --
 // UnsetModes or InvalidModes should be flagged as an error
 func (q *LabelType) checkTypeModalities(labelledTypesEnv LabelledTypesEnv, currentMode Modality) error {
 	_, unset := q.Mode.(*UnsetMode)

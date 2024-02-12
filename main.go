@@ -73,12 +73,12 @@ func dev(program string) {
 
 const program = `
 
-// prc[a] : lin /\ unr 1 = x <- shift self; close x
+// prc[a] : lin /\ rep 1 = x <- shift self; close x
 // prc[b] : lin 1 = cast a<self>
 
 prc[a] : lin 1 = x <- shift b; wait x; close self
-prc[b] : unr \/ lin 1 = cast self<c>
-prc[c] : unr 1 = close self
+prc[b] : rep \/ lin 1 = cast self<c>
+prc[c] : rep 1 = close self
 
 
 // type bin = +{b0 : bin, b1 : bin, e : 1}
@@ -461,8 +461,8 @@ prc[b] : affine \/ linear A = cast self<x>
 // prc[a] : affine A = y <- shift b; drop y; close self
 // prc[b] : affine \/ linear A = cast self<x>
 
-// type A = unrestricted \/ affine B
-// type B = unrestricted 1 * 1
+// type A = replicable \/ affine B
+// type B = replicable 1 * 1
 // assuming y : B
 // let f(b : A) : 1 = y <- shift b; drop y; close self
 // prc[a] : 1 = x : A <- new cast self<y>; f(x)
@@ -473,7 +473,7 @@ prc[b] : affine \/ linear A = cast self<x>
 
 // type A = linear &{a : B, b : C}
 // type B = 1 * (affine\/linear 1 -* 1)
-// type C = ((replicable\/linear unrestricted\/replicable 1) -* 1) -* 1
+// type C = ((replicable\/linear replicable\/replicable 1) -* 1) -* 1
 
 
 // // This is not allowed:

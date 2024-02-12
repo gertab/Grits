@@ -233,12 +233,3 @@ func (q *UpType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots map[
 func (q *DownType) isContractive(labelledTypesEnv LabelledTypesEnv, snapshots map[string]bool) bool {
 	return true
 }
-
-// func (q *LabelType) String() string {}
-// func (q *UnitType) String() string {}
-// func (q *SendType) String() string {}
-// func (q *ReceiveType) String() string {}
-// func (q *SelectLabelType) String() string {}
-// func (q *BranchCaseType) String() string {}
-// func (q *UpType) String() string {}
-// func (q *DownType) String() string {}

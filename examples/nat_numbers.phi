@@ -1,4 +1,4 @@
-// Natural numbers represented as the successor[s] of zero, eg 2 = +{succ: +{succ: +{zero: 1}}}
+// Natural numbers represented in unary form, eg 2 = +{succ: +{succ: +{zero: 1}}}
 type nat = +{zero : 1, succ : nat}
 
 // Provide double the value of x
@@ -39,9 +39,9 @@ let add1(x : nat) : nat =
 // prc[c] : nat = add(a, b)
 // prc[d] : 1 = printNat(c)
 
-// prc[a] : nat = nat4()
-// prc[b] : nat = half(a)
-// prc[c] : 1 = printNat(b)
+prc[a] : nat = nat4()
+prc[b] : nat = half(a)
+prc[c] : 1 = printNat(b)
 
 // prc[a] : nat = nat4()
 // prc[b] : nat = double(a)

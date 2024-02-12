@@ -196,7 +196,7 @@ func TestTypecheckCorrectDrop(t *testing.T) {
 		"let f1(x : 1 * 1, g : &{a : 1}) : 1 * 1 = drop g; fwd self x",
 		`assuming a : 1
 		prc[b] : 1 = drop a; close self`,
-		`assuming a : unrestricted 1
+		`assuming a : replicable 1
 		prc[b] : 1 = drop a; close self`,
 		`assuming a : affine 1
 		prc[b] : 1 = drop a; close self`,
@@ -222,7 +222,7 @@ func TestTypecheckIncorrectDrop(t *testing.T) {
 		// Cannot drop a non weakenable name
 		`assuming a : linear 1
 		prc[b] : 1 = drop a; close self`,
-		`assuming a : replicable 1
+		`assuming a : multicast 1
 		prc[b] : 1 = drop a; close self`,
 	}
 
@@ -542,9 +542,9 @@ func TestTypecheckCorrectSplit(t *testing.T) {
 		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
 		 prc[x] : 1 = close self`,
 		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
-		 prc[x] : unrestricted 1 = close self`,
-		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
 		 prc[x] : replicable 1 = close self`,
+		`prc[pid0] : 1 = <u, v> <- split x; wait u; wait v; close self
+		 prc[x] : multicast 1 = close self`,
 		`type A = 1 * 1
 		 prc[pid1] : 1 = <a, b> <- split +pid2;
 		 				 <a2, b2> <- recv a;
@@ -865,7 +865,7 @@ func TestTypecheckIncorrectCastShifting(t *testing.T) {
 		 prc[a] : affine \/ linear 1 = cast self<u>`,
 		`assuming u : affine 1
 		 prc[a] : linear \/ affine 1 = cast self<u>`,
-		`assuming u : unrestricted 1
+		`assuming u : replicable 1
 		 prc[a] : affine \/ linear 1 = cast self<u>`,
 		`assuming a : affine 1 * 1
 		 prc[b] : affine \/ linear 1 = x : affine 1 <- new (close x); drop x; cast self<a>`,
@@ -924,7 +924,7 @@ func TestFunctionDefinitionModes(t *testing.T) {
 		input1 string
 		input2 []string
 	}{
-		{"[unr]A [unr]* [unr]B", []string{"[unr]A", "[unr]B"}},                       // f1
+		{"[rep]A [rep]* [rep]B", []string{"[rep]A", "[rep]B"}},                       // f1
 		{"lin+{l1 : [lin]1} [lin]* [lin]C", []string{"lin+{l1 : [lin]1}", "[lin]C"}}, // f2
 	}
 
@@ -965,13 +965,13 @@ func TestTypecheckCorrectModalityStructure(t *testing.T) {
 		`type A = B
 		 type B = linear 1`,
 		`type A = 1`,
-		`type A1 = unrestricted 1
-		 type A2 = unr 1
+		`type A1 = replicable 1
+		 type A2 = rep 1
 		 type B1 = linear 1
 		 type B2 = lin 1
 		 type C1 = affine 1
 		 type C2 = aff 1
-		 type D1 = replicable 1
+		 type D1 = multicast 1
 		 type D2 = rep 1`,
 		`type A = linear 1 * B
 		 type B = linear 1`,
@@ -979,42 +979,42 @@ func TestTypecheckCorrectModalityStructure(t *testing.T) {
 		 type B = affine 1`,
 		`type A1 = linear/\affine 1
 		 type A2 = linear/\linear 1
-		 type A3 = linear/\replicable 1
-		 type A4 = replicable/\unrestricted 1
-		 type A5 = replicable/\replicable 1
-		 type A6 = affine/\unrestricted 1
+		 type A3 = linear/\multicast 1
+		 type A4 = multicast/\replicable 1
+		 type A5 = multicast/\multicast 1
+		 type A6 = affine/\replicable 1
 		 type A7 = affine/\affine 1
-		 type A8 = unrestricted/\unrestricted 1`,
+		 type A8 = replicable/\replicable 1`,
 		`type B1 = affine (linear/\affine 1)
 		 type B2 = linear (linear/\linear 1)
-		 type B3 = replicable (linear/\replicable 1)
-		 type B4 = unrestricted (replicable/\unrestricted 1)
-		 type B5 = replicable (replicable/\replicable 1)
-		 type B6 = unrestricted (affine/\unrestricted 1)
+		 type B3 = multicast (linear/\multicast 1)
+		 type B4 = replicable (multicast/\replicable 1)
+		 type B5 = multicast (multicast/\multicast 1)
+		 type B6 = replicable (affine/\replicable 1)
 		 type B7 = affine (affine/\affine 1)
-		 type B8 = unrestricted (unrestricted/\unrestricted 1)`,
+		 type B8 = replicable (replicable/\replicable 1)`,
 		`type A1 = affine\/linear 1
 		 type A2 = linear\/linear 1
-		 type A3 = replicable\/linear 1
-		 type A4 = unrestricted\/replicable 1
-		 type A5 = replicable\/replicable 1
-		 type A6 = unrestricted\/affine 1
+		 type A3 = multicast\/linear 1
+		 type A4 = replicable\/multicast 1
+		 type A5 = multicast\/multicast 1
+		 type A6 = replicable\/affine 1
 		 type A7 = affine\/affine 1
-		 type A8 = unrestricted\/unrestricted 1`,
+		 type A8 = replicable\/replicable 1`,
 		`type B1 = affine (affine\/linear 1)
 		 type B2 = linear (linear\/linear 1)
-		 type B3 = replicable (replicable\/linear 1)
-		 type B4 = unrestricted (unrestricted\/replicable 1)
-		 type B5 = replicable (replicable\/replicable 1)
-		 type B6 = unrestricted (unrestricted\/affine 1)
+		 type B3 = multicast (multicast\/linear 1)
+		 type B4 = replicable (replicable\/multicast 1)
+		 type B5 = multicast (multicast\/multicast 1)
+		 type B6 = replicable (replicable\/affine 1)
 		 type B7 = affine (affine\/affine 1)
-		 type B8 = unrestricted (unrestricted\/unrestricted 1)`,
-		`type A = linear(replicable\/linear replicable\/replicable unrestricted\/replicable 1)`,
+		 type B8 = replicable (replicable\/replicable 1)`,
+		`type A = linear(multicast\/linear multicast\/multicast replicable\/multicast 1)`,
 		`type A = linear +{a : 1, b : B}
 		 type B = 1 * (affine\/linear 1 -* 1)`,
 		`type A = linear &{a : B, b : C}
 		 type B = 1 * (affine\/linear 1 -* 1)
-		 type C = ((replicable\/linear unrestricted\/replicable 1) -* 1) -* 1`,
+		 type C = ((multicast\/linear replicable\/multicast 1) -* 1) -* 1`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -1037,7 +1037,7 @@ func TestTypecheckIncorrectModalityStructure(t *testing.T) {
 		`type A = linear 1 -* B
 		 type B = affine 1`,
 		`type A = linear +{a : 1, b : B}
-		 type B = 1 * (unrestricted\/affine 1 -* 1)`,
+		 type B = 1 * (replicable\/affine 1 -* 1)`,
 	}
 
 	runThroughTypechecker(t, cases, false)
@@ -1047,21 +1047,21 @@ func TestTypecheckIncorrectModalityShifts(t *testing.T) {
 	cases := []string{
 		// Check disallowed shifts
 		`type A = linear\/affine 1`,
-		`type A = linear\/replicable 1`,
-		`type A = replicable\/unrestricted 1`,
-		`type A = affine\/unrestricted 1`,
+		`type A = linear\/multicast 1`,
+		`type A = multicast\/replicable 1`,
+		`type A = affine\/replicable 1`,
 		`type A = affine (linear\/affine 1)`,
-		`type A = replicable (linear\/replicable 1)`,
-		`type A = unrestricted (replicable\/unrestricted 1)`,
-		`type A = unrestricted (affine\/unrestricted 1)`,
+		`type A = multicast (linear\/multicast 1)`,
+		`type A = replicable (multicast\/replicable 1)`,
+		`type A = replicable (affine\/replicable 1)`,
 		`type A = affine/\linear 1`,
-		`type A = replicable/\linear 1`,
-		`type A = unrestricted/\replicable 1`,
-		`type A = unrestricted/\affine 1`,
+		`type A = multicast/\linear 1`,
+		`type A = replicable/\multicast 1`,
+		`type A = replicable/\affine 1`,
 		`type A = linear (affine/\linear 1)`,
-		`type A = linear (replicable/\linear 1)`,
-		`type A = replicable (unrestricted/\replicable 1)`,
-		`type A = affine (unrestricted/\affine 1)`,
+		`type A = linear (multicast/\linear 1)`,
+		`type A = multicast (replicable/\multicast 1)`,
+		`type A = affine (replicable/\affine 1)`,
 	}
 
 	runThroughTypechecker(t, cases, false)

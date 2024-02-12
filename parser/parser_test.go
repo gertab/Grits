@@ -111,7 +111,7 @@ func TestBasicForms(t *testing.T) {
 	compareOutputProgram(t, output, expected)
 }
 func TestSimpleTypes(t *testing.T) {
-	u := types.NewUnrestrictedMode()
+	u := types.NewReplicableMode()
 
 	unitType := types.NewUnitType(u)
 	labelType1 := types.NewLabelType("abc", u)
@@ -140,7 +140,7 @@ func TestSimpleTypes(t *testing.T) {
 }
 
 func TestTypes(t *testing.T) {
-	u := types.NewUnrestrictedMode()
+	u := types.NewReplicableMode()
 
 	unitType := types.NewUnitType(u)
 	labelType1 := types.NewLabelType("abc", u)
@@ -369,8 +369,8 @@ func TestTypeDefinitionModes(t *testing.T) {
 		 type K = linear +{a : 1}
 		 type L = linear 1 -* 1
 		 type M = affine 1 -* 1
-		 type N = replicable 1 -* 1
-		 type O = unrestricted 1 -* 1
+		 type N = multicast 1 -* 1
+		 type O = replicable 1 -* 1
 		 type P = 1 -* (1 * +{ab : 1, cd : 1})
 		 type Q = affine 1 -* (1 * +{ab : 1, cd : 1})
 		 type R =  1 * (1 * linear /\ affine +{ab : 1, cd : 1})
@@ -379,24 +379,24 @@ func TestTypeDefinitionModes(t *testing.T) {
 	cases := []struct {
 		input1 string
 	}{
-		{"[unr]1 [unr]-* [unr]1"},        // A
-		{"[unr]1"},                       // B
+		{"[rep]1 [rep]-* [rep]1"},        // A
+		{"[rep]1"},                       // B
 		{"[lin]1 [lin]* [lin]1"},         // C
-		{"unr&{a : [unr]1, b : [unr]1}"}, // D
-		{"unr+{a : [unr]1, b : [unr]1}"}, // E
-		{"unr&{a : [unr]A}"},             // F
-		{"unr+{a : [unr]D}"},             // G
+		{"rep&{a : [rep]1, b : [rep]1}"}, // D
+		{"rep+{a : [rep]1, b : [rep]1}"}, // E
+		{"rep&{a : [rep]A}"},             // F
+		{"rep+{a : [rep]D}"},             // G
 		{"[lin]1 [lin]* [lin]C"},         // H
-		{"[unr]J"},                       // I
-		{"[unr]I"},                       // J
+		{"[rep]J"},                       // I
+		{"[rep]I"},                       // J
 		{"[aff]J2"},                      // I2
 		{"[aff]I2"},                      // J2
 		{"lin+{a : [lin]1}"},             // K
 		{"[lin]1 [lin]-* [lin]1"},        // L
 		{"[aff]1 [aff]-* [aff]1"},        // M
 		{"[rep]1 [rep]-* [rep]1"},        // N
-		{"[unr]1 [unr]-* [unr]1"},        // O
-		{"[unr]1 [unr]-* [unr]1 [unr]* unr+{ab : [unr]1, cd : [unr]1}"},          // P
+		{"[rep]1 [rep]-* [rep]1"},        // O
+		{"[rep]1 [rep]-* [rep]1 [rep]* rep+{ab : [rep]1, cd : [rep]1}"},          // P
 		{"[aff]1 [aff]-* [aff]1 [aff]* aff+{ab : [aff]1, cd : [aff]1}"},          // Q
 		{`[aff]1 [aff]* [aff]1 [aff]* lin/\aff lin+{ab : [lin]1, cd : [lin]1}`},  // R
 		{`[lin]1 [lin]-* [lin]1 [lin]* aff/\lin aff&{ab : [aff]1, cd : [aff]1}`}, // S

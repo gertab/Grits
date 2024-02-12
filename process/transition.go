@@ -44,8 +44,7 @@ func (process *Process) transitionLoop(re *RuntimeEnvironment) {
 // When a process starts transitioning, a process chooses to transition as one of these forms:
 //   (a) a provider     -> tries to send the final result
 //   (b) a client       -> retrieves any pending messages and consumes them
-//   (c) a special form (i.e. forward)
-//   (d) internally     -> transitions immediately without sending/receiving messages
+//   (c) internally     -> transitions immediately without sending/receiving messages
 
 func TransitionBySending(process *Process, toChan chan Message, continuationFunc func(), sendingMessage Message, re *RuntimeEnvironment) {
 

@@ -97,8 +97,8 @@ The full grammar accepted by our compiler is as follows:
 
 <branch_type> ::= <label> : <type_i> [ , <branch_type> ]        // labelled branches
 
-<modality> ::= u | unr | unrestricted                           // unresticted mode
-             | r | rep | replicable                             // replicable mode
+<modality> ::= r | rep | replicable                             // replicable mode
+             | m | mul | multicast                              // multicast mode
              | a | aff | affine                                 // affine mode
              | l | lin | linear                                 // linear mode
 

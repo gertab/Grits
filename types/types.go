@@ -802,7 +802,7 @@ type SessionTypeInitial interface {
 	toSessionType(Modality) SessionType
 }
 
-// Explicit mode, e.g. unrestricted A, where the mode of A becomes unrestricted
+// Explicit mode, e.g. replicable A, where the mode of A becomes replicable
 // Sets the modality for the continuation type
 type ExplicitModeTypeInitial struct {
 	Modality     Modality

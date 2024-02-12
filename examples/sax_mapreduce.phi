@@ -7,7 +7,7 @@ type treeNat = linear +{node : treeNat * treeNat, leaf : nat}
 // Takes a tree of natural numbers, doubles them and adds the results
 type A = treeNat
 type B = nat
-let mapreduce(fs : linear /\ unrestricted ((B * B) -* B), hs : linear /\ unrestricted (A -* B), t : treeNat) : B =
+let mapreduce(fs : linear /\ replicable ((B * B) -* B), hs : linear /\ replicable (A -* B), t : treeNat) : B =
   case t (
         node<t'> => <l, r> <- recv t';
                     <fs', fs''> <- split fs;
@@ -41,14 +41,14 @@ let treeNatEx() : treeNat =
   self.node<nodes>
 
 
-let reduceByAdding() : linear /\ unrestricted ((nat * nat) -* nat) = 
+let reduceByAdding() : linear /\ replicable ((nat * nat) -* nat) = 
   s <- shift self;
   <tree, result> <- recv s;
   <left, right> <- recv tree;
   currRes <- new addNats(left, right);
   fwd result currRes
 
-let mapByDoubling() : linear /\ unrestricted (nat -* nat)  = 
+let mapByDoubling() : linear /\ replicable (nat -* nat)  = 
   s <- shift self;
   <toDouble, result> <- recv s;
   doubled <- new double(toDouble);
@@ -56,8 +56,8 @@ let mapByDoubling() : linear /\ unrestricted (nat -* nat)  =
 
 prc[t] : treeNat = treeNatEx()
 //prc[c] : lin 1 = printTreeNat(t)
-prc[fs] : linear /\ unrestricted ((nat * nat) -* nat) =  reduceByAdding()
-prc[hs] : linear /\ unrestricted (nat -* nat) =  mapByDoubling()
+prc[fs] : linear /\ replicable ((nat * nat) -* nat) =  reduceByAdding()
+prc[hs] : linear /\ replicable (nat -* nat) =  mapByDoubling()
 prc[b] : nat = mapreduce(fs, hs, t) 
 prc[c] : lin 1 = printNat(b)
 

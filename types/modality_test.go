@@ -5,8 +5,8 @@ import (
 )
 
 func TestEqualModality(t *testing.T) {
-	label1 := NewLabelType("abc", NewUnrestrictedMode())
-	label2 := NewLabelType("def", NewUnrestrictedMode())
+	label1 := NewLabelType("abc", NewReplicableMode())
+	label2 := NewLabelType("def", NewReplicableMode())
 
 	unit := NewUnitType(NewAffineMode())
 	send := NewSendType(label1, label2, NewLinearMode())
@@ -43,22 +43,22 @@ func TestEqualModality(t *testing.T) {
 }
 
 func TestNotEqualModality(t *testing.T) {
-	label1 := NewLabelType("abc", NewUnrestrictedMode())
-	label2 := NewLabelType("def", NewUnrestrictedMode())
+	label1 := NewLabelType("abc", NewReplicableMode())
+	label2 := NewLabelType("def", NewReplicableMode())
 
 	unit := NewUnitType(NewAffineMode())
-	unit2 := NewUnitType(NewReplicableMode())
+	unit2 := NewUnitType(NewMulticastMode())
 	send := NewSendType(label1, label2, NewLinearMode())
 	send2 := NewSendType(label1, label2, NewAffineMode())
 	receive := NewReceiveType(label1, label2, NewAffineMode())
-	receive2 := NewReceiveType(label1, label2, NewUnrestrictedMode())
+	receive2 := NewReceiveType(label1, label2, NewReplicableMode())
 	sel_opt := []Option{{Label: "a", SessionType: label1}}
 	sel := NewSelectLabelType(sel_opt, NewLinearMode())
 	sel2 := NewSelectLabelType(sel_opt, NewAffineMode())
 	branch_opt := []Option{{Label: "a", SessionType: label1}, {Label: "bb", SessionType: label2}}
 	branch := NewBranchCaseType(branch_opt, NewLinearMode())
 	branch_opt2 := []Option{{Label: "bb", SessionType: label2}, {Label: "a", SessionType: label1}}
-	branch2 := NewBranchCaseType(branch_opt2, NewUnrestrictedMode())
+	branch2 := NewBranchCaseType(branch_opt2, NewReplicableMode())
 
 	cases := []struct {
 		input    SessionType
@@ -86,8 +86,8 @@ func TestCheckModality(t *testing.T) {
 	unsetMode := NewUnsetMode()
 	linearMode := NewLinearMode()
 	affineMode := NewAffineMode()
-	unrestrictedMode := NewUnrestrictedMode()
 	replicableMode := NewReplicableMode()
+	multicastMode := NewMulticastMode()
 
 	unitType := NewUnitTypeInitial()
 	labelType := NewLabelTypeInitial("A")
@@ -96,7 +96,7 @@ func TestCheckModality(t *testing.T) {
 	selectType := NewSelectLabelTypeInitial([]OptionInitial{*NewOptionInitial("opt1", unitType)})
 	branchType := NewBranchCaseTypeInitial([]OptionInitial{*NewOptionInitial("opt1", unitType)})
 	upType := NewUpTypeInitial(linearMode, affineMode, unitType)
-	downType := NewDownTypeInitial(unrestrictedMode, affineMode, unitType)
+	downType := NewDownTypeInitial(replicableMode, affineMode, unitType)
 
 	unitNormalType := NewUnitType(unsetMode)
 	labelNormalType := NewLabelType("A", unsetMode)
@@ -105,7 +105,7 @@ func TestCheckModality(t *testing.T) {
 	selectNormalType := NewSelectLabelType([]Option{*NewOption("opt1", unitNormalType)}, unsetMode)
 	branchNormalType := NewBranchCaseType([]Option{*NewOption("opt1", unitNormalType)}, unsetMode)
 	upNormalType := NewUpType(linearMode, affineMode, unitNormalType)
-	downNormalType := NewDownType(unrestrictedMode, affineMode, unitNormalType)
+	downNormalType := NewDownType(replicableMode, affineMode, unitNormalType)
 
 	cases := []struct {
 		stI              SessionTypeInitial
@@ -114,8 +114,8 @@ func TestCheckModality(t *testing.T) {
 	}{
 		{NewExplicitModeTypeInitial(linearMode, unitType), unitNormalType, linearMode},
 		{NewExplicitModeTypeInitial(affineMode, unitType), unitNormalType, affineMode},
-		{NewExplicitModeTypeInitial(unrestrictedMode, unitType), unitNormalType, unrestrictedMode},
 		{NewExplicitModeTypeInitial(replicableMode, unitType), unitNormalType, replicableMode},
+		{NewExplicitModeTypeInitial(multicastMode, unitType), unitNormalType, multicastMode},
 		{labelType, labelNormalType, unsetMode},
 		{unitType, unitNormalType, unsetMode},
 		{sendType, sendNormalType, unsetMode},

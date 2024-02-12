@@ -2,9 +2,9 @@
 type bin = linear +{b0 : bin, b1 : bin, e : 1}
 //type treeBin = linear +{node : treeBin * treeBin, leaf : bin}
 
-// Natural number types (linear and unrestricted versions)
+// Natural number types (linear and replicable versions)
 type nat = linear +{zero : 1, succ : nat}
-type uNat = unrestricted +{zero : 1, succ : uNat}
+type uNat = replicable +{zero : 1, succ : uNat}
 
 // Converts a binary number to a natural number
 // E.g. binToNat(100) -> S(S(S(S(Z))))
@@ -12,9 +12,7 @@ let binToNat(x : bin) : nat =
     z : lin 1 <- new close self;
     accum : nat <- new self.zero<z>;
 
-    nat1unr <- new nat1unrestricted();
-    natProducer <- new natProducer(nat1unr);
-    //natProducer : natCounter <- new natProducerInitializer();
+    natProducer : natCounter <- new natProducerInitializer();
 
     binToNatInternal(x, accum, natProducer)
 
@@ -33,38 +31,24 @@ let binToNatInternal(x : bin, accum : nat, natProducer : natCounter) : nat =
     )
 
 type natCounter = linear &{terminate : 1, one : nat * natCounter, zero : natCounter}
-let natProducer(curr : linear /\ unrestricted nat) : natCounter = 
+let natProducer(curr : uNat) : natCounter = 
     case self (
         terminate<x> => drop curr;
                         close self
         | one<x>     => <curr1, curr2> <- split curr;
-
-                        curr1lin : nat <- new cast curr1<curr1lin>;
-                       // send curr1lin<p, self>;
-                        curr1' <- new double(curr1lin);
-
-                        curr1'' : linear /\ unrestricted nat <- new cast curr1''<curr1'>;
-
-                        ///curr1'' <- shift curr1';
-
-                        cont <- new natProducer(curr1'');
-                        send self<curr2, cont>
+                        curr1' <- new double(curr1);
+                        curr2' : nat <- new uNatToLinear(curr2);
+                        cont <- new natProducer(curr1');
+                        send self<curr2', cont>
         | zero<x>    => curr'' <- new double(curr);
                         natProducer(curr'')
     )
 
-let natUnrestricted() : linear /\ unrestricted nat =
-    s <- shift self;
-    fwd s curr
-
-
-let nat1unrestricted() : linear /\ unrestricted nat = 
-    curr'' : lin 1 <- new close self;
-    curr' : nat <- new self.zero<curr''>;
-    curr : nat <- new self.succ<curr'>;
-
-    s <- shift self;
-    fwd s curr
+let natProducerInitializer() : natCounter = 
+    curr'' : rep 1 <- new close self;
+    curr' : uNat <- new self.zero<curr''>;
+    curr : uNat <- new self.succ<curr'>;
+    natProducer(curr)
 
 
 let uNatToLinear(x : uNat) : nat = 
@@ -80,16 +64,16 @@ let uNatToLinear(x : uNat) : nat =
 
 prc[a] : bin = bin4()
 prc[b] : nat = binToNat(a)
-prc[c] : 1   = printNat(b)
+prc[c] : lin 1   = printNat(b)
 
 
 //prc[a] : nat = nat5()
 //prc[b] : nat = nat2()
 //prc[c] : nat = addNats(a, b)
-//prc[d] : 1   = printNat(c)
+//prc[d] : lin 1 = printNat(c)
 
 //prc[a] : bin = bin2()
-//prc[b] : 1   = printBin(a)
+//prc[b] : lin 1 = printBin(a)
 
 
 
@@ -106,11 +90,11 @@ let addNats(x : nat, y : nat) : nat =
     )
 
 // Returns the double value for a natural number
-let double(x : nat) : nat =
+let double(x : uNat) : uNat =
     case x (
           zero<x'> => self.zero<x'>
         | succ<x'> => h <- new double(x');
-                      d : nat <- new d.succ<h>;
+                      d : uNat <- new d.succ<h>;
                       self.succ<d>
     )
 
@@ -262,3 +246,267 @@ let bin12() : bin =
   n4 : bin <- new self.b0<n3>;  
   fwd self n4
 
+// // Binary number types
+// type bin = linear +{b0 : bin, b1 : bin, e : 1}
+// //type treeBin = linear +{node : treeBin * treeBin, leaf : bin}
+// 
+// // Natural number types (linear and replicable versions)
+// type nat = linear +{zero : 1, succ : nat}
+// type uNat = replicable +{zero : 1, succ : uNat}
+// 
+// // Converts a binary number to a natural number
+// // E.g. binToNat(100) -> S(S(S(S(Z))))
+// let binToNat(x : bin) : nat = 
+//     z : lin 1 <- new close self;
+//     accum : nat <- new self.zero<z>;
+// 
+//     nat1rep <- new nat1replicable();
+//     natProducer <- new natProducer(nat1rep);
+//     //natProducer : natCounter <- new natProducerInitializer();
+// 
+//     binToNatInternal(x, accum, natProducer)
+// 
+// let binToNatInternal(x : bin, accum : nat, natProducer : natCounter) : nat = 
+//     case x (
+//           b0<x'> => natProducer' : natCounter <- new natProducer.zero<natProducer'>;
+//                     binToNatInternal(x', accum, natProducer')
+//         | b1<x'> => natProducer' : nat * natCounter <- new natProducer.one<natProducer'>;
+//                     <binaryValue, natProducer''> <- recv natProducer';
+//                     newAccum <- new addNats(binaryValue, accum);
+//                     binToNatInternal(x', newAccum, natProducer'')
+//         | e<x'>  => wait x';  
+//                     natProducer' : linear 1 <- new natProducer.terminate<natProducer'>;
+//                     wait natProducer'; 
+//                     fwd self accum
+//     )
+// 
+// type natCounter = linear &{terminate : 1, one : nat * natCounter, zero : natCounter}
+// let natProducer(curr : linear /\ replicable nat) : natCounter = 
+//     case self (
+//         terminate<x> => drop curr;
+//                         close self
+//         | one<x>     => <curr1, curr2> <- split curr;
+// 
+//                         curr1lin : nat <- new cast curr1<curr1lin>;
+//                        // send curr1lin<p, self>;
+//                         curr1' <- new double(curr1lin);
+// 
+//                         curr1'' : linear /\ replicable nat <- new cast curr1''<curr1'>;
+// 
+//                         ///curr1'' <- shift curr1';
+// 
+//                         cont <- new natProducer(curr1'');
+//                         send self<curr2, cont>
+//         | zero<x>    => curr'' <- new double(curr);
+//                         natProducer(curr'')
+//     )
+// 
+// let natreplicable() : linear /\ replicable nat =
+//     s <- shift self;
+//     fwd s curr
+// 
+// 
+// let nat1replicable() : linear /\ replicable nat = 
+//     curr'' : lin 1 <- new close self;
+//     curr' : nat <- new self.zero<curr''>;
+//     curr : nat <- new self.succ<curr'>;
+// 
+//     s <- shift self;
+//     fwd s curr
+// 
+// 
+// let uNatToLinear(x : uNat) : nat = 
+//     case x (
+//           zero<x'> => wait x';
+//                       cls : lin 1 <- new close self;
+//                       self.zero<cls>
+//         | succ<x'> => d <- new uNatToLinear(x');
+//                       self.succ<d>
+//     )
+// 
+// 
+// 
+// prc[a] : bin = bin4()
+// prc[b] : nat = binToNat(a)
+// prc[c] : 1   = printNat(b)
+// 
+// 
+// //prc[a] : nat = nat5()
+// //prc[b] : nat = nat2()
+// //prc[c] : nat = addNats(a, b)
+// //prc[d] : 1   = printNat(c)
+// 
+// //prc[a] : bin = bin2()
+// //prc[b] : 1   = printBin(a)
+// 
+// 
+// 
+// ///////// Natural Number Operations /////////
+// 
+// // Adds two natural numbers
+// let addNats(x : nat, y : nat) : nat =
+//     case x (
+//           zero<x'> => // print zeeeeee;
+//                       wait x'; fwd self y
+//         | succ<x'> => // print sccccc;
+//                       y'' : nat <- new y''.succ<y>;
+//                       addNats(x', y'')
+//     )
+// 
+// // Returns the double value for a natural number
+// let double(x : nat) : nat =
+//     case x (
+//           zero<x'> => self.zero<x'>
+//         | succ<x'> => h <- new double(x');
+//                       d : nat <- new d.succ<h>;
+//                       self.succ<d>
+//     )
+// 
+// 
+// // 5 : S(S(S(S(S(0)))))
+// let nat5() : nat =
+//   t : lin 1 <- new close t;
+//   z  : nat <- new z.zero<t>;
+//   s1 : nat <- new s1.succ<z>; 
+//   s2 : nat <- new s2.succ<s1>; 
+//   s3 : nat <- new s3.succ<s2>; 
+//   s4 : nat <- new s4.succ<s3>; 
+//   s5 : nat <- new s5.succ<s4>; 
+//   fwd self s5
+// 
+// // 2 : S(S(0))
+// let nat2() : nat =
+//   t : lin 1 <- new close t;
+//   z  : nat <- new z.zero<t>;
+//   s1 : nat <- new s1.succ<z>; 
+//   s2 : nat <- new s2.succ<s1>; 
+//   fwd self s2
+// 
+// ///////// Printing Helpers /////////
+// 
+// let printBin(b : bin) : lin 1 = 
+//         case b ( b0<c> => print b0; printBin(c)
+//                | b1<c> => print b1; printBin(c)
+//                | e<c>  => print e; wait c; close self)
+// 
+// let consumeNat(n : nat) : lin 1 = 
+//         case n ( zero<c> => print zero; wait c; close self
+//                | succ<c> => print succ; consumeNat(c))
+// 
+// let printNat(n : nat) : lin 1 = 
+//           y <- new consumeNat(n); 
+//           wait y;
+//           close self
+// 
+// 
+// ///////// BINARY CONSTANT Examples /////////
+// 
+// // b1 e = 1
+// let bin1() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0> ;  
+//   fwd self n1
+// 
+// // b0 b1 e = 10
+// let bin2() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b0<n1>;  
+//   fwd self n2
+// 
+// // b1 b1 e = 11
+// let bin3() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b1<n1>;  
+//   fwd self n2
+// 
+// // b0 b0 b1 e = 100
+// let bin4() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b0<n1>;  
+//   n3 : bin <- new self.b0<n2>;  
+//   fwd self n3
+// 
+// // b1 b0 b1 e = 101
+// let bin5() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b0<n1>;  
+//   n3 : bin <- new self.b1<n2>;  
+//   fwd self n3
+// 
+// // b0 b1 b1 e = 110
+// let bin6() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b1<n1>;  
+//   n3 : bin <- new self.b0<n2>;  
+//   fwd self n3
+// 
+// // b1 b1 b1 e = 111
+// let bin7() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b1<n1>;  
+//   n3 : bin <- new self.b1<n2>;  
+//   fwd self n3
+// 
+// // b0 b0 b0 b1 e = 1000
+// let bin8() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b0<n1>;  
+//   n3 : bin <- new self.b0<n2>;  
+//   n4 : bin <- new self.b0<n3>;  
+//   fwd self n4
+// 
+// // b1 b0 b0 b1 e = 1001
+// let bin9() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b0<n1>;  
+//   n3 : bin <- new self.b0<n2>;  
+//   n4 : bin <- new self.b1<n3>;  
+//   fwd self n4
+// 
+// // b0 b1 b0 b1 e = 1010
+// let bin10() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b0<n1>;  
+//   n3 : bin <- new self.b1<n2>;  
+//   n4 : bin <- new self.b0<n3>;  
+//   fwd self n4
+// 
+// // b1 b1 b0 b1 e = 1011
+// let bin11() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b0<n1>;  
+//   n3 : bin <- new self.b1<n2>;  
+//   n4 : bin <- new self.b1<n3>;  
+//   fwd self n4
+// 
+// // b0 b0 b1 b1 e = 1100
+// let bin12() : bin =   
+//   cls : linear 1 <- new close self;
+//   n0 : bin <- new self.e<cls>;
+//   n1 : bin <- new self.b1<n0>;  
+//   n2 : bin <- new self.b1<n1>;  
+//   n3 : bin <- new self.b0<n2>;  
+//   n4 : bin <- new self.b0<n3>;  
+//   fwd self n4
+// 

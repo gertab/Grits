@@ -145,25 +145,5 @@ let or(x : bits, y : bits) : bits =
     <u, u'> <- split w;
     nor(u, u')
 
-//// Example 10
-//type A10 = linear 1
-//type B10 = linear 1
-//
-//type bitsL = linear +{b0 : bitsL, b1 : bitsL}
-//
-//type list = linear +{cons : bitsL * list, nil : 1}
-//
-//let map(f : replicable (A10 -* B10), l : list) : list =
-//    case l (
-//          cons<l'> => <x, l''> <- recv l';
-//                      f''' <- new fwd self f;
-//                      <f', f''> <- split f''';
-//                      f' <- shift f'; // this should be its own separate process
-//                      y : B10 <- new send f'<x, y>;
-//                    
-//                      k' <- new ...
-//                      
-//                      k.cons<k'>
-//
-//        | nil<l'>  => 
-//    )
+// Example 10
+// Refer to nat_list_map.phi

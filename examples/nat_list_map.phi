@@ -4,8 +4,11 @@
 type nat = linear +{zero : 1, succ : nat}
 type listNat = linear +{cons : nat * listNat, nil : 1}
 
-// Takes a list of natural numbers and performs a mapping function 'f' (replicable mode) on each element, providing an updated list
-let map(f : linear /\ replicable (nat -* nat), l : listNat) : listNat =
+type mapType = linear /\ replicable (nat -* nat)
+
+// Takes a list of natural numbers and performs a mapping function 
+// 'f' (replicable mode) on each element, providing an updated list
+let map(f : mapType, l : listNat) : listNat =
     case l (
           cons<l'> => <curr, l''> <- recv l';
                       <f', f''> <- split f;                           // replicate the mapping function f
@@ -18,47 +21,41 @@ let map(f : linear /\ replicable (nat -* nat), l : listNat) : listNat =
                       self.nil<l'>
     )
 
-// Replicable process that doubles a number
-let mapByDoubling() : linear /\ replicable (nat -* nat)  = 
-  s <- shift self;
-  <toDouble, result> <- recv s;
-  doubled <- new double(toDouble);
-  fwd result doubled
-
 // Replicable process that increments a number
-let mapByIncrementing() : linear /\ replicable (nat -* nat)  = 
-  s <- shift self;              //
-  <toAdd, result> <- recv s;    // 
-  self.succ<toAdd>              // increment by one 'succ'
+let mapByIncrementing() : mapType  = 
+    s <- shift self;           
+    <toAdd, result> <- recv s; 
+    self.succ<toAdd>              // increment by one 'succ'
 
-// Create a list containing the numbers 3, 2 and 1: 
-//   cons(3, cons(2, cons(1, nil))), 
-//   where 1, 2 and 3 are represented as a nat structure
-let list123() : listNat =
-  // n1 : 1
-  n1 : nat <- new nat1();
-  // n2 : 10
-  n2 : nat <- new nat2();
-  // n3 : 11
-  n3 : nat <- new nat3();
+// Replicable process that doubles a number
+let mapByDoubling() : mapType  = 
+    s <- shift self;
+    <toDouble, result> <- recv s;
+    doubled <- new double(toDouble);
+    fwd result doubled
 
-  // l1 : cons(n1, nil) 
-  lnil' : linear 1    <- new close self;
-  lnil : listNat      <- new self.nil<lnil'>;
-  l1' : nat * listNat <- new send self<n1, lnil>;
-  l1 : listNat        <- new self.cons<l1'>;    
-  l2' : nat * listNat <- new send self<n2, l1>;
-  l2 : listNat        <- new self.cons<l2'>;    
-  l3' : nat * listNat <- new send self<n3, l2>;
-  l3 : listNat        <- new self.cons<l3'>;    
-  fwd self l3
+// Initialize each process individually
+//prc[l] : listNat = list123()
+//prc[f] : mapType =  mapByIncrementing()
+////prc[f] : mapType =  mapByDoubling()
+//prc[b] : listNat = map(f, l) 
+//prc[c] : linear 1 = printListNat(b)
 
-prc[t] : listNat = list123()
-prc[f] : linear /\ replicable (nat -* nat) =  mapByIncrementing()
-//prc[f] : linear /\ replicable (nat -* nat) =  mapByDoubling()
-prc[b] : listNat = map(f, t) 
-prc[c] : linear 1 = printListNat(b)
+let init() : linear 1 =
+    l : listNat <- new list123();
+    f : mapType <- new mapByIncrementing();
+    b : listNat <- new map(f, l);
+    printListNat(b)
 
+// Initialize process running init (these two are equivalent)
+//prc[main] : linear 1 = init()
+exec init()
+
+// Init without print function
+let init2() : listNat =
+    l : listNat <- new list123();
+    f : mapType <- new mapByIncrementing();
+    map(f, l)
 
 ///////// Natural Number Operations /////////
 
@@ -83,6 +80,24 @@ let double(x : nat) : nat =
 
 
 ///////// Natural numbers constants /////////
+
+// Create a list containing the numbers 3, 2 and 1: 
+//   cons(3, cons(2, cons(1, nil))), 
+//   where 1, 2 and 3 are represented as a nat structure
+let list123() : listNat =
+    n1 : nat <- new nat1(); // succ(zero)
+    n2 : nat <- new nat2(); // succ(succ(zero))
+    n3 : nat <- new nat3(); // succ(succ(succ(zero)))
+
+    lnil' : linear 1    <- new close self;
+    lnil : listNat      <- new self.nil<lnil'>;
+    l1' : nat * listNat <- new send self<n1, lnil>;
+    l1 : listNat        <- new self.cons<l1'>;    
+    l2' : nat * listNat <- new send self<n2, l1>;
+    l2 : listNat        <- new self.cons<l2'>;    
+    l3' : nat * listNat <- new send self<n3, l2>;
+    l3 : listNat        <- new self.cons<l3'>;    
+    fwd self l3
 
 // 1 : S(0)
 let nat1() : nat =

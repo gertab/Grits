@@ -853,6 +853,12 @@ func TestTypecheckCorrectCastShifting(t *testing.T) {
 		 let f2[w : linear 1, x : linear /\ affine 1] = cast x<w>
 		 assuming xx : linear /\ affine 1 * 1
 		 prc[a] : linear 1 * 1 = cast xx<self>`,
+		// declaration of independence
+		`let m(f : linear /\ replicable (1 * 1)) : linear 1 = 
+			fl : lin (1 * 1) <- new cast f<self>;
+			<x, y> <- recv fl;
+			wait x;
+			fwd self y`,
 	}
 
 	runThroughTypechecker(t, cases, true)
@@ -881,6 +887,11 @@ func TestTypecheckIncorrectCastShifting(t *testing.T) {
 		 prc[a] : affine 1 = cast u<self>`,
 		`assuming u : linear /\ affine 1 * 1
 		 prc[a] : linear 1 = cast u<self>`,
+		// declaration of independence
+		`let m2(f : lin /\ replicable (1 * 1)) : aff 1 = 
+			 fl : lin (1 * 1) <- new cast f<self>;
+			 <x, y> <- recv fl; wait x; wait y;
+			 close self`,
 	}
 	runThroughTypechecker(t, cases, false)
 }

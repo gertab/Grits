@@ -1,6 +1,6 @@
 // 'Map' adapted from Example 10 of 'A Message-Passing Interpretation of Adjoint Logic' 
 
-// Natural number types, and a list of natural numbers
+// Types for natural numbers and a list of natural numbers
 type nat = linear +{zero : 1, succ : nat}
 type listNat = linear +{cons : nat * listNat, nil : 1}
 
@@ -11,13 +11,13 @@ type mapType = linear /\ replicable (nat -* nat)
 let map(f : mapType, l : listNat) : listNat =
     case l (
           cons<l'> => <curr, l''> <- recv l';
-                      <f', f''> <- split f;                           // replicate the mapping function f
+                      <f', f''> <- split f;                           // replicate the mapping channel f
                       fl : lin (nat -* nat) <- new cast f'<self>;     // obtain linear version of f'
                       curr_updated : nat <- new send fl<curr, self>;  // map current element
-                      k'' : listNat <- new map(f'', l'');             // map the remaining elements
+                      k'' <- new map(f'', l'');                       // map the remaining elements
                       k' : nat * listNat <- new send self<curr_updated,k''>;
                       self.cons<k'>                                   // provide the result
-        | nil<l'>  => drop f;                                         // mapping function 'f' is unused
+        | nil<l'>  => drop f;                                         // mapping channel 'f' is unused
                       self.nil<l'>
     )
 
@@ -98,6 +98,21 @@ let list123() : listNat =
     l3' : nat * listNat <- new send self<n3, l2>;
     l3 : listNat        <- new self.cons<l3'>;    
     fwd self l3
+
+// Provide a list containing cons(1, cons(0, nil))
+let simpleList() : listNat =
+    n1'' : lin 1 <- new close self;
+    n1'  : nat <- new self.zero<n1''>;
+    n1 : nat <- new self.succ<n1'>; // succ(zero)
+    n0' : lin 1 <- new close self;
+    n0 : nat <- new self.zero<n0'>; // zero
+
+    lnil' : linear 1    <- new close self;
+    lnil : listNat      <- new self.nil<lnil'>;
+    l1' : nat * listNat <- new send self<n0, lnil>;
+    l1 : listNat        <- new self.cons<l1'>;    
+    l2' : nat * listNat <- new send self<n1, l1>;
+    self.cons<l2'>
 
 // 1 : S(0)
 let nat1() : nat =

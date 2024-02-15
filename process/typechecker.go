@@ -267,12 +267,22 @@ func preliminaryProcessesChecks(processes []*Process, assumedFreeNames []Name, g
 	return nil
 }
 
-// Ensure that for Γ ⊢ P :: (a : A), Γ ≥ A
+// Ensure that for Γ ⊢ P :: (a : A), Γ ≥ A, where A is the succedentType
 func declationOfIndependence(antecedents []Name, succedentType types.SessionType) error {
 	for _, antecedentName := range antecedents {
-		if !antecedentName.Type.Modality().CanBeDownshiftedTo(succedentType.Modality()) {
-			return fmt.Errorf("declaration of independence error: %s must have a stronger mode than %s", antecedentName.Type.StringWithOuterModality(), succedentType.StringWithOuterModality())
+		err := declationOfIndependenceOne(antecedentName, succedentType)
+		if err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+// Ensure that left ≥ right
+func declationOfIndependenceOne(left Name, rightType types.SessionType) error {
+	if !left.Type.Modality().CanBeDownshiftedTo(rightType.Modality()) {
+		return fmt.Errorf("declaration of independence error: %s must have a stronger mode than %s", left.Type.StringWithOuterModality(), rightType.StringWithOuterModality())
 	}
 
 	return nil
@@ -735,7 +745,7 @@ func (p *CaseForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 			labelsChecked[curBranchForm.label.L] = true
 
 			if !typeFound {
-				return TypeErrorf("case labelled '%s' does not match the branches of type '%s'", curBranchForm.String(), clientSelectLabelType.String())
+				return TypeErrorf("case labelled '%s' does not match the branches of type '%s'", curBranchForm.StringShort(), clientSelectLabelType.String())
 			}
 
 			// Copy gamma so that each branch has its own version
@@ -785,7 +795,7 @@ func (p *BranchForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 // New: continuation_c <- new (body); continuation_e
 func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowName *Name, providerType types.SessionType, labelledTypesEnv types.LabelledTypesEnv, sigma FunctionTypesEnv, globalEnv *GlobalEnvironment) *TypeError {
 	// Cut
-	globalEnv.log(LOGRULEDETAILS, "rule Cut")
+	globalEnv.log(LOGRULEDETAILS, "rule CUT")
 
 	if isProvider(p.continuation_c, providerShadowName) || nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
 		// Names are not fresh
@@ -812,7 +822,6 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			if gammaErr != nil {
 				return TypeErrorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
 			}
-
 			// Get function signature (incl. its type)
 			functionSignature, exists := sigma[callForm.functionName]
 			if !exists {
@@ -821,6 +830,13 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 			functionSignatureType := types.CopyType(functionSignature.Type)
 			functionSignatureType = types.Unfold(functionSignatureType, labelledTypesEnv)
+
+			// Check for declaration of independence: (Γ ⪰ m)
+			// Γ (gammaLeftNameTypesCtx) ⪰ m (type of p.continuation_c)
+			err := declationOfIndependence(gammaLeftNameTypesCtx.getNames(), functionSignatureType)
+			if err != nil {
+				return TypeErrorE(err)
+			}
 
 			// Typecheck the call function
 			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, functionSignatureType, labelledTypesEnv, sigma, globalEnv)
@@ -841,6 +857,13 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 			// Set type
 			p.continuation_c.Type = functionSignatureType
+
+			// Check for declaration of independence: (m ⪰ n)
+			// m (type of p.continuation_c) ⪰ p (providerType)
+			err = declationOfIndependenceOne(p.continuation_c, providerType)
+			if err != nil {
+				return TypeErrorE(err)
+			}
 
 			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
 			if polarityError != nil {
@@ -870,6 +893,18 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			err := checkNameType(p.continuation_c, labelledTypesEnv)
 			if err != nil {
 				return TypeErrorf("invalid type for %s in %s: %s", p.continuation_c.String(), p.StringShort(), err)
+			}
+
+			// Check for declaration of independence: Γ ⪰ m ⪰ n
+			err = declationOfIndependence(gammaLeftNameTypesCtx.getNames(), p.continuation_c.Type)
+			if err != nil {
+				return TypeErrorE(err)
+			}
+
+			// m (type of p.continuation_c) ⪰ p (providerType)
+			err = declationOfIndependenceOne(p.continuation_c, providerType)
+			if err != nil {
+				return TypeErrorE(err)
 			}
 
 			// typecheck the body of the process being spawned
@@ -1453,6 +1488,14 @@ type NamesTypesCtx map[string]NamesType
 type NamesType struct {
 	Name Name
 	Type types.SessionType
+}
+
+func (namesTypesCtx NamesTypesCtx) getNames() (result []Name) {
+	for _, v := range namesTypesCtx {
+		result = append(result, v.Name)
+	}
+
+	return result
 }
 
 func produceNameTypesCtx(names []Name) NamesTypesCtx {

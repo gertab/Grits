@@ -33,7 +33,7 @@ const (
 	FUNCTION_DEF
 	TYPE_DEF
 	ASSUMING_DEF
-	MAIN_DEF
+	EXEC_DEF
 )
 
 // Process that is currently being parsed and yet to become a process.Process
@@ -60,7 +60,7 @@ func ParseFile(fileName string) ([]*process.Process, []process.Name, *process.Gl
 func ParseReader(r io.Reader) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
 	if debug {
 		LexAndPrintTokens(r)
-		return nil, nil, nil, fmt.Errorf("debugging the lexer")
+		return nil, nil, nil, fmt.Errorf("Debugging the lexer")
 	}
 
 	allEnvironment, err := Parse(r)
@@ -78,8 +78,19 @@ func ParseReader(r io.Reader) ([]*process.Process, []process.Name, *process.Glob
 	return expandedProcesses, assumedFreeNames, globalEnv, nil
 }
 
-// Splits all of the processes, function definitions, processes, type definitions and assumed names into separate structures
+// func Check() {
+// 	processes, _ := ParseFile("parser/input.test")
+
+// 	for _, p := range processes {
+// 		fmt.Println(p.Body.String())
+// 		if p.FunctionDefinitions != nil {
+// 			fmt.Println(len(*p.FunctionDefinitions))
+// 		}
+// 	}
+// }
+
 func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *process.GlobalEnvironment, error) {
+
 	var processes []*process.Process
 	var assumedFreeNames []process.Name
 	var functions []process.FunctionDefinition
@@ -131,18 +142,19 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 		}
 	}
 
-	// Process defined using the 'exec' keyword
+	// Define process
 	execCount := 0
 	for _, p := range u.procsAndFuns {
-		if p.kind == MAIN_DEF {
+		if p.kind == EXEC_DEF {
 			execCount += 1
 
 			// fetch type from the function type
+
 			functionName := p.proc.Body.(*process.CallForm).FunctionName()
 
 			function := process.GetFunctionByNameArity(functions, functionName, 0)
 			if function == nil {
-				return nil, nil, nil, fmt.Errorf("invalid calling main on %s()", functionName)
+				return nil, nil, nil, fmt.Errorf("invalid calling exec on %s()", functionName)
 			}
 			new_p := process.NewProcess(p.proc.Body, []process.Name{{Ident: fmt.Sprintf("exec%d", execCount), IsSelf: true}}, function.Type, process.LINEAR, p.position)
 			processes = append(processes, new_p)
@@ -152,5 +164,57 @@ func expandProcesses(u allEnvironment) ([]*process.Process, []process.Name, *pro
 	// Fixes the modalities for each labelled type
 	types.SetModalityTypeDef(typeDefs)
 
+	// for _, t := range typeDefs {
+	// 	fmt.Println(t.Name, ": ", t.Modality.String(), " | ", t.SessionType.String(), " \t|| ", t.SessionType.StringWithModality())
+	// }
+
 	return processes, assumedFreeNames, &process.GlobalEnvironment{FunctionDefinitions: &functions, Types: &typeDefs}, nil
 }
+
+// // Forms used as shorthand notations
+// // When expanded, these are converted to the other ones
+// todo: need to add polarity
+
+// // Send: send to_c<payload_c, continuation_c>; continuation_e
+// type SendMacroForm struct {
+// 	to_c           process.Name
+// 	payload_c      process.Name
+// 	continuation_c process.Name
+// 	// Extra used for shorthand notation
+// 	continuation_e process.Form
+// }
+
+// func NewSendMacroForm(to_c, payload_c, continuation_c process.Name, continuation_e process.Form) *SendMacroForm {
+// 	return &SendMacroForm{
+// 		to_c:           to_c,
+// 		payload_c:      payload_c,
+// 		continuation_c: continuation_c,
+// 		continuation_e: continuation_e}
+// }
+
+// func (p *SendMacroForm) String() string {
+// 	var buf bytes.Buffer
+// 	buf.WriteString("send ")
+// 	buf.WriteString(p.to_c.String())
+// 	buf.WriteString("<")
+// 	buf.WriteString(p.payload_c.String())
+// 	buf.WriteString(",")
+// 	buf.WriteString(p.continuation_c.String())
+// 	buf.WriteString(">; ")
+// 	buf.WriteString(p.continuation_e.String())
+// 	return buf.String()
+// }
+
+// func (p *SendMacroForm) Substitute(old, new process.Name) {
+// }
+
+// // Free names, excluding self references
+// func (p *SendMacroForm) FreeNames() []process.Name {
+// 	var fn []process.Name
+// 	return fn
+// }
+
+// func (f *SendMacroForm) Transition(process *process.Process, re *process.RuntimeEnvironment) {
+// 	// Should never be called
+// 	panic("Unexpanded form found")
+// }

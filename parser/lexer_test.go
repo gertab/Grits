@@ -58,7 +58,7 @@ func TestSimpleToken(t *testing.T) {
 		{"==><<-/*comment*/<", []int{EQUALS, RIGHT_ARROW, LANGLE, LEFT_ARROW, LANGLE}},
 		{"send recv receive/*comment*/case close wait/*comment*/", []int{SEND, RECEIVE, RECEIVE, CASE, CLOSE, WAIT}},
 		{"cast shift accept acc acquire acq detach det//comment", []int{CAST, SHIFT, ACCEPT, ACCEPT, ACQUIRE, ACQUIRE, DETACH, DETACH}},
-		{"release rel drop/*comment*/split push new main", []int{RELEASE, RELEASE, DROP, SPLIT, PUSH, NEW, MAIN}},
+		{"release rel drop/*comment*/split push new exec", []int{RELEASE, RELEASE, DROP, SPLIT, PUSH, NEW, EXEC}},
 		{"/*comment*/snew forward fwd let in end sprc prc self assuming", []int{SNEW, FORWARD, FORWARD, LET, IN, END, SPRC, PRC, SELF, ASSUMING}},
 		{"print", []int{PRINT}},
 		{`+-1 1a{},()/\ \/`, []int{PLUS, MINUS, UNIT, LABEL, LCBRACK, RCBRACK, COMMA, LPAREN, RPAREN, UP_ARROW, DOWN_ARROW}},

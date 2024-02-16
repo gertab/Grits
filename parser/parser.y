@@ -27,14 +27,14 @@ import (
 	polarity 		      types.Polarity
 }
 
-%token LABEL LEFT_ARROW RIGHT_ARROW UP_ARROW DOWN_ARROW  EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING MAIN
+%token LABEL LEFT_ARROW RIGHT_ARROW UP_ARROW DOWN_ARROW  EQUALS DOT SEQUENCE COLON COMMA LPAREN RPAREN LSBRACK RSBRACK LANGLE RANGLE PIPE SEND RECEIVE CASE CLOSE WAIT CAST SHIFT ACCEPT ACQUIRE DETACH RELEASE DROP SPLIT PUSH NEW SNEW TYPE LET IN END SPRC PRC FORWARD SELF PRINT PLUS MINUS TIMES AMPERSAND UNIT LCBRACK RCBRACK LOLLI PERCENTAGE ASSUMING EXEC
 %type <strval> LABEL
 %type <statements> statements 
 %type <common_type> process_def
 %type <common_type> function_def
 %type <common_type> type_def
 %type <common_type> assuming_def
-%type <common_type> main_def
+%type <common_type> exec_def
 %type <form> expression 
 %type <name> name
 %type <name> name_with_type_ann
@@ -79,8 +79,8 @@ statements : process_def             { $$ = []unexpandedProcessOrFunction{$1} }
 		   | type_def statements 	 { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
 		   | assuming_def 			 { $$ = []unexpandedProcessOrFunction{$1} }
 		   | assuming_def statements { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) }
-		   | main_def 			 	 { $$ = []unexpandedProcessOrFunction{$1} }
-		   | main_def statements 	 { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
+		   | exec_def 			 	 { $$ = []unexpandedProcessOrFunction{$1} }
+		   | exec_def statements 	 { $$ = append([]unexpandedProcessOrFunction{$1}, $2...) };
 
 /* A process is defined using the prc keyword */
 process_def : 
@@ -252,9 +252,9 @@ polarity : PLUS { $$ = types.POSITIVE }
 	     | MINUS { $$ = types.NEGATIVE };
 
 /* execute function definitions directly */
-main_def : MAIN LABEL LPAREN RPAREN
+exec_def : EXEC LABEL LPAREN RPAREN
 			{ $$ = unexpandedProcessOrFunction{
-				kind: MAIN_DEF, 
+				kind: EXEC_DEF, 
 				proc: incompleteProcess{Body: process.NewCall($2, []process.Name{})},
 				position: phiVAL.currPosition}};
 

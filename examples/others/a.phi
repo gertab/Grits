@@ -8,4 +8,4 @@ let f() : A = x : A <- new close x;
 
 prc[a] : A = f()
 
-//main f()
+//exec f()

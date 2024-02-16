@@ -1,13 +1,13 @@
 // Mapreduce is discussed in 'Lecture Notes on Adjoint SAX - 15-836' by F. Pfenning
 
 // Natural number types
-type nat = linear +{zero : 1, succ : nat}
-type treeNat = linear +{node : treeNat * treeNat, leaf : nat}
+type nat = lin +{zero : 1, succ : nat}
+type treeNat = lin +{node : treeNat * treeNat, leaf : nat}
 
 // Takes a tree of natural numbers, doubles them and adds the results
 type A = treeNat
 type B = nat
-let mapreduce(fs : linear /\ replicable ((B * B) -* B), hs : linear /\ replicable (A -* B), t : treeNat) : B =
+let mapreduce(fs : lin /\ rep ((B * B) -* B), hs : lin /\ rep (A -* B), t : treeNat) : B =
   case t (
         node<t'> => <l, r> <- recv t';
                     <fs', fs''> <- split fs;
@@ -41,14 +41,14 @@ let treeNatEx() : treeNat =
   self.node<nodes>
 
 
-let reduceByAdding() : linear /\ replicable ((nat * nat) -* nat) = 
+let reduceByAdding() : lin /\ rep ((nat * nat) -* nat) = 
   s <- shift self;
   <tree, result> <- recv s;
   <left, right> <- recv tree;
   currRes <- new addNats(left, right);
   fwd result currRes
 
-let mapByDoubling() : linear /\ replicable (nat -* nat)  = 
+let mapByDoubling() : lin /\ rep (nat -* nat)  = 
   s <- shift self;
   <toDouble, result> <- recv s;
   doubled <- new double(toDouble);
@@ -56,8 +56,8 @@ let mapByDoubling() : linear /\ replicable (nat -* nat)  =
 
 prc[t] : treeNat = treeNatEx()
 //prc[c] : lin 1 = printTreeNat(t)
-prc[fs] : linear /\ replicable ((nat * nat) -* nat) =  reduceByAdding()
-prc[hs] : linear /\ replicable (nat -* nat) =  mapByDoubling()
+prc[fs] : lin /\ rep ((nat * nat) -* nat) =  reduceByAdding()
+prc[hs] : lin /\ rep (nat -* nat) =  mapByDoubling()
 prc[b] : nat = mapreduce(fs, hs, t) 
 prc[c] : lin 1 = printNat(b)
 

@@ -1,11 +1,9 @@
 // Examples from 'A Message-Passing Interpretation of Adjoint Logic'
 
 // Example 1
-
 type A = 1 * 1
 type B = 1
 let eg1(x : A * B) : B * A  = <y, x'> <- recv x; send self<x', y>
-
 
 // Example 2
 type A2 = 1
@@ -18,8 +16,6 @@ let eg2(x : +{left : A2, right : B2}, y : &{left : A2, right : B2}) : A2 * B2  =
       | right<x'> => y' : A2 <- new y.left<self>;
                      send self<y', x'>
     )
-
-
 
 // Example 3
 type A3 = 1
@@ -35,10 +31,10 @@ let eg3(p : C3) : A3 * B3 =
     send self<x, y>
 
 // Example 4
-type A4 = affine 1
-type B4 = affine 1
+type A4 = aff 1
+type B4 = aff 1
 
-let eg4(x : affine A4 * B4) : affine &{left : A4, right : B4} =
+let eg4(x : aff A4 * B4) : aff &{left : A4, right : B4} =
     case self (
         left<p1>  => <y, z> <- recv x; 
                      drop z;
@@ -49,21 +45,21 @@ let eg4(x : affine A4 * B4) : affine &{left : A4, right : B4} =
     )
 
 // Example 5
-// Taking mode k as linear, and m as affine
+// Taking mode k as linear, and m as aff
 
-// type A5 = affine 1
-// type B5 = affine 1
+// type A5 = aff 1
+// type B5 = aff 1
 // 
-// let eg5(f : affine \/ linear (A5 -* B5)) : (affine \/ linear A5) -* (affine \/ linear B5) = 
+// let eg5(f : aff \/ lin (A5 -* B5)) : (aff \/ lin A5) -* (aff \/ lin B5) = 
 //     <x, y> <- recv self;
 //     w <- shift f;
 //     v <- shift x;
-//     z : affine \/ linear B5 <- new cast y<self>; /*problem due to y referring to old self*/
+//     z : aff \/ lin B5 <- new cast y<self>; /*problem due to y referring to old self*/
 //     send w<v, z>
-type A5 = affine 1
-type B5 = affine 1 * 1
+type A5 = aff 1
+type B5 = aff 1 * 1
 
-let eg5(f : affine \/ linear (A5 -* B5)) : (affine \/ linear A5) -* (affine \/ linear B5) = 
+let eg5(f : aff \/ lin (A5 -* B5)) : (aff \/ lin A5) -* (aff \/ lin B5) = 
     <x, y> <- recv self;
     w <- shift f;
     v <- shift x;
@@ -84,24 +80,6 @@ let eg6(y : &{left : A6 -* C6, right : B6 -* C6}) : (+{left : A6, right : B6} -*
         | right<b> => bc : B6 -* C6 <- new y.right<self>;
                       send bc<b, c>
     )
-
-
-
-
-// Example 8 
-
-// Run using
-// go run . -verbosity 2 ./examples/paper_examples.phi
-
-// prc[b] : affine &{left : A4, right : B4} = eg4(x)
-// prc[x] : affine A4 * B4 = send self<g, h>
-// prc[g] : affine A4 = close self
-// prc[h] : affine B4 = close self
-
-//  /* consume a */
-// prc[otherSide] : A4 = b.left<self> 
-
-
 
 
 // Example 9 (Circuits)
@@ -147,3 +125,15 @@ let or(x : bits, y : bits) : bits =
 
 // Example 10
 // Refer to nat_list_map.phi
+
+
+// Run using:
+// go run . -verbosity 2 examples/m_passing_examples.phi
+
+prc[b] : aff &{left : A4, right : B4} = eg4(x)
+prc[x] : aff A4 * B4 = send self<g, h>
+prc[g] : aff A4 = close self
+prc[h] : aff B4 = close self
+
+//  /* consume a */
+prc[otherSide] : A4 = b.left<self> 

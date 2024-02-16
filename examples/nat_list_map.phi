@@ -1,10 +1,10 @@
 // 'Map' adapted from Example 10 of 'A Message-Passing Interpretation of Adjoint Logic' 
 
 // Types for natural numbers and a list of natural numbers
-type nat = linear +{zero : 1, succ : nat}
-type listNat = linear +{cons : nat * listNat, nil : 1}
+type nat = lin +{zero : 1, succ : nat}
+type listNat = lin +{cons : nat * listNat, nil : 1}
 
-type mapType = linear /\ replicable (nat -* nat)
+type mapType = lin /\ rep (nat -* nat)
 
 // Takes a list of natural numbers and performs a mapping function 
 // 'f' (replicable mode) on each element, providing an updated list
@@ -22,7 +22,7 @@ let map(f : mapType, l : listNat) : listNat =
     )
 
 // Replicable process that increments a number
-let mapByIncrementing() : mapType  = 
+let mapByInc() : mapType  = 
     s <- shift self;           
     <toAdd, result> <- recv s; 
     self.succ<toAdd>              // increment by one 'succ'
@@ -36,25 +36,25 @@ let mapByDoubling() : mapType  =
 
 // Initialize each process individually
 //prc[l] : listNat = list123()
-//prc[f] : mapType =  mapByIncrementing()
+//prc[f] : mapType =  mapByInc()
 ////prc[f] : mapType =  mapByDoubling()
 //prc[b] : listNat = map(f, l) 
-//prc[c] : linear 1 = printListNat(b)
+//prc[c] : lin 1 = printListNat(b)
 
-let init() : linear 1 =
+let init() : lin 1 =
     l : listNat <- new list123();
-    f : mapType <- new mapByIncrementing();
+    f : mapType <- new mapByInc();
     b : listNat <- new map(f, l);
     printListNat(b)
 
 // Initialize process running init (these two are equivalent)
-//prc[main] : linear 1 = init()
+//prc[main] : lin 1 = init()
 exec init()
 
 // Init without print function
 let init2() : listNat =
     l : listNat <- new list123();
-    f : mapType <- new mapByIncrementing();
+    f : mapType <- new mapByInc();
     map(f, l)
 
 ///////// Natural Number Operations /////////
@@ -89,7 +89,7 @@ let list123() : listNat =
     n2 : nat <- new nat2(); // succ(succ(zero))
     n3 : nat <- new nat3(); // succ(succ(succ(zero)))
 
-    lnil' : linear 1    <- new close self;
+    lnil' : lin 1    <- new close self;
     lnil : listNat      <- new self.nil<lnil'>;
     l1' : nat * listNat <- new send self<n1, lnil>;
     l1 : listNat        <- new self.cons<l1'>;    
@@ -107,7 +107,7 @@ let simpleList() : listNat =
     n0' : lin 1 <- new close self;
     n0 : nat <- new self.zero<n0'>; // zero
 
-    lnil' : linear 1    <- new close self;
+    lnil' : lin 1    <- new close self;
     lnil : listNat      <- new self.nil<lnil'>;
     l1' : nat * listNat <- new send self<n0, lnil>;
     l1 : listNat        <- new self.cons<l1'>;    

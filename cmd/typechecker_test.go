@@ -713,15 +713,15 @@ func TestExecCorrect(t *testing.T) {
 						  wait x; 
 						  close self
 		
-		exec f()`,
+		main f()`,
 		`type A = 1
 
 		let f[w : A] = x : A <- new close x; 
 						  wait x; 
 						  close w
 		
-		exec f()
-		exec f()`,
+		main f()
+		main f()`,
 	}
 
 	runThroughTypechecker(t, cases, true)

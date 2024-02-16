@@ -86,7 +86,7 @@ const RCBRACK = 57394
 const LOLLI = 57395
 const PERCENTAGE = 57396
 const ASSUMING = 57397
-const EXEC = 57398
+const MAIN = 57398
 
 var phiToknames = [...]string{
 	"$end",
@@ -144,7 +144,7 @@ var phiToknames = [...]string{
 	"LOLLI",
 	"PERCENTAGE",
 	"ASSUMING",
-	"EXEC",
+	"MAIN",
 }
 
 var phiStatenames = [...]string{}
@@ -1145,7 +1145,7 @@ phidefault:
 //line parser/parser.y:256
 		{
 			phiVAL.common_type = unexpandedProcessOrFunction{
-				kind:     EXEC_DEF,
+				kind:     MAIN_DEF,
 				proc:     incompleteProcess{Body: process.NewCall(phiDollar[2].strval, []process.Name{})},
 				position: phiVAL.currPosition}
 		}

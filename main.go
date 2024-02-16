@@ -302,7 +302,7 @@ const program55 = `
 // type secondNegType = &{'second : (1 -o 1)}
 
 // // Double lolli
-// exec f4()
+// main f4()
 
 // let f1[w : (1 -* 1) -* 1, z : 1] = <x, y> <- recv w; print ok; send x<z, y>
 // let f2[w : 1 -* 1] = <x, y> <- recv w; wait x; print ok2; close y
@@ -579,7 +579,7 @@ prc[b] : affine \/ linear A = cast self<x>
 // 			wait x; 
 // 			close self
 
-// exec f()
+// main f()
 
 
 

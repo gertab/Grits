@@ -79,7 +79,7 @@ The full grammar accepted by our compiler is as follows:
               | let <label> '[' <param> ']' = <term>            // function declaration with explicit provider name
               | assuming <param>                                // add name type assumptions
               | prc '[' <name> ']' : <type> = <term>            // create processes
-              | exec <label> ( )                                // execute function
+              | main <label> ( )                                // execute function
 
 <param> ::= <name> : <type> [ , <param> ]                       // typed variable names
 

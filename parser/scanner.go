@@ -199,8 +199,8 @@ func (s *scanner) scanLabel(ch rune) (token tok, value string, startPos, endPos 
 		return SELF, buf.String(), startPos, endPos
 	case "assuming":
 		return ASSUMING, buf.String(), startPos, endPos
-	case "exec":
-		return EXEC, buf.String(), startPos, endPos
+	case "main":
+		return MAIN, buf.String(), startPos, endPos
 	case "print":
 		// Debug keyword
 		return PRINT, buf.String(), startPos, endPos

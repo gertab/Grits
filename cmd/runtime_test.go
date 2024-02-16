@@ -399,7 +399,7 @@ func TestExec(t *testing.T) {
 				  wait x; 
 				  close self
 	
-	exec f()`
+	main f()`
 	expected := []traceOption{
 		{steps{{"exec1", process.CALL}, {"exec1", process.CUT}, {"exec1", process.CLS}}},
 	}

@@ -1,15 +1,22 @@
 // Examples from 'A Message-Passing Interpretation of Adjoint Logic'
 
+// Run using:
+// go run . --verbosity 2 examples/m_passing_examples.phi
+
 // Example 1
-type A = 1 * 1
-type B = 1
-let eg1(x : A * B) : B * A  = <y, x'> <- recv x; send self<x', y>
+type A = mul 1 * 1
+type B = mul 1
+let eg1(x : A * B) : B * A  = 
+    <y, x'> <- recv x; 
+    send self<x', y>
 
 // Example 2
-type A2 = 1
-type B2 = 1
+type A2 = lin 1
+type B2 = lin 1
+type lr = +{left : A2, right : B2}
+type lr' = &{left : A2, right : B2}
 
-let eg2(x : +{left : A2, right : B2}, y : &{left : A2, right : B2}) : A2 * B2  = 
+let eg2(x : lr, y : lr') : A2 * B2  = 
     case x (
         left<x'>  => y' : B2 <- new y.right<self>;
                      send self<x', y'>
@@ -44,8 +51,17 @@ let eg4(x : aff A4 * B4) : aff &{left : A4, right : B4} =
                      fwd p2 z
     )
 
+// Run using:
+// go run . -verbosity 2 examples/m_passing_examples.phi
+
+// prc[b] : aff &{left : A4, right : B4} = eg4(x)
+// prc[x] : aff A4 * B4 = send self<g, h>
+// prc[g] : aff A4 = close self
+// prc[h] : aff B4 = close self
+// prc[otherSide] : A4 = b.left<self> //  /* consume a */
+
 // Example 5
-// Taking mode k as linear, and m as aff
+// Taking mode k as linear, and m as affine
 
 // type A5 = aff 1
 // type B5 = aff 1
@@ -63,7 +79,7 @@ let eg5(f : aff \/ lin (A5 -* B5)) : (aff \/ lin A5) -* (aff \/ lin B5) =
     <x, y> <- recv self;
     w <- shift f;
     v <- shift x;
-    z : B5 <- new send w<v, z>; /*fixed problem by changing order*/
+    z : B5 <- new send w<v, self>; /*fixed problem by changing order*/
     cast y<z>
 
 // Example 6 (reverse direction)
@@ -72,7 +88,9 @@ type A6 = 1
 type B6 = 1
 type C6 = 1
 
-let eg6(y : &{left : A6 -* C6, right : B6 -* C6}) : (+{left : A6, right : B6} -* C6) = 
+type yType = &{left : A6 -* C6, right : B6 -* C6}
+type resType = +{left : A6, right : B6} -* C6
+let eg6(y : yType) : resType = 
     <ab, c> <- recv self;
     case ab (
           left<a>  => ac : A6 -* C6 <- new y.left<self>;
@@ -125,15 +143,3 @@ let or(x : bits, y : bits) : bits =
 
 // Example 10
 // Refer to nat_list_map.phi
-
-
-// Run using:
-// go run . -verbosity 2 examples/m_passing_examples.phi
-
-prc[b] : aff &{left : A4, right : B4} = eg4(x)
-prc[x] : aff A4 * B4 = send self<g, h>
-prc[g] : aff A4 = close self
-prc[h] : aff B4 = close self
-
-//  /* consume a */
-prc[otherSide] : A4 = b.left<self> 

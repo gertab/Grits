@@ -1,4 +1,4 @@
-// Mapreduce is discussed in 'Lecture Notes on Adjoint SAX - 15-836' by F. Pfenning
+// MapReduce is discussed in 'Lecture Notes on Adjoint SAX - 15-836' by F. Pfenning
 
 // Natural number types
 type nat = lin +{zero : 1, succ : nat}
@@ -7,7 +7,9 @@ type treeNat = lin +{node : treeNat * treeNat, leaf : nat}
 // Takes a tree of natural numbers, doubles them and adds the results
 type A = treeNat
 type B = nat
-let mapreduce(fs : lin /\ rep ((B * B) -* B), hs : lin /\ rep (A -* B), t : treeNat) : B =
+type reduceType = lin /\ rep ((B * B) -* B)
+type mapType = lin /\ rep (A -* B)
+let mapreduce(fs : reduceType, hs : mapType, t : treeNat) : B =
   case t (
         node<t'> => <l, r> <- recv t';
                     <fs', fs''> <- split fs;
@@ -54,6 +56,7 @@ let mapByDoubling() : lin /\ rep (nat -* nat)  =
   doubled <- new double(toDouble);
   fwd result doubled
 
+// Double all numbers in a tree and adds them
 prc[t] : treeNat = treeNatEx()
 //prc[c] : lin 1 = printTreeNat(t)
 prc[fs] : lin /\ rep ((nat * nat) -* nat) =  reduceByAdding()
@@ -61,16 +64,13 @@ prc[hs] : lin /\ rep (nat -* nat) =  mapByDoubling()
 prc[b] : nat = mapreduce(fs, hs, t) 
 prc[c] : lin 1 = printNat(b)
 
-
 ///////// Natural Number Operations /////////
 
 // Adds two natural numbers
 let addNats(x : nat, y : nat) : nat =
     case x (
-          zero<x'> => // print zeeeeee;
-                      wait x'; fwd self y
-        | succ<x'> => // print sccccc;
-                      y'' : nat <- new y''.succ<y>;
+          zero<x'> => wait x'; fwd self y
+        | succ<x'> => y'' : nat <- new y''.succ<y>;
                       addNats(x', y'')
     )
 

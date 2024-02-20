@@ -4,14 +4,14 @@
 type bin = +{b0 : bin, b1 : bin, e : 1}
 type list = +{cons : bin * list, nil : 1}
 
-let append(L : list, K : list) : list =
-  case L ( cons<c> => 
-                <x, L2> <- recv c;
-                R <- new append(L2, K);
-                zz : bin * list <- new (send self<x, R>);
-                self.cons<zz>
+let append(l1 : list, l2 : list) : list =
+  case l1 ( cons<c> => 
+                <x, l1'> <- recv c;
+                remainingL <- new append(l1', l2);
+                reorderedL : bin * list <- new (send self<x, remainingL>);
+                self.cons<reorderedL>
          | nil<c> => wait c; 
-                     fwd self K)
+                     fwd self l2)
 
 let append2(L : list, K : list) : list =
   case L ( cons<p> => 
@@ -24,15 +24,16 @@ let append2(L : list, K : list) : list =
                 fwd self K)
 
 let reverse(l : list) : list =
-  a : list <- new nilList();
-  rev(l, a)
+  c : 1 <- new close self;
+  nilList : list <- new self.nil<c>;
+  reverse_inner(l, nilList)
 
-let rev(l : list, accum : list) : list =
+let reverse_inner(l : list, accum : list) : list =
   case l ( cons<p> =>      
                 <x, l'> <- recv p;
-                t : bin * list <- new send t<x, accum>;
-                accum2 : list <- new accum2.cons<t>;
-                rev(l', accum2)
+                t : bin * list <- new send self<x, accum>;
+                accum2 : list <- new self.cons<t>;
+                reverse_inner(l', accum2)
          | nil<u> => 
                 wait u;
                 fwd self accum

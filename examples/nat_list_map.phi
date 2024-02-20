@@ -35,27 +35,26 @@ let mapByDoubling() : mapType  =
     fwd result doubled
 
 // Initialize each process individually
-//prc[l] : listNat = list123()
+//prc[l] : listNat = simpList()
 //prc[f] : mapType =  mapByInc()
 ////prc[f] : mapType =  mapByDoubling()
 //prc[b] : listNat = map(f, l) 
 //prc[c] : lin 1 = printListNat(b)
 
-let init() : lin 1 =
-    l : listNat <- new list123();
+let main() : listNat =
+    l : listNat <- new simpList();
+    f : mapType <- new mapByInc();
+    map(f, l)
+
+// Init with print function
+let main2() : lin 1 =
+    l : listNat <- new simpList();
     f : mapType <- new mapByInc();
     b : listNat <- new map(f, l);
     printListNat(b)
 
 // Initialize process running init (these two are equivalent)
-//prc[main] : lin 1 = init()
-exec init()
-
-// Init without print function
-let init2() : listNat =
-    l : listNat <- new list123();
-    f : mapType <- new mapByInc();
-    map(f, l)
+exec main2()
 
 ///////// Natural Number Operations /////////
 
@@ -79,12 +78,31 @@ let double(x : nat) : nat =
     )
 
 
-///////// Natural numbers constants /////////
+///////// Natural numbers lists and constants /////////
+
+// Provide a list containing cons(1, cons(0, nil))
+let simpList() : listNat =
+    n1'' : lin 1 <- new close self;
+    n1'  : nat <- new self.zero<n1''>;
+    n1 : nat <- new self.succ<n1'>; // succ(zero)
+    n0' : lin 1 <- new close self;
+    n0 : nat <- new self.zero<n0'>; // zero
+
+
+    lnil' : lin 1       <- new close self;
+    lnil : listNat      <- new self.nil<lnil'>;
+    l0' : nat * listNat <- new send self<n0, lnil>;
+    l0 : listNat        <- new self.cons<l0'>;    
+    l1' : nat * listNat <- new send self<n1, l0>;
+    self.cons<l1'>
+
+// prc[a] : listNat = simpList()
+// prc[b] : lin 1 = printListNat(a)
 
 // Create a list containing the numbers 3, 2 and 1: 
 //   cons(3, cons(2, cons(1, nil))), 
 //   where 1, 2 and 3 are represented as a nat structure
-let list123() : listNat =
+let largerList() : listNat =
     n1 : nat <- new nat1(); // succ(zero)
     n2 : nat <- new nat2(); // succ(succ(zero))
     n3 : nat <- new nat3(); // succ(succ(succ(zero)))
@@ -98,21 +116,6 @@ let list123() : listNat =
     l3' : nat * listNat <- new send self<n3, l2>;
     l3 : listNat        <- new self.cons<l3'>;    
     fwd self l3
-
-// Provide a list containing cons(1, cons(0, nil))
-let simpleList() : listNat =
-    n1'' : lin 1 <- new close self;
-    n1'  : nat <- new self.zero<n1''>;
-    n1 : nat <- new self.succ<n1'>; // succ(zero)
-    n0' : lin 1 <- new close self;
-    n0 : nat <- new self.zero<n0'>; // zero
-
-    lnil' : lin 1    <- new close self;
-    lnil : listNat      <- new self.nil<lnil'>;
-    l1' : nat * listNat <- new send self<n0, lnil>;
-    l1 : listNat        <- new self.cons<l1'>;    
-    l2' : nat * listNat <- new send self<n1, l1>;
-    self.cons<l2'>
 
 // 1 : S(0)
 let nat1() : nat =
@@ -161,6 +164,11 @@ let nat5() : nat =
 
 ///////// Printing Helpers /////////
 
+let printListNat(l : listNat) : lin 1 = 
+          y <- new consumeListNat(l); 
+          wait y;
+          close self
+
 let consumeListNat(l : listNat) : lin 1 = 
         case l ( cons<c> => print _cons_;
                             <element, remainingList> <- recv c;
@@ -172,11 +180,6 @@ let consumeListNat(l : listNat) : lin 1 =
                | nil<c> =>  print _nil_;
                             wait c; close self
         )
-
-let printListNat(l : listNat) : lin 1 = 
-          y <- new consumeListNat(l); 
-          wait y;
-          close self
 
 let consumeNat(n : nat) : lin 1 = 
         case n ( zero<c> => print zero; wait c; close self

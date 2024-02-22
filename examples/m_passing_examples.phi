@@ -72,15 +72,27 @@ let eg4(x : aff A4 * B4) : aff &{left : A4, right : B4} =
 //     v <- shift x;
 //     z : aff \/ lin B5 <- new cast y<self>; /*problem due to y referring to old self*/
 //     send w<v, z>
-type A5 = aff 1
-type B5 = aff 1 * 1
+type A5 = mul 1
+type B5 = mul 1 * 1
 
-let eg5(f : aff \/ lin (A5 -* B5)) : (aff \/ lin A5) -* (aff \/ lin B5) = 
+let eg5(f : mul \/ lin (A5 -* B5)) : (mul \/ lin A5) -* (mul \/ lin B5) = 
     <x, y> <- recv self;
     w <- shift f;
     v <- shift x;
-    z : B5 <- new send w<v, self>; /*fixed problem by changing order*/
+    z : B5 <- new send w<v, self>; 
     cast y<z>
+
+// Example 5 (Distribution of up shifts over implications)
+
+type A' = lin 1
+type B' = lin 1 * 1
+
+let eg5up(f : lin /\ aff (A' -* B')) : (lin /\ aff A') -* (lin /\ aff B') = 
+    <x, y> <- recv self;
+    y' <- shift self;
+    x' : A' <- new cast x<x'>;
+    f' : A' -* B' <- new cast f<f'>;
+    send f'<x',self>
 
 // Example 6 (reverse direction)
 

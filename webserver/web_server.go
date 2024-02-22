@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"grits/parser"
+	"grits/process"
 	"log"
 	"net/http"
-	"phi/parser"
-	"phi/process"
 	"time"
 
 	"github.com/gorilla/websocket"

@@ -3,20 +3,20 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"grits/benchmarks"
+	"grits/parser"
+	"grits/process"
+	"grits/webserver"
 	"log"
-	"phi/benchmarks"
-	"phi/parser"
-	"phi/process"
-	"phi/webserver"
 	"runtime"
 	"time"
 )
 
-const PHI = "phi"
+const GRITS = "grits"
 const executionVersion = process.NORMAL_ASYNC
 
 /*
-Usage of ./phi:
+Usage of ./grits:
 
 	-benchmark
 	      run benchmarks for current program
@@ -101,7 +101,7 @@ func Cli() {
 	}
 
 	if *logLevel > 1 {
-		fmt.Printf("%v -- typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v\n", PHI, typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
+		fmt.Printf("%v -- typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v\n", GRITS, typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
 	}
 
 	if *startWebserver {

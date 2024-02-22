@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-// type phiSymType struct {
+// type gritsSymType struct {
 // 	strval string
 // }
 
 func getTokens(l *lexer) []int {
 	tokens := make([]int, 0)
-	val := phiSymType{}
+	val := gritsSymType{}
 
 	for {
 		tok := l.Lex(&val)

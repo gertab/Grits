@@ -2,11 +2,11 @@ package parser
 
 import (
 	"fmt"
+	"grits/position"
+	"grits/process"
+	"grits/types"
 	"io"
 	"os"
-	"phi/position"
-	"phi/process"
-	"phi/types"
 	"strings"
 )
 

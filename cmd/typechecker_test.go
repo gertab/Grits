@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"phi/parser"
-	"phi/process"
+	"grits/parser"
+	"grits/process"
 	"testing"
 )
 

@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"phi/process"
-	"phi/types"
+	"grits/process"
+	"grits/types"
 	"testing"
 )
 

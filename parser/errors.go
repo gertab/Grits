@@ -3,7 +3,7 @@ package parser
 import (
 	"errors"
 	"fmt"
-	"phi/process"
+	"grits/process"
 )
 
 // ParseError is the type of error when parsing a process.

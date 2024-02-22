@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"bytes"
-	"phi/parser"
-	"phi/process"
+	"grits/parser"
+	"grits/process"
 	"sort"
 	"sync"
 	"testing"

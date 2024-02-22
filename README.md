@@ -1,6 +1,4 @@
-# Phi/Harruba
-
-[*Phi is currently a placeholder for the language name*]
+# Grits
 
 Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 
@@ -17,7 +15,7 @@ This produces the executable `phi` file, which can be used to typecheck and run 
 You can find some examples in the [`examples`](/examples/) directory.
 
 ```bash
-./phi examples/nat_double.phi
+./grits examples/nat_double.phi
 ```
 
 ### Tool Flags
@@ -34,8 +32,8 @@ Use the `--benchmark` flag to evaluate performance.
 Optional flags include `--maxcores <number of cores>` and `--repeat <number of times>` for fine-tuning tests.
 
 ```bash
-./phi --benchmark examples/nat_double.phi
-./phi --benchmark --maxcores 1 --repeat 5 examples/nat_double.phi
+./grits --benchmark examples/nat_double.phi
+./grits --benchmark --maxcores 1 --repeat 5 examples/nat_double.phi
 ```
 
 To run all pre-configured benchmarks: `./phi --benchmarks`.

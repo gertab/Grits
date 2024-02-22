@@ -1,4 +1,4 @@
-module phi
+module grits
 
 go 1.20
 

@@ -16,7 +16,7 @@ package process
 
 import (
 	"fmt"
-	"phi/types"
+	"grits/types"
 	"sync/atomic"
 	"time"
 )

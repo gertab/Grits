@@ -12,17 +12,21 @@ type mapType = lin /\ rep (A -* B)
 let mapreduce(fs : reduceType, hs : mapType, t : treeNat) : B =
   case t (
         node<t'> => <l, r> <- recv t';
-                    <fs', fs''> <- split fs;
+                    <fs', fs''> <- split fs;       // Duplicate fs
                     <fs'', fs'''> <- split fs'';
-                    <hs', hs''> <- split hs;
+                    <hs', hs''> <- split hs;       // Duplicate hs
+
+                    // Traverse the child nodes
                     y1 <- new mapreduce(fs', hs', l);
                     y2 <- new mapreduce(fs'', hs'', r);
 
-                    p : nat * nat <- new send p<y1, y2>;
-                    fl : ((nat * nat) -* nat) <- new cast fs'''<fl>;
+                    // Perform the reduction part
+                    p : nat * nat <- new send self<y1, y2>;
+                    fl : ((nat * nat) -* nat) <- new cast fs'''<self>;
                     send fl<p, self>
-      | leaf<t'> =>
-                    hl : lin (nat -* nat) <- new cast hs<hl>;
+
+      | leaf<t'> => // Perform the mapping part
+                    hl : lin (nat -* nat) <- new cast hs<self>;
                     drop fs;
                     send hl<t', self>
   )

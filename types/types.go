@@ -2,7 +2,7 @@ package types
 
 import (
 	"bytes"
-	"phi/position"
+	"grits/position"
 	"reflect"
 
 	"golang.org/x/exp/slices"

@@ -2,8 +2,8 @@ package process
 
 import (
 	"bytes"
-	"phi/position"
-	"phi/types"
+	"grits/position"
+	"grits/types"
 )
 
 // A 'Process' contains the body of the process and the channel it is providing on.

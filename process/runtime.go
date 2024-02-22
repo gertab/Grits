@@ -164,7 +164,7 @@ func InitializeProcesses(processes []*Process, globalEnv *GlobalEnvironment, sub
 		log.Fatal(err)
 	}
 
-	re.logf(LOGPROCESSING, "Finished in %v\n", re.TimeTaken())
+	re.logf(LOGPROCESSING, "Execution finished in %v\n", re.TimeTaken())
 	re.logf(LOGPROCESSING, "End process count: %d (%d)\n", re.ProcessCount(), re.DeadProcessCount())
 
 	return re

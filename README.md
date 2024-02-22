@@ -36,7 +36,7 @@ Optional flags include `--maxcores <number of cores>` and `--repeat <number of t
 ./grits --benchmark --maxcores 1 --repeat 5 examples/nat_double.grits
 ```
 
-To run all pre-configured benchmarks: `./phi --benchmarks`.
+To run all pre-configured benchmarks: `./grits --benchmarks`.
 For detailed information on performance evaluation, refer to [benchmarks/readme](benchmarks/README.md).
 
 ## Sample program

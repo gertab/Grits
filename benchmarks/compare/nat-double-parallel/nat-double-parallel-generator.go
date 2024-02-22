@@ -12,7 +12,7 @@ import (
 
 const (
 	fileName  = "nat-double-parallel"
-	extension = ".phi"
+	extension = ".grits"
 	upto      = 50
 	every     = 2
 )

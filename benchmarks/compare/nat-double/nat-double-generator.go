@@ -12,7 +12,7 @@ import (
 
 const (
 	fileName  = "nat-double"
-	extension = ".phi"
+	extension = ".grits"
 	count     = 16
 )
 

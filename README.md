@@ -11,11 +11,11 @@ Then, build the project as follows:
 go build .
 ```
 
-This produces the executable `phi` file, which can be used to typecheck and run programs `./phi path/to/file.phi`.
+This produces the executable `grits` file, which can be used to typecheck and run programs `./grits path/to/file.grits`.
 You can find some examples in the [`examples`](/examples/) directory.
 
 ```bash
-./grits examples/nat_double.phi
+./grits examples/nat_double.grits
 ```
 
 ### Tool Flags
@@ -32,8 +32,8 @@ Use the `--benchmark` flag to evaluate performance.
 Optional flags include `--maxcores <number of cores>` and `--repeat <number of times>` for fine-tuning tests.
 
 ```bash
-./grits --benchmark examples/nat_double.phi
-./grits --benchmark --maxcores 1 --repeat 5 examples/nat_double.phi
+./grits --benchmark examples/nat_double.grits
+./grits --benchmark --maxcores 1 --repeat 5 examples/nat_double.grits
 ```
 
 To run all pre-configured benchmarks: `./phi --benchmarks`.

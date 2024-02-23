@@ -70,8 +70,8 @@ let eg4(x : aff A4 * B4) : aff &{left : A4, right : B4} =
 // prc[otherSide] : A4 = b.left<self> //  /* consume a */
 
 // Example 5
-// Taking mode k as linear, and m as affine
 // ↓^m_k (A5_m -* B5_m) ⊢ ↓^m_k (A5_m) -* ↓^m_k (B5_m)
+// Taking mode k as linear, and m as multicast
 
 type A5 = mul 1
 type B5 = mul 1 * 1
@@ -99,7 +99,7 @@ let upDist(f : before) : after =
     f' : A -* B <- new cast f<f'>;
     send f'<x',self>
 
-// Example 6 (reverse direction)
+// Example 6
 // +{left: A6, right: B6} -* C6 ⊢ &{left: A6 -* C6, right: B6 -* C6}
 
 type A6 = 1

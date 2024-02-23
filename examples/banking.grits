@@ -1,16 +1,19 @@
+// Banking example
 
-
-type bankType = aff &{ login : +{ authenticated : lin /\ aff transaction, 
-                                  not_authenticated : bankType },
+type bankType = aff &{ login : authType,
                        gen_query : bankType}
+
+type authType = +{ auth : lin /\ aff transaction, 
+                   not_auth : bankType }
+
 type transaction = lin +{start : +{finish : 1}}
 
 let bank() : bankType =
       case self (
           login<s>     => auth <- new authService();
-                          self.authenticated<auth>
+                          self.auth<auth>
                           //b <- new bank();
-                          //self.not_authenticated<b>
+                          //self.not_auth<b>
         | gen_query<s> => bank()
     )
 
@@ -26,15 +29,12 @@ let authService() : lin /\ aff transaction =
 //prc[user1] : lin 1 = drop bankService; 
 //                     close self
 
-type authType = +{ authenticated : lin /\ aff transaction, 
-                   not_authenticated : bankType }
-
 prc[bankService] : bankType = bank()
 prc[user2] : lin 1 = 
     print _attempt_login_;
     b : authType <- new bankService.login<self>; 
     case b (
-         authenticated<b'> => 
+         auth<b'> => 
              t :  transaction <- new cast b'<self>;
              // not possible to drop t (since it is now linear)
              case t (
@@ -44,5 +44,5 @@ prc[user2] : lin 1 =
                               )
              )
 
-       | not_authenticated<b'> => drop b'; close self
+       | not_auth<b'> => drop b'; close self
     )

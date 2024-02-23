@@ -1,16 +1,20 @@
 // Examples from 'A Message-Passing Interpretation of Adjoint Logic'
 
 // Run using:
-// go run . --verbosity 2 examples/m_passing_examples.phi
+// go run . --verbosity 2 examples/m_passing_examples.grits
 
 // Example 1
-type A = mul 1 * 1
-type B = mul 1
-let eg1(x : A * B) : B * A  = 
+// A1 * B1 ⊢ B1 * A1 (showing types only)
+
+type A1 = mul 1 * 1
+type B1 = mul 1
+let eg1(x : A1 * B1) : B1 * A1  = 
     <y, x'> <- recv x; 
     send self<x', y>
 
 // Example 2
+// +{left : A2, right : B2}, &{left : A2, right : B2} ⊢ A2 * B2
+
 type A2 = lin 1
 type B2 = lin 1
 type lr = +{left : A2, right : B2}
@@ -25,8 +29,10 @@ let eg2(x : lr, y : lr') : A2 * B2  =
     )
 
 // Example 3
-type A3 = 1
-type B3 = 1
+// &{left : A3, right : B3} ⊢ A3 * B3  (modes must admit contraction)
+
+type A3 = rep 1
+type B3 = rep 1
 
 type C3 = &{left : A3, right : B3}
 
@@ -38,6 +44,8 @@ let eg3(p : C3) : A3 * B3 =
     send self<x, y>
 
 // Example 4
+// A4 * B4 ⊢ &{left : A4, right : B4} (modes must admit weakening)
+
 type A4 = aff 1
 type B4 = aff 1
 
@@ -52,8 +60,9 @@ let eg4(x : aff A4 * B4) : aff &{left : A4, right : B4} =
     )
 
 // Run using:
-// go run . -verbosity 2 examples/m_passing_examples.phi
+// go run . -verbosity 2 examples/m_passing_examples.grits
 
+// Uncomment the following to spawn as processes:
 // prc[b] : aff &{left : A4, right : B4} = eg4(x)
 // prc[x] : aff A4 * B4 = send self<g, h>
 // prc[g] : aff A4 = close self
@@ -62,16 +71,8 @@ let eg4(x : aff A4 * B4) : aff &{left : A4, right : B4} =
 
 // Example 5
 // Taking mode k as linear, and m as affine
+// ↓^m_k (A5_m -* B5_m) ⊢ ↓^m_k (A5_m) -* ↓^m_k (B5_m)
 
-// type A5 = aff 1
-// type B5 = aff 1
-// 
-// let eg5(f : aff \/ lin (A5 -* B5)) : (aff \/ lin A5) -* (aff \/ lin B5) = 
-//     <x, y> <- recv self;
-//     w <- shift f;
-//     v <- shift x;
-//     z : aff \/ lin B5 <- new cast y<self>; /*problem due to y referring to old self*/
-//     send w<v, z>
 type A5 = mul 1
 type B5 = mul 1 * 1
 
@@ -83,59 +84,69 @@ let eg5(f : mul \/ lin (A5 -* B5)) : (mul \/ lin A5) -* (mul \/ lin B5) =
     cast y<z>
 
 // Example 5 (Distribution of up shifts over implications)
+// ↑^k_m (A_m -* B_m) ⊢ ↑^k_m (A_m) -* ↑^k_m (B_m)
 
-type A' = lin 1
-type B' = lin 1 * 1
+type A = lin 1
+type B = lin 1 * 1
 
-let eg5up(f : lin /\ aff (A' -* B')) : (lin /\ aff A') -* (lin /\ aff B') = 
+type before = lin /\ aff (A -* B)
+type after = (lin /\ aff A) -* (lin /\ aff B)
+
+let upDist(f : before) : after = 
     <x, y> <- recv self;
     y' <- shift self;
-    x' : A' <- new cast x<x'>;
-    f' : A' -* B' <- new cast f<f'>;
+    x' : A <- new cast x<x'>;
+    f' : A -* B <- new cast f<f'>;
     send f'<x',self>
 
 // Example 6 (reverse direction)
+// +{left: A6, right: B6} -* C6 ⊢ &{left: A6 -* C6, right: B6 -* C6}
 
 type A6 = 1
 type B6 = 1
 type C6 = 1
 
-type yType = &{left : A6 -* C6, right : B6 -* C6}
-type resType = +{left : A6, right : B6} -* C6
-let eg6(y : yType) : resType = 
+type xType = +{left : A6, right : B6} -* C6
+type resType = &{left : A6 -* C6, right : B6 -* C6}
+let eg6(x : xType) : resType = 
+    case self (
+          left<ac>  => <a, c> <- recv self;
+                       ab : +{left : A6, right : B6} <- new self.left<a>;
+                       send x<ab, self>
+        | right<bc> => <b, c> <- recv self;
+                       ab : +{left : A6, right : B6} <- new self.right<b>;
+                       send x<ab, self>
+    )
+
+// Example 6 (reverse direction)
+// &{left: A6' -* C6', right: B6' -* C6'} ⊢ +{left: A6', right: B6'} -* C6'
+
+type A6' = 1
+type B6' = 1
+type C6' = 1
+
+type yType' = &{left : A6' -* C6', right : B6' -* C6'}
+type resType' = +{left : A6', right : B6'} -* C6'
+let eg6reverse(y : yType') : resType' = 
     <ab, c> <- recv self;
     case ab (
-          left<a>  => ac : A6 -* C6 <- new y.left<self>;
+          left<a>  => ac : A6' -* C6' <- new y.left<self>;
                       send ac<a, c>
-        | right<b> => bc : B6 -* C6 <- new y.right<self>;
+        | right<b> => bc : B6' -* C6' <- new y.right<self>;
                       send bc<b, c>
     )
 
+// Example 7 and 8 revisit previous examples
 
 // Example 9 (Circuits)
-// type bits = +{b0 : bits, b1 : bits}
-// let nor(x : bits, y : bits) : bits = 
-//     case x (
-//           b0<x'> => case y (
-//                           b0<y'> => z' : bits <- new (self.b1<z'>); // problem with multiple selfs (inc z')
-//                                     nor(z', x', y')
-//                         | b1<y'> => z' : bits <- new (self.b0<z'>); // same
-//                                     nor(z', x', y')
-//                     ) 
-//         | b1<x'> => case y (
-//                           b0<y'> => z' : bits <- new (self.b0<z'>); // same
-//                                     nor(z', x', y')
-//                         | b1<y'> => z' : bits <- new (self.b0<z'>); // same
-//                                     nor(z', x', y')
-//                     ) 
-//     )
-// Example 9 (Circuits - slightly modified)
+// bits, bits ⊢ bits
+
 type bits = +{b0 : bits, b1 : bits}
 let nor(x : bits, y : bits) : bits = 
     case x (
           b0<x'> => case y (
                           b0<y'> => z' <- new nor(x', y');
-                                    self.b1<z'> // problem with multiple selfs (inc z')
+                                    self.b1<z'>
                                     
                         | b1<y'> => z' <- new nor(x', y');
                                     self.b0<z'>
@@ -153,5 +164,4 @@ let or(x : bits, y : bits) : bits =
     <u, u'> <- split w;
     nor(u, u')
 
-// Example 10
-// Refer to nat_list_map.phi
+// Example 10 - refer to nat_list_map.grits

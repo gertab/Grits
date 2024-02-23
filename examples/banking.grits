@@ -1,0 +1,48 @@
+
+
+type bankType = aff &{ login : +{ authenticated : lin /\ aff transaction, 
+                                  not_authenticated : bankType },
+                       gen_query : bankType}
+type transaction = lin +{start : +{finish : 1}}
+
+let bank() : bankType =
+      case self (
+          login<s>     => auth <- new authService();
+                          self.authenticated<auth>
+                          //b <- new bank();
+                          //self.not_authenticated<b>
+        | gen_query<s> => bank()
+    )
+
+let authService() : lin /\ aff transaction =
+    s' <- shift self;
+    // Perform transaction in linear mode
+    s'' : lin 1 <- new close self;
+    s''' : lin +{finish : 1} <- new self.finish<s''>;
+    self.start<s'''>
+
+
+//prc[bankService] : bankType = bank()
+//prc[user1] : lin 1 = drop bankService; 
+//                     close self
+
+type authType = +{ authenticated : lin /\ aff transaction, 
+                   not_authenticated : bankType }
+
+prc[bankService] : bankType = bank()
+prc[user2] : lin 1 = 
+    print _attempt_login_;
+    b : authType <- new bankService.login<self>; 
+    case b (
+         authenticated<b'> => 
+             t :  transaction <- new cast b'<self>;
+             // not possible to drop t (since it is now linear)
+             case t (
+                start<t'> => print _perform_linear_transaction_;
+                              case t' (
+                                finish<t''> => wait t''; close self
+                              )
+             )
+
+       | not_authenticated<b'> => drop b'; close self
+    )

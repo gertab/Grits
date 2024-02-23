@@ -1,6 +1,6 @@
 package parser
 
-//go:generate goyacc -p phi -o parser/parser.y.go parser/parser.y
+//go:generate goyacc -p grits -o parser/parser.y.go parser/parser.y
 
 import (
 	"fmt"
@@ -9,11 +9,11 @@ import (
 )
 
 // Generated from goyacc
-// type phiSymType struct {
+// type gritsSymType struct {
 // 	strval string
 // }
 
-// lexer for phi.
+// lexer for grits.
 type lexer struct {
 	scanner *scanner
 	Errors  chan error

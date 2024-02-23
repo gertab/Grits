@@ -9,11 +9,11 @@ Use the `--benchmark` flag to evaluate performance.
 Optional flags include `--maxcores <number of cores>` (sets GOMAXPROCS) and `--repeat <number of times>` (to repeat a run multiple times) for fine-tuning tests.
 
 ```bash
-./phi --benchmark examples/nat_double.phi
-./phi --benchmark --maxcores 1 --repeat 5 examples/nat_double.phi
+./grits --benchmark examples/nat_double.grits
+./grits --benchmark --maxcores 1 --repeat 5 examples/nat_double.grits
 ```
 
-To run all pre-configured benchmarks: `./phi --benchmarks`.
+To run all pre-configured benchmarks: `./grits --benchmarks`.
 
 ## How to interpret the output
 
@@ -34,4 +34,4 @@ These csv files contain the following columns:
 
 ## Sample results
 
-Sample benchmarks for [`nat-double-1.go`](./compare/nat-double/nat-double-1.phi) can be found in [`nat-benchmarks-10.csv`](./compare/nat-double/sample-results/nat-benchmarks-10.csv) and [`nat-detailed-benchmarks-10.csv`](./compare/nat-double/sample-results/nat-detailed-benchmarks-10.csv).
+Sample benchmarks for [`nat-double-1.go`](./compare/nat-double/nat-double-1.grits) can be found in [`nat-benchmarks-10.csv`](./compare/nat-double/sample-results/nat-benchmarks-10.csv) and [`nat-detailed-benchmarks-10.csv`](./compare/nat-double/sample-results/nat-detailed-benchmarks-10.csv).

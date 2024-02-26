@@ -3,8 +3,8 @@
 type bankType = aff &{ login : authType,
                        gen_query : bankType}
 
-type authType = +{ auth : lin /\ aff transaction, 
-                   not_auth : bankType }
+type authType = aff +{ auth : lin /\ aff transaction, 
+                       not_auth : bankType }
 
 type transaction = lin +{start : +{finish : 1}}
 

@@ -20,6 +20,7 @@ To run all pre-configured benchmarks: `./grits --benchmarks`.
 When `--benchmark` (or `--benchmarks`) is used, the program is timed using both the non-polarized (synchronous) transition semantics (v1) and the polarized version (v2).
 The number of processes spawned is measured as well.
 
+Results are collected in the `benchmark-results` directory.
 Two files are outputted for each result: `file-benchmark-X.csv` and `file-benchmark-detailed-X.csv` (where `X` is the number of cores used).
 The latter provides each result for each run, whilst the form only shows the averaged result.
 These csv files contain the following columns:

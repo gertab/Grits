@@ -28,6 +28,7 @@ import (
 const (
 	detailedOutput      = true
 	outputFileExtension = ".csv"
+	outputFolder        = "benchmark-results"
 )
 
 // Runs benchmark for one file
@@ -58,6 +59,7 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		var result TimingResult
+		result.name = fileNameBase
 		result.invalid = false
 		go runAllTimingsOnce(bytes.NewReader(programFileBytes), &wg, &result)
 		wg.Wait()
@@ -159,7 +161,14 @@ func Benchmarks(maxCores int) {
 func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCores int) {
 	// Start writing result to file
 	benchmarksFilename := folder + "-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
-	f, err := os.Create(benchmarksFilename)
+	fileNameWithFolder := filepath.Join(outputFolder, benchmarksFilename)
+
+	if err := prepareOutputFolder(fileNameWithFolder); err != nil {
+		return
+	}
+
+	// Create file
+	f, err := os.Create(fileNameWithFolder)
 	if err != nil {
 		fmt.Println("Couldn't open file: ", err)
 		return
@@ -205,7 +214,7 @@ func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCore
 			fmt.Print(".")
 
 			if !result.invalid {
-				// fmt.Prixntln(result)
+				// fmt.Println(result)
 				result.name = file.baseName()
 				allTimingResults = append(allTimingResults, result)
 			}
@@ -238,9 +247,17 @@ func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCore
 // Saves all individual runs to a file
 func saveDetailedBenchmarks(name string, benchmarkCaseResults []benchmarkCaseResult, maxCores int) (string, error) {
 	fileName := name + "-detailed-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
-	f, err := os.Create(fileName)
+	fileNameWithFolder := filepath.Join(outputFolder, fileName)
+
+	// Prepare folder
+	if err := prepareOutputFolder(fileNameWithFolder); err != nil {
+		return fileNameWithFolder, err
+	}
+
+	// Create file
+	f, err := os.Create(fileNameWithFolder)
 	if err != nil {
-		return fileName, err
+		return fileNameWithFolder, err
 	}
 	defer f.Close()
 
@@ -257,7 +274,7 @@ func saveDetailedBenchmarks(name string, benchmarkCaseResults []benchmarkCaseRes
 		}
 	}
 
-	return fileName, nil
+	return fileNameWithFolder, nil
 }
 
 // Input for each case
@@ -384,7 +401,15 @@ func csvHeader() string {
 
 func saveToFileCSV(fileName string, title string, results []TimingResult, maxCores int) (string, error) {
 	name := fileName + "-" + title + "-" + fmt.Sprint(maxCores) + outputFileExtension
-	f, err := os.Create(name)
+	nameWithFolder := filepath.Join(outputFolder, name)
+
+	// Prepare folder
+	if err := prepareOutputFolder(nameWithFolder); err != nil {
+		return nameWithFolder, err
+	}
+
+	// Create file
+	f, err := os.Create(nameWithFolder)
 	if err != nil {
 		return name, err
 	}
@@ -398,7 +423,7 @@ func saveToFileCSV(fileName string, title string, results []TimingResult, maxCor
 		f.Write([]byte("\n"))
 	}
 
-	return name, nil
+	return nameWithFolder, nil
 }
 
 func getAverage(allResults []TimingResult) *TimingResult {
@@ -536,4 +561,9 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 	processes = nil
 	assumedFreeNames = nil
 	return timeTaken, processCount, nil
+}
+
+// Create output folder (if nonexistent)
+func prepareOutputFolder(path string) error {
+	return os.MkdirAll(filepath.Dir(path), 0770)
 }

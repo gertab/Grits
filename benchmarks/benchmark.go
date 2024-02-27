@@ -2,16 +2,23 @@ package benchmarks
 
 import (
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"grits/parser"
 	"grits/process"
+	"image/color"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
+
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg"
 )
 
 // All unmarked time units are in Microseconds
@@ -61,6 +68,7 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 		var result TimingResult
 		result.name = fileNameBase
 		result.invalid = false
+		result.caseNumber = -1 // ignore case number in individual files
 		go runAllTimingsOnce(bytes.NewReader(programFileBytes), &wg, &result)
 		wg.Wait()
 
@@ -95,7 +103,7 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 		return
 	}
 
-	fmt.Printf("Saved results in %v (and detailed version in %s)\n", fileName, fileNameDetailed)
+	fmt.Printf("Saved results in %v (and detailed version in %s)\n", filepath.Join(outputFolder, fileName), filepath.Join(outputFolder, fileNameDetailed))
 }
 
 // Runs pre-configured benchmarks (stored in the folder benchmarks/compare)
@@ -104,74 +112,66 @@ func Benchmarks(maxCores int) {
 	fmt.Printf("Benchmarking... (using %d cores out of %v)\n\n", maxCores, runtime.NumCPU())
 
 	folder := "nat-double"
+	visualisePlots("nat-double-benchmarks-10.csv", true)
+	visualisePlots("nat-double-parallel-benchmarks-10.csv", false)
+	return
 	benchmarkCases := []benchmarkCase{
-		{"nat-double-1.grits", 2},
-		{"nat-double-2.grits", 2},
-		{"nat-double-3.grits", 2},
-		{"nat-double-4.grits", 2},
-		{"nat-double-5.grits", 2},
-		{"nat-double-6.grits", 2},
-		{"nat-double-7.grits", 2},
-		{"nat-double-8.grits", 2},
-		{"nat-double-9.grits", 2},
-		{"nat-double-10.grits", 2},
-		{"nat-double-11.grits", 2},
-		{"nat-double-12.grits", 2},
-		{"nat-double-13.grits", 2},
-		{"nat-double-14.grits", 2},
-		{"nat-double-15.grits", 2},
-		{"nat-double-16.grits", 2},
+		{"nat-double-1.grits", 1, 2},
+		{"nat-double-2.grits", 2, 2},
+		{"nat-double-3.grits", 3, 2},
+		{"nat-double-4.grits", 4, 2},
+		{"nat-double-5.grits", 5, 2},
+		{"nat-double-6.grits", 6, 2},
+		{"nat-double-7.grits", 7, 2},
+		{"nat-double-8.grits", 8, 2},
+		{"nat-double-9.grits", 9, 2},
+		{"nat-double-10.grits", 10, 2},
+		{"nat-double-11.grits", 11, 2},
+		{"nat-double-12.grits", 12, 2},
+		{"nat-double-13.grits", 13, 2},
+		{"nat-double-14.grits", 14, 2},
+		{"nat-double-15.grits", 15, 2},
+		{"nat-double-16.grits", 16, 2},
 	}
 
-	runGroupedBenchmarks(folder, benchmarkCases, maxCores)
+	resultsFile, err := runGroupedBenchmarks(folder, benchmarkCases, maxCores)
+	if err == nil {
+		visualisePlots(resultsFile, true)
+	}
 
 	folder = "nat-double-parallel"
 	benchmarkCases = []benchmarkCase{
-		{"nat-double-parallel-2.grits", 2},
-		{"nat-double-parallel-4.grits", 2},
-		{"nat-double-parallel-6.grits", 2},
-		{"nat-double-parallel-8.grits", 2},
-		{"nat-double-parallel-10.grits", 2},
-		{"nat-double-parallel-12.grits", 2},
-		{"nat-double-parallel-14.grits", 2},
-		{"nat-double-parallel-16.grits", 2},
-		{"nat-double-parallel-18.grits", 2},
-		{"nat-double-parallel-20.grits", 2},
-		{"nat-double-parallel-22.grits", 2},
-		{"nat-double-parallel-24.grits", 2},
-		{"nat-double-parallel-26.grits", 2},
-		{"nat-double-parallel-28.grits", 2},
-		{"nat-double-parallel-30.grits", 2},
-		{"nat-double-parallel-32.grits", 2},
-		{"nat-double-parallel-34.grits", 2},
-		{"nat-double-parallel-36.grits", 2},
-		{"nat-double-parallel-38.grits", 2},
-		{"nat-double-parallel-40.grits", 2},
-		{"nat-double-parallel-42.grits", 2},
-		{"nat-double-parallel-44.grits", 2},
-		{"nat-double-parallel-46.grits", 2},
-		{"nat-double-parallel-48.grits", 2},
-		{"nat-double-parallel-50.grits", 2},
+		{"nat-double-parallel-2.grits", 2, 4},
+		{"nat-double-parallel-8.grits", 8, 4},
+		{"nat-double-parallel-14.grits", 14, 4},
+		{"nat-double-parallel-20.grits", 20, 4},
+		{"nat-double-parallel-26.grits", 26, 4},
+		{"nat-double-parallel-32.grits", 32, 4},
+		{"nat-double-parallel-38.grits", 38, 4},
+		{"nat-double-parallel-44.grits", 44, 4},
+		{"nat-double-parallel-50.grits", 50, 4},
 	}
 
-	runGroupedBenchmarks(folder, benchmarkCases, maxCores)
+	resultsFile, err = runGroupedBenchmarks(folder, benchmarkCases, maxCores)
+	if err == nil {
+		visualisePlots(resultsFile, false)
+	}
 }
 
 // Fetches files from /benchmarks/compare/<folder>/
-func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCores int) {
+func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCores int) (string, error) {
 	// Start writing result to file
 	benchmarksFilename := folder + "-benchmarks-" + fmt.Sprint(maxCores) + outputFileExtension
 	fileNameWithFolder := filepath.Join(outputFolder, benchmarksFilename)
 
 	if err := prepareOutputFolder(fileNameWithFolder); err != nil {
-		return
+		return benchmarksFilename, err
 	}
 
 	// Create file
 	f, err := os.Create(fileNameWithFolder)
 	if err != nil {
-		fmt.Println("Couldn't open file: ", err)
-		return
+		return benchmarksFilename, fmt.Errorf("couldn't open file: %v", err)
 	}
 	defer f.Close()
 	f.WriteString(csvHeader() + "\n")
@@ -190,6 +190,7 @@ func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCore
 
 		// Prepare result
 		currentBenchmarkCaseResult := NewBenchmarkCaseResult(fullPathName)
+		currentBenchmarkCaseResult.caseNumber = file.caseNumber
 
 		// Open file
 		programFileBytes, err := readFile(fullPathName)
@@ -216,6 +217,7 @@ func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCore
 			if !result.invalid {
 				// fmt.Println(result)
 				result.name = file.baseName()
+				result.caseNumber = file.caseNumber
 				allTimingResults = append(allTimingResults, result)
 			}
 		}
@@ -235,13 +237,13 @@ func runGroupedBenchmarks(folder string, benchmarkCases []benchmarkCase, maxCore
 	// 	fmt.Println(i, res.String())
 	// }
 
-	fileName, err := saveDetailedBenchmarks(folder, benchmarkCaseResults, maxCores)
+	benchmarksDetailed, err := saveDetailedBenchmarks(folder, benchmarkCaseResults, maxCores)
 	if err != nil {
-		fmt.Println("Could save to file", err)
-		return
+		return benchmarksFilename, fmt.Errorf("could not save to file: %v", err)
 	}
 
-	fmt.Printf("Saved results in %v\n", fileName)
+	fmt.Printf("Saved detailed results in %v\n", benchmarksDetailed)
+	return benchmarksFilename, nil
 }
 
 // Saves all individual runs to a file
@@ -280,6 +282,7 @@ func saveDetailedBenchmarks(name string, benchmarkCaseResults []benchmarkCaseRes
 // Input for each case
 type benchmarkCase struct {
 	fileName    string // Path of file to run
+	caseNumber  int
 	repetitions uint
 }
 
@@ -291,6 +294,7 @@ func (b *benchmarkCase) baseName() string {
 type benchmarkCaseResult struct {
 	fileName        string
 	ok              bool
+	caseNumber      int
 	repetitionsDone uint
 	results         []TimingResult
 }
@@ -328,6 +332,7 @@ func NewBenchmarkCaseResult(fileName string) *benchmarkCaseResult {
 type TimingResult struct {
 	name                         string
 	invalid                      bool
+	caseNumber                   int
 	timeNonPolarizedSync         time.Duration
 	processCountNonPolarizedSync uint64
 	timeNormalAsync              time.Duration
@@ -340,6 +345,9 @@ func (t *TimingResult) String() string {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(fmt.Sprintf("File: %v\n", t.name))
+	if t.caseNumber >= 0 {
+		buffer.WriteString(fmt.Sprintf(" (%v)\n", t.caseNumber))
+	}
 	buffer.WriteString(fmt.Sprintf("\tv1: \t\t%vµs (%v) -- %d processes\n", t.timeNonPolarizedSync.Microseconds(), t.timeNonPolarizedSync, t.processCountNonPolarizedSync))
 	buffer.WriteString(fmt.Sprintf("\tv2(async):\t%vµs (%v) -- %d processes\n", t.timeNormalAsync.Microseconds(), t.timeNormalAsync, t.processCountNormalAsync))
 	buffer.WriteString(fmt.Sprintf("\tv2(sync):\t%vµs (%v) -- %d processes\n", t.timeNormalSync.Microseconds(), t.timeNormalSync, t.processCountNormalSync))
@@ -361,6 +369,10 @@ func (t *TimingResult) csvRow() string {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(t.name)
+	buffer.WriteString(separator)
+	if t.caseNumber >= 0 {
+		buffer.WriteString(fmt.Sprintf("%v", t.caseNumber))
+	}
 	buffer.WriteString(separator)
 	buffer.WriteString(fmt.Sprintf("%v", t.timeNonPolarizedSync.Microseconds()))
 	buffer.WriteString(separator)
@@ -384,6 +396,8 @@ func csvHeader() string {
 
 	buffer.WriteString("name")
 	buffer.WriteString(separator)
+	buffer.WriteString("caseNumber")
+	buffer.WriteString(separator)
 	buffer.WriteString("timeNonPolarizedSync")
 	buffer.WriteString(separator)
 	buffer.WriteString("processCountNonPolarizedSync")
@@ -405,7 +419,7 @@ func saveToFileCSV(fileName string, title string, results []TimingResult, maxCor
 
 	// Prepare folder
 	if err := prepareOutputFolder(nameWithFolder); err != nil {
-		return nameWithFolder, err
+		return name, err
 	}
 
 	// Create file
@@ -423,7 +437,7 @@ func saveToFileCSV(fileName string, title string, results []TimingResult, maxCor
 		f.Write([]byte("\n"))
 	}
 
-	return nameWithFolder, nil
+	return name, nil
 }
 
 func getAverage(allResults []TimingResult) *TimingResult {
@@ -434,7 +448,18 @@ func getAverage(allResults []TimingResult) *TimingResult {
 		return &TimingResult{}
 	}
 
-	result := TimingResult{allResults[0].name, false, allResults[0].timeNonPolarizedSync, allResults[0].processCountNonPolarizedSync, allResults[0].timeNormalAsync, allResults[0].processCountNormalAsync, allResults[0].timeNormalSync, allResults[0].processCountNormalSync}
+	result := TimingResult{
+		allResults[0].name,
+		false,
+		allResults[0].caseNumber,
+		allResults[0].timeNonPolarizedSync,
+		allResults[0].processCountNonPolarizedSync,
+		allResults[0].timeNormalAsync,
+		allResults[0].processCountNormalAsync,
+		allResults[0].timeNormalSync,
+		allResults[0].processCountNormalSync,
+	}
+
 	for i := 1; i < count; i += 1 {
 		result.timeNonPolarizedSync += allResults[i].timeNonPolarizedSync
 		result.processCountNonPolarizedSync += allResults[i].processCountNonPolarizedSync
@@ -566,4 +591,123 @@ func runTiming(program io.Reader, executionVersion process.Execution_Version) (t
 // Create output folder (if nonexistent)
 func prepareOutputFolder(path string) error {
 	return os.MkdirAll(filepath.Dir(path), 0770)
+}
+
+////////////////////////////////////////////
+// Visualising csv file into a plot
+////////////////////////////////////////////
+
+// Reads a csv file containing the following headers and outputs a graph
+// containing two lines: one showing the synchronous (non-polarized) version
+// and the other showing the asynchronous (polarized) version.
+// CSV Headers: name, caseNumber, timeNonPolarizedSync, processCountNonPolarizedSync, timeNormalAsync, processCountNormalAsync, timeNormalSync, processCountNormalSync
+
+func visualisePlots(resultsFile string, logScale bool) {
+	fullResultsPath := filepath.Join(outputFolder, resultsFile)
+
+	// Open the CSV file
+	file, err := os.Open(fullResultsPath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// Create a new CSV reader
+	reader := csv.NewReader(file)
+
+	// Skip the header row
+	if _, err := reader.Read(); err != nil {
+		panic(err)
+	}
+
+	// Read in all the CSV records
+	records, err := reader.ReadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a new plot
+	p := plot.New()
+
+	//Get data for the first line (Synchronous, non-polarized version)
+	data := make(plotter.XYs, len(records))
+	for i, record := range records {
+		x, err := strconv.ParseFloat(record[1], 64)
+		if err != nil {
+			// panic(err)
+			fmt.Println("Couldn't draw plot")
+			return
+		}
+		y, err := strconv.ParseFloat(record[2], 64)
+		if err != nil {
+			// panic(err)
+			fmt.Println("Couldn't draw plot")
+			return
+		}
+		data[i].X = x
+		data[i].Y = y
+	}
+
+	// Add first line to the plot
+	// Synchronous semantics (using the non-polarized version)
+	line, err := plotter.NewLine(data)
+	if err != nil {
+		panic(err)
+	}
+	line.LineStyle.Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+	line.LineStyle.Width = vg.Points(1)
+
+	p.Add(line)
+	p.Legend.Add("Grits (Synchronous sem.)", line)
+
+	// Add second line to the plot
+
+	// Convert the CSV data to a plotter.Values
+	data2 := make(plotter.XYs, len(records))
+	for i, record := range records {
+		x, err := strconv.ParseFloat(record[1], 64)
+		if err != nil {
+			// panic(err)
+			fmt.Println("Couldn't draw plot")
+			return
+		}
+		y, err := strconv.ParseFloat(record[4], 64)
+		if err != nil {
+			// panic(err)
+			fmt.Println("Couldn't draw plot")
+			return
+		}
+		data2[i].X = x
+		data2[i].Y = y
+	}
+
+	// Asynchronous semantics (using the polarized, buffered version)
+	line2, err := plotter.NewLine(data2)
+	if err != nil {
+		panic(err)
+	}
+	line2.LineStyle.Color = color.RGBA{R: 255, G: 127, B: 80, A: 255}
+	line2.LineStyle.Width = vg.Points(1)
+
+	p.Add(line2)
+	p.Legend.Add("Grits (Asynchronous sem.)", line2)
+
+	// Set the axes labels
+	p.Title.Text = filepath.Base(resultsFile)
+	p.X.Label.Text = "Count"
+	p.Y.Label.Text = "Time taken (µs)"
+
+	if logScale {
+		p.Y.Label.Text = "Time taken (µs, log)"
+		p.Y.Tick.Marker = plot.LogTicks{Prec: -1}
+		p.Y.Scale = plot.LogScale{}
+	}
+
+	// Save the plot to a PNG file
+	plotFileName := filepath.Base(resultsFile) + ".png"
+	plotFilePath := filepath.Join(outputFolder, plotFileName)
+
+	if err := p.Save(14*vg.Centimeter, 14*vg.Centimeter, plotFilePath); err != nil {
+		panic(err)
+	}
 }

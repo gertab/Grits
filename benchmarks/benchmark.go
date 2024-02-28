@@ -3,6 +3,7 @@ package benchmarks
 import (
 	"bytes"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"grits/parser"
 	"grits/process"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -109,12 +111,15 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 // Runs pre-configured benchmarks (stored in the folder benchmarks/compare)
 func Benchmarks(maxCores int) {
 	runtime.GOMAXPROCS(maxCores)
+
+	if err := checkBenchmarksAvailable(); err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	fmt.Printf("Benchmarking... (using %d cores out of %v)\n\n", maxCores, runtime.NumCPU())
 
 	folder := "nat-double"
-	visualisePlots("nat-double-benchmarks-10.csv", true)
-	visualisePlots("nat-double-parallel-benchmarks-10.csv", false)
-	return
 	benchmarkCases := []benchmarkCase{
 		{"nat-double-1.grits", 1, 2},
 		{"nat-double-2.grits", 2, 2},
@@ -156,6 +161,23 @@ func Benchmarks(maxCores int) {
 	if err == nil {
 		visualisePlots(resultsFile, false)
 	}
+}
+
+// Looks for the benchmark/compare folder to make sure that the benchmarking directory is available
+func checkBenchmarksAvailable() error {
+	msg :=
+		`to run benchmarks, you need to be located at the root folder of the Grits source code. The source code and benchmark files can be obtained using the following commands:
+> git clone https://github.com/gertab/Grits.git
+> cd Grits 
+> go build .
+> ./grits --benchmarks
+> cd benchmark-results
+`
+	if _, err := os.Stat(filepath.Join("benchmarks", "compare")); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf(msg)
+	}
+
+	return nil
 }
 
 // Fetches files from /benchmarks/compare/<folder>/
@@ -704,7 +726,7 @@ func visualisePlots(resultsFile string, logScale bool) {
 	}
 
 	// Save the plot to a PNG file
-	plotFileName := filepath.Base(resultsFile) + ".png"
+	plotFileName := strings.TrimSuffix(filepath.Base(resultsFile), filepath.Ext(resultsFile)) + ".png"
 	plotFilePath := filepath.Join(outputFolder, plotFileName)
 
 	if err := p.Save(14*vg.Centimeter, 14*vg.Centimeter, plotFilePath); err != nil {

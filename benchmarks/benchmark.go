@@ -32,8 +32,9 @@ import (
 //   - processCountNonPolarizedSync : number of processes spawn (when using v1)
 //   - timeNormalAsync              : time taken to evaluate file (using v2-async)
 //   - processCountNormalAsync      : number of processes spawn (when using v2-async)
-//   - timeNormalSync               : time taken to evaluate file (using v2-sync)
-//   - processCountNormalSync       : number of processes spawn (when using v2-sync)
+//
+// //   - timeNormalSync               : time taken to evaluate file (using v2-sync)
+// //   - processCountNormalSync       : number of processes spawn (when using v2-sync)
 const (
 	detailedOutput      = true
 	outputFileExtension = ".csv"
@@ -359,8 +360,8 @@ type TimingResult struct {
 	processCountNonPolarizedSync uint64
 	timeNormalAsync              time.Duration
 	processCountNormalAsync      uint64
-	timeNormalSync               time.Duration
-	processCountNormalSync       uint64
+	// timeNormalSync               time.Duration
+	// processCountNormalSync       uint64
 }
 
 func (t *TimingResult) String() string {
@@ -372,7 +373,7 @@ func (t *TimingResult) String() string {
 	}
 	buffer.WriteString(fmt.Sprintf("\tv1: \t\t%vµs (%v) -- %d processes\n", t.timeNonPolarizedSync.Microseconds(), t.timeNonPolarizedSync, t.processCountNonPolarizedSync))
 	buffer.WriteString(fmt.Sprintf("\tv2(async):\t%vµs (%v) -- %d processes\n", t.timeNormalAsync.Microseconds(), t.timeNormalAsync, t.processCountNormalAsync))
-	buffer.WriteString(fmt.Sprintf("\tv2(sync):\t%vµs (%v) -- %d processes\n", t.timeNormalSync.Microseconds(), t.timeNormalSync, t.processCountNormalSync))
+	// buffer.WriteString(fmt.Sprintf("\tv2(sync):\t%vµs (%v) -- %d processes\n", t.timeNormalSync.Microseconds(), t.timeNormalSync, t.processCountNormalSync))
 
 	return buffer.String()
 }
@@ -382,7 +383,7 @@ func (t *TimingResult) StringShort() string {
 
 	buffer.WriteString(fmt.Sprintf("\tv1: \t\t%vµs (%v) -- %d processes\n", t.timeNonPolarizedSync.Microseconds(), t.timeNonPolarizedSync, t.processCountNonPolarizedSync))
 	buffer.WriteString(fmt.Sprintf("\tv2(async):\t%vµs (%v) -- %d processes\n", t.timeNormalAsync.Microseconds(), t.timeNormalAsync, t.processCountNormalAsync))
-	buffer.WriteString(fmt.Sprintf("\tv2(sync):\t%vµs (%v) -- %d processes\n", t.timeNormalSync.Microseconds(), t.timeNormalSync, t.processCountNormalSync))
+	// buffer.WriteString(fmt.Sprintf("\tv2(sync):\t%vµs (%v) -- %d processes\n", t.timeNormalSync.Microseconds(), t.timeNormalSync, t.processCountNormalSync))
 
 	return buffer.String()
 }
@@ -403,10 +404,10 @@ func (t *TimingResult) csvRow() string {
 	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalAsync.Microseconds()))
 	buffer.WriteString(separator)
 	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalAsync))
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%v", t.timeNormalSync.Microseconds()))
-	buffer.WriteString(separator)
-	buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalSync))
+	// buffer.WriteString(separator)
+	// buffer.WriteString(fmt.Sprintf("%v", t.timeNormalSync.Microseconds()))
+	// buffer.WriteString(separator)
+	// buffer.WriteString(fmt.Sprintf("%d", t.processCountNormalSync))
 
 	return buffer.String()
 }
@@ -427,10 +428,10 @@ func csvHeader() string {
 	buffer.WriteString("timeNormalAsync")
 	buffer.WriteString(separator)
 	buffer.WriteString("processCountNormalAsync")
-	buffer.WriteString(separator)
-	buffer.WriteString("timeNormalSync")
-	buffer.WriteString(separator)
-	buffer.WriteString("processCountNormalSync")
+	// buffer.WriteString(separator)
+	// buffer.WriteString("timeNormalSync")
+	// buffer.WriteString(separator)
+	// buffer.WriteString("processCountNormalSync")
 
 	return buffer.String()
 }
@@ -478,8 +479,8 @@ func getAverage(allResults []TimingResult) *TimingResult {
 		allResults[0].processCountNonPolarizedSync,
 		allResults[0].timeNormalAsync,
 		allResults[0].processCountNormalAsync,
-		allResults[0].timeNormalSync,
-		allResults[0].processCountNormalSync,
+		// allResults[0].timeNormalSync,
+		// allResults[0].processCountNormalSync,
 	}
 
 	for i := 1; i < count; i += 1 {
@@ -487,8 +488,8 @@ func getAverage(allResults []TimingResult) *TimingResult {
 		result.processCountNonPolarizedSync += allResults[i].processCountNonPolarizedSync
 		result.timeNormalAsync += allResults[i].timeNormalAsync
 		result.processCountNormalAsync += allResults[i].processCountNormalAsync
-		result.timeNormalSync += allResults[i].timeNormalSync
-		result.processCountNormalSync += allResults[i].processCountNormalSync
+		// result.timeNormalSync += allResults[i].timeNormalSync
+		// result.processCountNormalSync += allResults[i].processCountNormalSync
 	}
 
 	// Get average
@@ -496,8 +497,8 @@ func getAverage(allResults []TimingResult) *TimingResult {
 	result.processCountNonPolarizedSync /= uint64(count)
 	result.timeNormalAsync /= time.Duration(count)
 	result.processCountNormalAsync /= uint64(count)
-	result.timeNormalSync /= time.Duration(count)
-	result.processCountNormalSync /= uint64(count)
+	// result.timeNormalSync /= time.Duration(count)
+	// result.processCountNormalSync /= uint64(count)
 
 	return &result
 }
@@ -540,15 +541,15 @@ func runAllTimingsOnce(program io.Reader, wg *sync.WaitGroup, result *TimingResu
 	result.timeNormalAsync = timeTaken2
 	result.processCountNormalAsync = count2
 
-	// Version 2 (Sync):
-	timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
-	if err != nil {
-		result.invalid = true
-		return
-	}
+	// // Version 2 (Sync):
+	// timeTaken3, count3, err := runTiming(bytes.NewReader(programFileBytes), process.NORMAL_SYNC)
+	// if err != nil {
+	// 	result.invalid = true
+	// 	return
+	// }
 
-	result.timeNormalSync = timeTaken3
-	result.processCountNormalSync = count3
+	// result.timeNormalSync = timeTaken3
+	// result.processCountNormalSync = count3
 	result.invalid = false
 }
 

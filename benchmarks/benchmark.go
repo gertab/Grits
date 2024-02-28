@@ -133,8 +133,8 @@ func Benchmarks(maxCores int) {
 		{"nat-double-11.grits", 11, 4},
 		{"nat-double-12.grits", 12, 4},
 		{"nat-double-13.grits", 13, 4},
-		{"nat-double-14.grits", 14, 3},
-		{"nat-double-15.grits", 15, 3},
+		{"nat-double-14.grits", 14, 2},
+		{"nat-double-15.grits", 15, 1},
 	}
 
 	resultsFile, err := runGroupedBenchmarks(folder, benchmarkCases, maxCores)

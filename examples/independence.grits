@@ -1,0 +1,14 @@
+// 'Declaration of independence' example
+// You can depend on stronger names, for instance, in ex1, a linear 
+// provider can depend on name 'a' having affine mode. On the other
+// hand, an affine provider cannot depend on a weaker channel, in 
+// the case of ex2, linear name b.
+
+let ex1(a : aff 1) : lin 1 =
+    drop a;
+    close self
+
+// Fails typechecking
+//let ex2(b : lin 1) : aff 1 =
+//    wait b;
+//    close self

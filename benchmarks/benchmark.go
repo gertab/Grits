@@ -78,9 +78,7 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 		// fmt.Print(".")
 
 		if !result.invalid {
-			if detailedOutput {
-				fmt.Println(i+1, result.StringShort())
-			}
+			fmt.Println(i+1, result.StringShort())
 			allResults = append(allResults, result)
 		}
 	}
@@ -122,22 +120,21 @@ func Benchmarks(maxCores int) {
 
 	folder := "nat-double"
 	benchmarkCases := []benchmarkCase{
-		{"nat-double-1.grits", 1, 2},
-		{"nat-double-2.grits", 2, 2},
-		{"nat-double-3.grits", 3, 2},
-		{"nat-double-4.grits", 4, 2},
-		{"nat-double-5.grits", 5, 2},
-		{"nat-double-6.grits", 6, 2},
-		{"nat-double-7.grits", 7, 2},
-		{"nat-double-8.grits", 8, 2},
-		{"nat-double-9.grits", 9, 2},
-		{"nat-double-10.grits", 10, 2},
-		{"nat-double-11.grits", 11, 2},
-		{"nat-double-12.grits", 12, 2},
-		{"nat-double-13.grits", 13, 2},
-		{"nat-double-14.grits", 14, 2},
-		{"nat-double-15.grits", 15, 2},
-		{"nat-double-16.grits", 16, 2},
+		{"nat-double-1.grits", 1, 4},
+		{"nat-double-2.grits", 2, 4},
+		{"nat-double-3.grits", 3, 4},
+		{"nat-double-4.grits", 4, 4},
+		{"nat-double-5.grits", 5, 4},
+		{"nat-double-6.grits", 6, 4},
+		{"nat-double-7.grits", 7, 4},
+		{"nat-double-8.grits", 8, 4},
+		{"nat-double-9.grits", 9, 4},
+		{"nat-double-10.grits", 10, 4},
+		{"nat-double-11.grits", 11, 4},
+		{"nat-double-12.grits", 12, 4},
+		{"nat-double-13.grits", 13, 4},
+		{"nat-double-14.grits", 14, 3},
+		{"nat-double-15.grits", 15, 3},
 	}
 
 	resultsFile, err := runGroupedBenchmarks(folder, benchmarkCases, maxCores)
@@ -463,33 +460,36 @@ func saveToFileCSV(fileName string, title string, results []TimingResult, maxCor
 	return name, nil
 }
 
+// Averages a list of results.
+// 0 seconds timings are skipped
 func getAverage(allResults []TimingResult) *TimingResult {
-	// allResults are not modified
-	count := len(allResults)
+	if len(allResults) == 0 {
+		return &TimingResult{invalid: true}
+	}
+
+	result := TimingResult{allResults[0].name, false, allResults[0].caseNumber, 0, 0, 0, 0}
+
+	count := 0
+	for _, curResult := range allResults {
+
+		if curResult.timeNonPolarizedSync == 0 && curResult.timeNormalAsync == 0 {
+			// in case of zero timings, skip record
+			continue
+		}
+
+		count += 1
+
+		result.timeNonPolarizedSync += curResult.timeNonPolarizedSync
+		result.processCountNonPolarizedSync += curResult.processCountNonPolarizedSync
+		result.timeNormalAsync += curResult.timeNormalAsync
+		result.processCountNormalAsync += curResult.processCountNormalAsync
+		// result.timeNormalSync += curResult.timeNormalSync
+		// result.processCountNormalSync += curResult.processCountNormalSync
+	}
 
 	if count == 0 {
-		return &TimingResult{}
-	}
-
-	result := TimingResult{
-		allResults[0].name,
-		false,
-		allResults[0].caseNumber,
-		allResults[0].timeNonPolarizedSync,
-		allResults[0].processCountNonPolarizedSync,
-		allResults[0].timeNormalAsync,
-		allResults[0].processCountNormalAsync,
-		// allResults[0].timeNormalSync,
-		// allResults[0].processCountNormalSync,
-	}
-
-	for i := 1; i < count; i += 1 {
-		result.timeNonPolarizedSync += allResults[i].timeNonPolarizedSync
-		result.processCountNonPolarizedSync += allResults[i].processCountNonPolarizedSync
-		result.timeNormalAsync += allResults[i].timeNormalAsync
-		result.processCountNormalAsync += allResults[i].processCountNormalAsync
-		// result.timeNormalSync += allResults[i].timeNormalSync
-		// result.processCountNormalSync += allResults[i].processCountNormalSync
+		result.invalid = true
+		return &result
 	}
 
 	// Get average
@@ -653,22 +653,28 @@ func visualisePlots(resultsFile string, logScale bool) {
 	p := plot.New()
 
 	//Get data for the first line (Synchronous, non-polarized version)
-	data := make(plotter.XYs, len(records))
-	for i, record := range records {
-		x, err := strconv.ParseFloat(record[1], 64)
+	var data plotter.XYs
+	for _, record := range records {
+		x, err := strconv.ParseInt(record[1], 10, 64)
 		if err != nil {
 			// panic(err)
 			fmt.Println("Couldn't draw plot")
 			return
 		}
-		y, err := strconv.ParseFloat(record[2], 64)
+
+		y, err := strconv.ParseInt(record[2], 10, 64)
 		if err != nil {
 			// panic(err)
 			fmt.Println("Couldn't draw plot")
 			return
 		}
-		data[i].X = x
-		data[i].Y = y
+
+		if y > 0 {
+			var d plotter.XY
+			d.X = float64(x)
+			d.Y = float64(y)
+			data = append(data, d)
+		}
 	}
 
 	// Add first line to the plot
@@ -686,22 +692,27 @@ func visualisePlots(resultsFile string, logScale bool) {
 	// Add second line to the plot
 
 	// Convert the CSV data to a plotter.Values
-	data2 := make(plotter.XYs, len(records))
-	for i, record := range records {
-		x, err := strconv.ParseFloat(record[1], 64)
+	var data2 plotter.XYs
+	for _, record := range records {
+		x, err := strconv.ParseInt(record[1], 10, 64)
 		if err != nil {
 			// panic(err)
 			fmt.Println("Couldn't draw plot")
 			return
 		}
-		y, err := strconv.ParseFloat(record[4], 64)
+		y, err := strconv.ParseInt(record[4], 10, 64)
 		if err != nil {
 			// panic(err)
 			fmt.Println("Couldn't draw plot")
 			return
 		}
-		data2[i].X = x
-		data2[i].Y = y
+
+		if y > 0 {
+			var d plotter.XY
+			d.X = float64(x)
+			d.Y = float64(y)
+			data2 = append(data2, d)
+		}
 	}
 
 	// Asynchronous semantics (using the polarized, buffered version)
@@ -730,7 +741,9 @@ func visualisePlots(resultsFile string, logScale bool) {
 	plotFileName := strings.TrimSuffix(filepath.Base(resultsFile), filepath.Ext(resultsFile)) + ".png"
 	plotFilePath := filepath.Join(outputFolder, plotFileName)
 
-	if err := p.Save(14*vg.Centimeter, 14*vg.Centimeter, plotFilePath); err != nil {
-		panic(err)
+	err = p.Save(14*vg.Centimeter, 14*vg.Centimeter, plotFilePath)
+
+	if err != nil {
+		fmt.Println("Couldn't save graph", err)
 	}
 }

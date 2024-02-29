@@ -1,6 +1,6 @@
 # Grits
 
-Type system and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
+Grits is a type-checker and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 
 ## How to use
 
@@ -11,7 +11,7 @@ Then, build the project as follows:
 go build .
 ```
 
-This produces the executable `grits` file, which can be used to typecheck and run programs `./grits path/to/file.grits`.
+This produces an executable `grits` file, which can be used to typecheck and run programs `./grits path/to/file.grits`.
 You can find some examples in the [`examples`](/examples/) directory.
 
 ```bash
@@ -139,7 +139,7 @@ This project requires [Go](https://go.dev/doc/install) version 1.20 (or later).
 
 ### Building and Testing
 
-To get dependencies, run `go get .`, and then build the project using `go build .`. To execute tests, run `go test ./...`.
+To build the project use `go build .`. To execute tests, run `go test ./...`.
 
 <!-- might be useful to include a makefile -->
 

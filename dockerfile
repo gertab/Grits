@@ -5,7 +5,7 @@ FROM golang:alpine
 WORKDIR /app
 
 # Copy the local package files to the container's workspace
-COPY . /app
+COPY . .
 
 # Build the Go application inside the container
 RUN go build -o grits

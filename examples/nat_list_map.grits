@@ -34,27 +34,32 @@ let mapByDoubling() : mapType  =
     doubled <- new double(toDouble);
     fwd result doubled
 
-// Initialize each process individually
-//prc[l] : listNat = simpList()
-//prc[f] : mapType =  mapByInc()
-////prc[f] : mapType =  mapByDoubling()
-//prc[b] : listNat = map(f, l) 
-//prc[c] : lin 1 = printListNat(b)
-
 let main() : listNat =
     l : listNat <- new simpList();
     f : mapType <- new mapByInc();
     map(f, l)
 
+// Execute main
+exec main()
+
 // Init with print function
 let main2() : lin 1 =
-    l : listNat <- new simpList();
-    f : mapType <- new mapByInc();
-    b : listNat <- new map(f, l);
-    printListNat(b)
+    m : listNat <- new main();
+    printListNat(m)
 
-// Initialize process running init (these two are equivalent)
+// Execute main2
 exec main2()
+
+// Print list without mapping
+let main3() : lin 1 =
+    l : listNat <- new simpList();
+    printListNat(l)
+
+// Initialize each process individually
+//prc[l] : listNat = simpList()
+//prc[f] : mapType =  mapByInc()
+//prc[b] : listNat = map(f, l) 
+//prc[c] : lin 1 = printListNat(b)
 
 ///////// Natural Number Operations /////////
 

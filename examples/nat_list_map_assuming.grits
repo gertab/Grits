@@ -1,0 +1,33 @@
+// 'Map' adapted from Example 10 of 'A Message-Passing Interpretation of Adjoint Logic' 
+
+// Types for natural numbers and a list of natural numbers
+type nat = lin +{zero : 1, succ : nat}
+type listNat = lin +{cons : nat * listNat, nil : 1}
+
+type mapType = lin /\ rep (nat -* nat)
+
+// Takes a list of natural numbers and performs a mapping function 
+// 'f' (replicable mode) on each element, providing an updated list
+let map(f : mapType, l : listNat) : listNat =
+    case l (
+          cons<l'> => <curr, l''> <- recv l';
+                      <f', f''> <- split f;                           // replicate the mapping channel f
+                      fl : lin (nat -* nat) <- new cast f'<self>;     // obtain linear version of f'
+                      curr_updated : nat <- new send fl<curr, self>;  // map current element
+                      k'' <- new map(f'', l'');                       // map the remaining elements
+                      k' : nat * listNat <- new send self<curr_updated,k''>;
+                      self.cons<k'>                                   // provide the result
+        | nil<l'>  => drop f;                                         // mapping channel 'f' is unused
+                      self.nil<l'>
+    )
+
+// Replicable process that increments a number
+let mapByInc() : mapType  = 
+    s <- shift self;           
+    <toAdd, result> <- recv s; 
+    self.succ<toAdd>              // increment by one 'succ'
+
+// Initialize each process individually
+assuming l : listNat
+prc[f] : mapType =  mapByInc()
+prc[b] : listNat = map(f, l) 

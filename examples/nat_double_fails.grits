@@ -5,8 +5,9 @@ let double(x : nat) : nat =
     case x (
           zero<x'> => self.zero<x'>
         | succ<x'> => h <- new double(x');
-                      d : nat <- new d.succ<h>;
-                      self.succ<d>
+                      // d : nat <- new d.succ<h>; (valid d)
+                      d : 1 <- new close self; //changed type of d to 1
+                      self.succ<d> // d has a wrong type
     )
 
 // Initiate execution

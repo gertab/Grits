@@ -1,0 +1,84 @@
+// Banking example (2)
+// In this case the bank type starts in linear mode and offers a shift into affine mode. 
+
+type bankType = lin &{ secure : transaction,
+                       unsecure : aff \/ lin gen_query}
+type transaction = lin +{start : +{finish : 1}}
+type gen_query = aff +{some_query : 1}
+
+let bank() : bankType =
+      case self (
+          secure<s>     => s' : lin 1 <- new close self;
+                           s'' : lin +{finish : 1} <- new self.finish<s'>;
+                           self.start<s''>
+        | unsecure<s>   => s' : aff 1 <- new close self;
+                           s'' : gen_query <- new self.some_query<s'>;
+                           cast self<s''>
+    )
+
+//prc[bankService1] : bankType = bank()
+//prc[user1] : lin 1 = 
+//    print _unsecure_connection_drop_;
+//    b : aff \/ lin gen_query <- new bankService1.unsecure<self>;
+//    b' <- shift b; // b' is now affine
+//    drop b';
+//    close self
+
+prc[bankService2] : bankType = bank()
+prc[user2] : lin 1 = 
+    print _unsecure_connection_;
+    b : aff \/ lin gen_query <- new bankService2.unsecure<self>;
+    b' <- shift b; // b' is now affine
+    case b' (
+       some_query<t> => wait t; close self
+    )
+
+//prc[bankService3] : bankType = bank()
+//prc[user3] : lin 1 = 
+//    print _secure_transaction_;
+//    b : transaction <- new bankService3.secure<self>;
+//    case b (
+//       start<t> => print _perform_linear_transaction_;
+//                     case t (
+//                       finish<t'> => wait t'; close self
+//                     )
+//    )
+
+//let ex1(a : aff 1) : lin 1 =
+//    drop a;
+//    close self
+
+//let ex2(a : lin 1) : aff 1 =
+//    wait a;
+//    close self
+
+
+//let authService() : aff \/ lin transaction =
+//    s' <- shift self;
+//    // Perform transaction in linear mode
+//    s'' : lin 1 <- new close self;
+//    s''' : lin +{finish : 1} <- new self.finish<s''>;
+//    self.start<s'''>
+
+
+////prc[bankService] : bankType = bank()
+////prc[user1] : lin 1 = drop bankService; 
+////                     close self
+//
+//prc[bankService] : bankType = bank()
+//prc[user2] : lin 1 = 
+//    print _attempt_login_;
+//    b : authType <- new bankService.login<self>; 
+//    case b (
+//         auth<b'> => 
+//             t :  transaction <- new cast b'<self>;
+//             // not possible to drop t (since it is now linear)
+//             case t (
+//                start<t'> => print _perform_linear_transaction_;
+//                              case t' (
+//                                finish<t''> => wait t''; close self
+//                              )
+//             )
+//
+//       | not_auth<b'> => drop b'; close self
+//    )

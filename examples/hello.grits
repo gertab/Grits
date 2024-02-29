@@ -1,0 +1,11 @@
+// Hello world example
+
+type A = lin 1                // Declares type
+
+let hello() : A = 
+    a : A <- new close self;  // Spawns a child process the terminates immediately
+    wait a;                   // Parent process waits for child to die
+    print hello;              // Outputs 'hello'
+    close self                // Parent terminates
+
+exec hello()                  // Executes the hello() procedure

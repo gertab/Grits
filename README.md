@@ -18,6 +18,40 @@ You can find some examples in the [`examples`](/examples/) directory.
 ./grits examples/nat_double.grits
 ```
 
+<details>
+  <summary>Build in Windows</summary>
+  
+  The `go build .` command works similarly on Windows. In this case, a `grits.exe` executable file is produced, which can be used as `grits.exe <flags> <file>`. Example usage:
+
+   ```bash
+   grits.exe examples/hello.grits
+   ```
+
+</details>
+
+<details>
+  <summary>Run using docker</summary>
+  
+  An alternative way to build and run Grits is via Docker.
+
+  1. You should have a Docker runtime installed. Installation instructions are available from [https://www.docker.com](https://www.docker.com). Ensure that the Docker daemon is running.
+  2. Create a docker image tagged `grits` using `docker-build.sh`:
+  
+     ```bash
+     chmod +x docker-build.sh
+     ./docker-build.sh
+     ```
+  
+     Or use `docker build -t grits:latest .`   directly.
+  3. To run the docker image tagged `grits`, use the command `./docker-run.sh <flags> <file>` (might need to run `chmod +x   docker-run.sh`).
+  4. For instance, to typecheck and execute `hello.grits`, use:
+  
+     ```bash
+     ./docker-run.sh examples/hello.grits
+     ```
+
+</details>
+
 ### Tool Flags
 
 The tool supports various flags for customization:
@@ -28,8 +62,7 @@ The tool supports various flags for customization:
 
 ### Benchmarking
 
-Use the `--benchmark` flag to evaluate performance.
-Optional flags include `--maxcores <number of cores>` and `--repeat <number of times>` for fine-tuning tests.
+To benchmark a specific program, use the `--benchmark` flag.  Optional flags include `--maxcores <number of cores>` and `--repeat <number of times>` for fine-tuning tests. All results are stored in the `benchmark-results/` directory created during benchmarking. Example usage:
 
 ```bash
 ./grits --benchmark examples/nat_double.grits
@@ -157,3 +190,13 @@ Some other notable parts:
 - [`process/runtime.go`](/process/runtime.go): Entry point for the interpreter. Sets up the processes, channels and monitor before initiating execution.
 - [`process/form.go`](/process/form.go): contains the different forms that a process can take. They are used to create the AST of processes.
 - [`webserver/web_server.go`](/webserver/web_server.go): provides an external interface to compile and execute a program via a webserver (refer to the [docs](/webserver/web_server.md)) (wip)
+
+
+<!-- markdownlint-configure-file {
+  "no-inline-html": {
+    "allowed_elements": [
+      "details",
+      "summary"
+    ]
+  }
+} -->

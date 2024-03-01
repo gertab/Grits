@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # This creates a docker containers each time this runs
-# Clean containers using: docker rm $(docker ps -a -q  --filter ancestor=grits)
+# They are deleted immediately after (--rm)
 
 docker run \
+    --rm \
     -v ./examples:/app/examples \
     -v ./benchmark-results:/app/benchmark-results \
     grits \

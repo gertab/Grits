@@ -530,6 +530,9 @@ func TestTypecheckIncorrectCut(t *testing.T) {
 		 prc[pid1] : 1 = x : 1 <- new f(y); wait x; close self`,
 		`let f() : 1 = close self
 		 prc[pid1] : 1 = x : 1 <- new f_other(); wait x; close self`,
+		`let x() : 1 = 
+		    y : T <- new close self; 
+		    close self`,
 	}
 
 	runThroughTypechecker(t, cases, false)

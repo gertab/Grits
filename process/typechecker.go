@@ -883,9 +883,6 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 				return TypeErrorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
 			}
 
-			// Unfold if needed
-			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
-
 			// Modify the type of p.continuation_c to set its modalities
 			types.AddMissingModalities(&p.continuation_c.Type, labelledTypesEnv)
 
@@ -894,6 +891,9 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			if err != nil {
 				return TypeErrorf("invalid type for %s in %s: %s", p.continuation_c.String(), p.StringShort(), err)
 			}
+
+			// Unfold if needed
+			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
 
 			// Check for declaration of independence: Γ ⪰ m ⪰ n
 			err = declationOfIndependence(gammaLeftNameTypesCtx.getNames(), p.continuation_c.Type)

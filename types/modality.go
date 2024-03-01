@@ -377,8 +377,12 @@ func StringToMode(input string) Modality {
 	}
 }
 
+// Infer general modality of type
 func AddMissingModalities(t *SessionType, labelledTypesEnv LabelledTypesEnv) {
-	// Infer general modality of type
+	if t == nil {
+		return
+	}
+
 	mode := (*t).inferModality(labelledTypesEnv, make(map[string]bool))
 
 	// Assign the modality to the inner type

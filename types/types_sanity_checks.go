@@ -91,7 +91,7 @@ func CheckTypeWellFormedness(t SessionType, labelledTypesEnv LabelledTypesEnv) e
 // Ensures also the branches are made up of unique labels
 func (q *LabelType) checkTypeLabels(labelledTypesEnv LabelledTypesEnv) error {
 	if !LabelledTypedExists(labelledTypesEnv, q.Label) {
-		return fmt.Errorf("error calling undefined label type '%s'", q.String())
+		return fmt.Errorf("type '%s' is undefined", q.String())
 	}
 
 	return nil

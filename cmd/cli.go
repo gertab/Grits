@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-const GRITS = "grits"
-const executionVersion = process.NORMAL_ASYNC
-
 /*
 Usage of ./grits:
 
@@ -50,6 +47,10 @@ func Cli() {
 	execute := flag.Bool("execute", true, "execute processes")
 	noExecute := flag.Bool("noexecute", false, "do not execute processes (equivalent to -execute=false)")
 	logLevel := flag.Int("verbosity", 1, "verbosity level (1 = least, 3 = most)")
+
+	// Execution Flags
+	syncSemantics := flag.Bool("sync", false, "execute using synchronous version (non-polarized) (default set to --async)")
+	asyncSemantics := flag.Bool("async", true, "execute using asynchronous version (polarized) (default, refer to --sync for alternative)")
 
 	// Benchmarking flags
 	benchmark := flag.Bool("benchmark", false, "run benchmarks for current program")
@@ -101,7 +102,12 @@ func Cli() {
 	}
 
 	if *logLevel > 1 {
-		fmt.Printf("%v -- typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v\n", GRITS, typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
+		fmt.Printf("Grits -- typecheck: %v, execute: %v, verbosity: %d, webserver: %v, benchmark: %v, ", typecheckRes, executeRes, *logLevel, *startWebserver, *benchmark)
+		if *syncSemantics {
+			fmt.Printf("execution version: v1 (sync)\n")
+		} else if *asyncSemantics {
+			fmt.Printf("execution version: v2 (async)\n")
+		}
 	}
 
 	if *startWebserver {
@@ -145,6 +151,18 @@ func Cli() {
 	}
 
 	if executeRes {
+		// Choose execution version
+		var executionVersion process.Execution_Version
+
+		if *syncSemantics {
+			executionVersion = process.NON_POLARIZED_SYNC
+		} else if *asyncSemantics {
+			executionVersion = process.NORMAL_ASYNC
+		} else {
+			fmt.Println("Choose either --sync or --async as the execution version")
+			return
+		}
+
 		re := &process.RuntimeEnvironment{
 			GlobalEnvironment: globalEnv,
 			UseMonitor:        false,

@@ -58,6 +58,7 @@ The tool supports various flags for customization:
 
 - `--notypecheck`: skip typechecking
 - `--noexecute`: skip execution
+- `--sync`, `--async`: execute using synchronous or asynchronous semantics (default: `--async`)
 - `--verbosity <level>`: control verbosity (1 is the least verbose, 3 is the most)
 
 ### Benchmarking

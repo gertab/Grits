@@ -1,3 +1,4 @@
+// Doubles a number two times
 
 type nat = +{zero : 1, succ : nat}
 

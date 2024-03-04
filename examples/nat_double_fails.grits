@@ -1,3 +1,5 @@
+// Doubles a number two times
+// This program contains a type error
 
 type nat = +{zero : 1, succ : nat}
 

@@ -26,12 +26,12 @@ The latter provides each result for each run, whilst the form only shows the ave
 These csv files contain the following columns:
 
 - *name*: name of file being checked
-- *timeNonPolarizedSync*: time taken to evaluate file (using v1)
-- *processCountNonPolarizedSync*: number of processes spawn (when using v1)
-- *timeNormalAsync*: time taken to evaluate file (using v2-async)
-- *processCountNormalAsync*: number of processes spawn (when using v2-async)
-<!-- - *timeNormalSync*: time taken to evaluate file (using v2-sync)
-- *processCountNormalSync*: number of processes spawn (when using v2-sync) -->
+- *timeSyncV1NP*: time taken to evaluate file (using v1)
+- *processCountSyncV1NP*: number of processes spawn (when using v1)
+- *timeAsyncV2*: time taken to evaluate file (using v2-async)
+- *processCountAsyncV2*: number of processes spawn (when using v2-async)
+<!-- - *timeSyncV2*: time taken to evaluate file (using v2-sync)
+- *processCountSyncV2*: number of processes spawn (when using v2-sync) -->
 
 ## Sample results
 

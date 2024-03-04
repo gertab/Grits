@@ -1,4 +1,4 @@
-name,caseNumber,timeNonPolarizedSync,processCountNonPolarizedSync,timeNormalAsync,processCountNormalAsync,timeNormalSync,processCountNormalSync
+name,caseNumber,timeSyncV1NP,processCountSyncV1NP,timeAsyncV2,processCountAsyncV2,timeSyncV2,processCountSyncV2
 nat-double-parallel-2.grits,2,1848,153,2137,153,1628,153
 nat-double-parallel-2.grits,2,1947,153,1980,153,1747,153
 nat-double-parallel-2.grits,2,1755,153,1916,153,2185,153

@@ -1,4 +1,4 @@
-name,timeNonPolarizedSync,processCountNonPolarizedSync,timeNormalAsync,processCountNormalAsync,timeNormalSync,processCountNormalSync
+name,timeSyncV1NP,processCountSyncV1NP,timeAsyncV2,processCountAsyncV2,timeSyncV2,processCountSyncV2
 nat-double-1.grits,1,145,10,148,10,166,10
 nat-double-1.grits,1,155,10,205,10,190,10
 nat-double-1.grits,1,409,10,167,10,234,10

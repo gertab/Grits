@@ -108,7 +108,7 @@ func BenchmarkFile(fileName string, repetitions uint, maxCores int) {
 }
 
 // Runs pre-configured benchmarks (stored in the folder benchmarks/compare)
-func Benchmarks(maxCores int) {
+func SampleBenchmarks(maxCores int) {
 	runtime.GOMAXPROCS(maxCores)
 
 	if err := checkBenchmarksAvailable(); err != nil {
@@ -131,9 +131,9 @@ func Benchmarks(maxCores int) {
 		{"nat-double-9.grits", 9, 4},
 		{"nat-double-10.grits", 10, 4},
 		{"nat-double-11.grits", 11, 4},
-		{"nat-double-12.grits", 12, 4},
-		{"nat-double-13.grits", 13, 4},
-		{"nat-double-14.grits", 14, 2},
+		{"nat-double-12.grits", 12, 3},
+		{"nat-double-13.grits", 13, 3},
+		{"nat-double-14.grits", 14, 1},
 	}
 
 	resultsFile, err := runGroupedBenchmarks(folder, benchmarkCases, maxCores)
@@ -167,7 +167,7 @@ func checkBenchmarksAvailable() error {
 > git clone https://github.com/gertab/Grits.git
 > cd Grits 
 > go build .
-> ./grits --benchmarks
+> ./grits --sample-benchmarks
 > cd benchmark-results
 `
 	if _, err := os.Stat(filepath.Join("benchmarks", "compare")); errors.Is(err, os.ErrNotExist) {

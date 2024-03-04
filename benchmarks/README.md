@@ -13,11 +13,11 @@ Optional flags include `--maxcores <number of cores>` (sets GOMAXPROCS) and `--r
 ./grits --benchmark --maxcores 1 --repeat 5 examples/nat_double.grits
 ```
 
-To run all pre-configured benchmarks: `./grits --benchmarks`.
+To run all pre-configured benchmarks: `./grits --sample-benchmarks`.
 
 ## How to interpret the output
 
-When `--benchmark` (or `--benchmarks`) is used, the program is timed using both the non-polarized (synchronous) transition semantics (v1) and the polarized version (v2).
+When `--benchmark` (or `--sample-benchmarks`) is used, the program is timed using both the non-polarized (synchronous) transition semantics (v1) and the polarized version (v2).
 The number of processes spawned is measured as well.
 
 Results are collected in the `benchmark-results` directory.
@@ -30,8 +30,8 @@ These csv files contain the following columns:
 - *processCountNonPolarizedSync*: number of processes spawn (when using v1)
 - *timeNormalAsync*: time taken to evaluate file (using v2-async)
 - *processCountNormalAsync*: number of processes spawn (when using v2-async)
-- *timeNormalSync*: time taken to evaluate file (using v2-sync)
-- *processCountNormalSync*: number of processes spawn (when using v2-sync)
+<!-- - *timeNormalSync*: time taken to evaluate file (using v2-sync)
+- *processCountNormalSync*: number of processes spawn (when using v2-sync) -->
 
 ## Sample results
 

@@ -18,27 +18,27 @@ const executionVersion = process.NORMAL_ASYNC
 /*
 Usage of ./grits:
 
-	-benchmark
+	--benchmark
 	      run benchmarks for current program
-	-benchmarks
-	      start all (pre-configured) benchmarks
-	-maxcores
+	--sample-benchmarks
+	      run sample benchmarks
+	--maxcores
 		  sets the maximum number of cores to use while doing the benchmarks (0 = maximum number of available cores)
-	-execute
+	--execute
 	      execute processes (default true)
-	-noexecute
+	--noexecute
 	      do not execute processes (equivalent to -execute=false)
-	-typecheck
+	--typecheck
 	      run typechecker (default true)
-	-notypecheck
+	--notypecheck
 	      skip typechecker (equivalent to -typecheck=false)
-	-repeat uint
+	--repeat uint
 	      number of repetitions do when benchmarking (default 1)
-	-verbosity int
+	--verbosity int
 	      verbosity level (1 = least, 3 = most) (default 1)
-	-webserver
+	--webserver
 	      start webserver
-	-addr string
+	--addr string
 	      webserver address (default ":8081")
 */
 
@@ -52,10 +52,10 @@ func Cli() {
 	logLevel := flag.Int("verbosity", 1, "verbosity level (1 = least, 3 = most)")
 
 	// Benchmarking flags
-	doAllBenchmarks := flag.Bool("benchmarks", false, "start all (pre-configured) benchmarks")
 	benchmark := flag.Bool("benchmark", false, "run benchmarks for current program")
 	benchmarkRepeatCount := flag.Uint("repeat", 1, "number of repetitions do when benchmarking")
 	maxCores := flag.Int("maxcores", 0, "sets the maximum number of cores to utilise while doing the benchmarks (0 = maximum number of available cores)")
+	sampleBenchmarks := flag.Bool("sample-benchmarks", false, "run sample benchmarks")
 
 	// Webserver
 	startWebserver := flag.Bool("webserver", false, "start webserver")
@@ -70,14 +70,14 @@ func Cli() {
 		*maxCores = runtime.NumCPU()
 	}
 
-	if *doAllBenchmarks {
+	if *sampleBenchmarks {
 		if len(args) >= 1 {
 			log.Fatal("To run pre-configured benchmarks, do not pass any filenames")
 			return
 		}
 
 		// Run benchmarks and terminate
-		benchmarks.Benchmarks(*maxCores)
+		benchmarks.SampleBenchmarks(*maxCores)
 		return
 	}
 

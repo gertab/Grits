@@ -69,7 +69,7 @@ To benchmark a specific program, use the `--benchmark` flag.  Optional flags inc
 ./grits --benchmark --maxcores 1 --repeat 5 examples/nat_double.grits
 ```
 
-To run all pre-configured benchmarks: `./grits --benchmarks`.
+To run the pre-configured sample benchmarks: `./grits --sample-benchmarks`.
 For detailed information on performance evaluation, refer to [benchmarks/readme](benchmarks/README.md).
 
 ## Sample program

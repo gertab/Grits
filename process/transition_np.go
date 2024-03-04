@@ -312,25 +312,25 @@ func (f *SelectForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 
 		TransitionBySendingNP(process, process.Providers[0].Channel, selRule, message, re)
 	} else if f.continuation_c.IsSelf {
-		// CSE rule (client, -ve)
+		// BRA rule (client, -ve)
 
 		if !f.continuation_c.IsSelf {
-			re.errorf(process, "[select, client] in CSE rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
+			re.errorf(process, "[select, client] in BRA rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
 		}
 
-		message := Message{Rule: CSE, Channel1: process.Providers[0], Label: f.label}
+		message := Message{Rule: BRA, Channel1: process.Providers[0], Label: f.label}
 		// Send the provider channel (self) as the continuation channel
 
-		cseRule := func() {
+		braRule := func() {
 			// Message is the received message
-			re.logProcess(LOGRULE, process, "[select, client] starting CSE rule")
-			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule CSE\n", f.to_c.String())
+			re.logProcess(LOGRULE, process, "[select, client] starting BRA rule")
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule BRA\n", f.to_c.String())
 
 			// Although the process dies, its provider will be used as the client's provider
 			process.renamed(process.Providers, []Name{f.to_c}, re)
 		}
 
-		TransitionBySendingNP(process, f.to_c.Channel, cseRule, message, re)
+		TransitionBySendingNP(process, f.to_c.Channel, braRule, message, re)
 	} else {
 		re.errorf(process, "in %s, neither the sender ('%s') or continuation ('%s') is self", f.String(), f.to_c.String(), f.continuation_c.String())
 	}
@@ -345,13 +345,13 @@ func (f *CaseForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of case: %s\n", f.String())
 
 	if f.from_c.IsSelf {
-		// CSE rule (provider)
+		// BRA rule (provider)
 
-		cseRule := func(message Message) {
+		braRule := func(message Message) {
 			re.logProcess(LOGRULEDETAILS, process, "[case, provider] finished receiving on self")
 
-			if message.Rule != CSE {
-				re.errorf(process, "expected CSE, found %s\n", RuleString[message.Rule])
+			if message.Rule != BRA {
+				re.errorf(process, "expected BRA, found %s\n", RuleString[message.Rule])
 			}
 
 			// Match received label with the available branches
@@ -371,19 +371,19 @@ func (f *CaseForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 				re.errorf(process, "no matching labels found for %s\n", message.Label)
 			}
 
-			process.finishedRule(CSE, "[case, provider]", "(p)", re)
+			process.finishedRule(BRA, "[case, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being received
 			process.terminateBeforeRename(process.Providers, []Name{message.Channel2}, re)
 
 			process.Body = new_body
 			process.Providers = []Name{message.Channel1}
-			// process.finishedRule(CSE, "[receive, provider]", "(p)", re)
+			// process.finishedRule(BRA, "[receive, provider]", "(p)", re)
 			process.processRenamed(re)
 
 			process.transitionLoopNP(re)
 		}
 
-		TransitionByReceivingNP(process, process.Providers[0].Channel, cseRule, re)
+		TransitionByReceivingNP(process, process.Providers[0].Channel, braRule, re)
 	} else {
 		// SEL rule (client, +ve)
 

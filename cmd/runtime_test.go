@@ -424,7 +424,7 @@ func TestCall(t *testing.T) {
 	prc[y] : B = f1(z)
 	prc[z] : A = f2()`
 	expected := []traceOption{
-		{steps{{"y", process.CALL}, {"z", process.CALL}, {"z", process.CSE}}},
+		{steps{{"y", process.CALL}, {"z", process.CALL}, {"z", process.BRA}}},
 	}
 
 	typecheck := false
@@ -467,7 +467,7 @@ func TestFwdPolarity(t *testing.T) {
 	prc[z] : A = case self ( labelok<b> => close b )`
 
 	expected := []traceOption{
-		{steps{{"y", process.FWD}, {"y", process.CSE}}},
+		{steps{{"y", process.FWD}, {"y", process.BRA}}},
 	}
 
 	typecheck := false
@@ -490,8 +490,8 @@ func TestFwdCutPolarityWithTyping(t *testing.T) {
 	prc[z] : A = case self ( labelok<b> => close b )`
 
 	expected := []traceOption{
-		{steps{{"y", process.CUT}, {"y", process.FWD}, {"zz", process.FWD}, {"y", process.CSE}}},
-		{steps{{"y", process.CUT}, {"y", process.FWD}, {"y", process.FWD}, {"y", process.CSE}}},
+		{steps{{"y", process.CUT}, {"y", process.FWD}, {"zz", process.FWD}, {"y", process.BRA}}},
+		{steps{{"y", process.CUT}, {"y", process.FWD}, {"y", process.FWD}, {"y", process.BRA}}},
 	}
 
 	typecheck := true
@@ -509,7 +509,7 @@ func TestFwdPolarityWithTyping(t *testing.T) {
 	prc[z] : A = case self ( labelok<b> => close b )`
 
 	expected := []traceOption{
-		{steps{{"y", process.FWD}, {"y", process.CSE}}},
+		{steps{{"y", process.FWD}, {"y", process.BRA}}},
 	}
 
 	typecheck := true
@@ -530,7 +530,7 @@ func TestNestedSelectWithTyping(t *testing.T) {
 	prc[final] : 1 = case x (next<z> => drop +z; close self)`
 
 	expected := []traceOption{
-		{steps{{"x", process.CALL}, {"z", process.CALL}, {"z", process.CSE}, {"final", process.SEL}, {"final", process.DROP}}},
+		{steps{{"x", process.CALL}, {"z", process.CALL}, {"z", process.BRA}, {"final", process.SEL}, {"final", process.DROP}}},
 	}
 
 	typecheck := true
@@ -596,7 +596,7 @@ func TestNestedPolarizedFwd(t *testing.T) {
 	prc[x] : B = close self`
 
 	expected = []traceOption{
-		{steps{{"ff", process.FWD}, {"ff", process.CSE}}},
+		{steps{{"ff", process.FWD}, {"ff", process.BRA}}},
 	}
 	checkInputRepeatedly(t, input, expected, typecheck)
 }

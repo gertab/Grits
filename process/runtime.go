@@ -366,7 +366,7 @@ const (
 	CST             // uses Channel1 (continuation_c) of the Message
 	SHF             // uses Channel1 of the Message
 	SEL             // uses Channel1 and Label of the Message
-	CSE             // uses Channel1 and Label of the Message
+	BRA             // uses Channel1 and Label of the Message
 	DROP
 
 	// These can happen when a process is 'interactive' by transitioning internally
@@ -381,7 +381,7 @@ const (
 
 	// Other actions
 	FWD
-	FWD_DROP
+	GC
 	PRINT
 )
 
@@ -392,7 +392,7 @@ var RuleString = map[Rule]string{
 	CST:  "CST",
 	SHF:  "SHF",
 	SEL:  "SEL",
-	CSE:  "CSE",
+	BRA:  "BRA",
 	DROP: "DROP",
 
 	CUT:   "CUT",
@@ -401,9 +401,9 @@ var RuleString = map[Rule]string{
 
 	DUP: "DUP",
 
-	FWD:      "FWD",
-	FWD_DROP: "FWD_DROP",
-	PRINT:    "PRINT",
+	FWD:   "FWD",
+	GC:    "GC",
+	PRINT: "PRINT",
 }
 
 type ControlMessage struct {

@@ -83,7 +83,7 @@ func TransitionByReceiving(process *Process, clientChan chan Message, processMes
 			// Process acting as a client by consuming a message from some channel
 			if receivedMessage.Rule == FWD {
 				handleNegativeForwardRequest(process, receivedMessage, re)
-			} else if receivedMessage.Rule == FWD_DROP {
+			} else if receivedMessage.Rule == GC {
 				handleNegativeDropRequest(process, re)
 			} else {
 				processMessageFunc(receivedMessage)
@@ -127,10 +127,10 @@ func handleNegativeForwardRequest(process *Process, message Message, re *Runtime
 }
 
 func handleNegativeDropRequest(process *Process, re *RuntimeEnvironment) {
-	re.logProcess(LOGRULEDETAILS, process, "Received FWD_DROP request.")
+	re.logProcess(LOGRULEDETAILS, process, "Received GC request.")
 
 	if len(NamesToString(process.Body.FreeNames())) > 0 {
-		re.logProcessf(LOGRULEDETAILS, process, "FWD_DROP will extend to %s.\n", NamesToString(process.Body.FreeNames()))
+		re.logProcessf(LOGRULEDETAILS, process, "GC will extend to %s.\n", NamesToString(process.Body.FreeNames()))
 	}
 
 	// Propagate the drop the the process' clients, before terminating
@@ -423,7 +423,7 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 
 		TransitionBySending(process, process.Providers[0].Channel, selRule, message, re)
 	} else if f.continuation_c.IsSelf {
-		// CSE rule (client, -ve)
+		// BRA rule (client, -ve)
 		//
 		// [to_c.label<...>]
 		//    |
@@ -432,22 +432,22 @@ func (f *SelectForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// case self (...)
 
 		if !f.continuation_c.IsSelf {
-			re.errorf(process, "[select, client] in CSE rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
+			re.errorf(process, "[select, client] in BRA rule, the continuation channel should be self, but found %s\n", f.continuation_c.String())
 		}
 
-		message := Message{Rule: CSE, Channel1: process.Providers[0], Label: f.label}
+		message := Message{Rule: BRA, Channel1: process.Providers[0], Label: f.label}
 		// Send the provider channel (self) as the continuation channel
 
-		cseRule := func() {
+		braRule := func() {
 			// Message is the received message
-			re.logProcess(LOGRULE, process, "[select, client] starting CSE rule")
-			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule CSE\n", f.to_c.String())
+			re.logProcess(LOGRULE, process, "[select, client] starting BRA rule")
+			re.logProcessf(LOGRULEDETAILS, process, "Received message on channel %s, containing message rule BRA\n", f.to_c.String())
 
 			// Although the process dies, its provider will be used as the client's provider
 			process.renamed(process.Providers, []Name{f.to_c}, re)
 		}
 
-		TransitionBySending(process, f.to_c.Channel, cseRule, message, re)
+		TransitionBySending(process, f.to_c.Channel, braRule, message, re)
 	} else {
 		re.errorf(process, "in %s, neither the sender ('%s') or continuation ('%s') is self", f.String(), f.to_c.String(), f.continuation_c.String())
 	}
@@ -462,7 +462,7 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 	re.logProcessf(LOGRULEDETAILS, process, "transition of case: %s\n", f.String())
 
 	if f.from_c.IsSelf {
-		// CSE rule (provider, -ve)
+		// BRA rule (provider, -ve)
 		//
 		// to_c.label<self>
 		//    |
@@ -470,11 +470,11 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 		//   \|/
 		// [case self (...)]
 
-		cseRule := func(message Message) {
+		braRule := func(message Message) {
 			re.logProcessf(LOGRULEDETAILS, process, "[case, provider] finished receiving on self. Received label '%s'\n", message.Label.String())
 
-			if message.Rule != CSE {
-				re.errorf(process, "expected CSE, found %s\n", RuleString[message.Rule])
+			if message.Rule != BRA {
+				re.errorf(process, "expected BRA, found %s\n", RuleString[message.Rule])
 			}
 
 			// Match received label with the available branches
@@ -495,19 +495,19 @@ func (f *CaseForm) Transition(process *Process, re *RuntimeEnvironment) {
 				re.errorf(process, "no matching labels found for %s\n", message.Label)
 			}
 
-			process.finishedRule(CSE, "[case, provider]", "(p)", re)
+			process.finishedRule(BRA, "[case, provider]", "(p)", re)
 			// Terminate the current provider to replace them with the one being received
 			process.terminateBeforeRename(process.Providers, []Name{message.Channel2}, re)
 
 			process.Body = new_body
 			process.Providers = []Name{message.Channel1}
-			// process.finishedRule(CSE, "[receive, provider]", "(p)", re)
+			// process.finishedRule(BRA, "[receive, provider]", "(p)", re)
 			process.processRenamed(re)
 
 			process.transitionLoop(re)
 		}
 
-		TransitionByReceiving(process, process.Providers[0].Channel, cseRule, re)
+		TransitionByReceiving(process, process.Providers[0].Channel, braRule, re)
 	} else {
 		// SEL rule (client, +ve)
 		//
@@ -701,9 +701,9 @@ func (f *ForwardForm) Transition(process *Process, re *RuntimeEnvironment) {
 		// least problematic
 		// ACTIVE
 
-		message := Message{Rule: FWD_DROP}
+		message := Message{Rule: GC}
 		f.from_c.Channel <- message
-		re.logProcessf(LOGRULE, process, "[droppable forward, client] sent FWD_DROP request to client %s\n", f.from_c.String())
+		re.logProcessf(LOGRULE, process, "[droppable forward, client] sent GC request to client %s\n", f.from_c.String())
 
 		process.terminateForward(re)
 

@@ -1,6 +1,12 @@
-# Grits
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/grits-light-text.png">
+  <img alt="Grits" src="./assets/grits-dark-text.png">
+</picture>
+</p>
+<!-- # Grits -->
 
-Grits is a type-checker and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
+**Grits** is a type-checker and interpreter for intuitionistic session types written in Go, based on the semi-axiomatic sequent calculus.
 
 ## How to use
 

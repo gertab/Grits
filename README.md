@@ -1,7 +1,7 @@
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/grits-light-text.png">
-  <img alt="Grits" src="./assets/grits-dark-text.png">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/grits-light-text.svg">
+  <img alt="Grits" width="250" height="161" src="./assets/grits-dark-text.svg">
 </picture>
 </p>
 <!-- # Grits -->

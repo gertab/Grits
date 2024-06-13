@@ -394,7 +394,7 @@ func TestTypeDefinitionModes(t *testing.T) {
 		{"lin+{a : [lin]1}"},             // K
 		{"[lin]1 [lin]-* [lin]1"},        // L
 		{"[aff]1 [aff]-* [aff]1"},        // M
-		{"[rep]1 [rep]-* [rep]1"},        // N
+		{"[mul]1 [mul]-* [mul]1"},        // N
 		{"[rep]1 [rep]-* [rep]1"},        // O
 		{"[rep]1 [rep]-* [rep]1 [rep]* rep+{ab : [rep]1, cd : [rep]1}"},          // P
 		{"[aff]1 [aff]-* [aff]1 [aff]* aff+{ab : [aff]1, cd : [aff]1}"},          // Q

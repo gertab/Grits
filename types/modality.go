@@ -7,6 +7,7 @@ import (
 
 type Modality interface {
 	String() string
+	FullString() string
 	// Check which shift are allowed
 	CanBeUpshiftedTo(Modality) bool
 	CanBeDownshiftedTo(Modality) bool
@@ -41,6 +42,10 @@ func NewReplicableMode() *ReplicableMode {
 
 func (q *ReplicableMode) String() string {
 	return "rep"
+}
+
+func (q *ReplicableMode) FullString() string {
+	return "replicable"
 }
 
 func (q *ReplicableMode) Copy() Modality {
@@ -98,7 +103,11 @@ func NewMulticastMode() *MulticastMode {
 }
 
 func (q *MulticastMode) String() string {
-	return "rep"
+	return "mul"
+}
+
+func (q *MulticastMode) FullString() string {
+	return "multicast"
 }
 
 func (q *MulticastMode) Copy() Modality {
@@ -159,6 +168,10 @@ func (q *AffineMode) String() string {
 	return "aff"
 }
 
+func (q *AffineMode) FullString() string {
+	return "affine"
+}
+
 func (q *AffineMode) Copy() Modality {
 	return NewAffineMode()
 }
@@ -215,6 +228,10 @@ func NewLinearMode() *LinearMode {
 
 func (q *LinearMode) String() string {
 	return "lin"
+}
+
+func (q *LinearMode) FullString() string {
+	return "linear"
 }
 
 func (q *LinearMode) Copy() Modality {
@@ -279,6 +296,10 @@ func (q *InvalidMode) String() string {
 	return "invalid: " + q.mode
 }
 
+func (q *InvalidMode) FullString() string {
+	return q.String()
+}
+
 func (q *InvalidMode) Copy() Modality {
 	return NewInvalidMode(q.mode)
 }
@@ -313,6 +334,10 @@ func NewUnsetMode() *UnsetMode {
 
 func (q *UnsetMode) String() string {
 	return "unset"
+}
+
+func (q *UnsetMode) FullString() string {
+	return q.String()
 }
 
 func (q *UnsetMode) Copy() Modality {

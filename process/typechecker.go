@@ -1096,7 +1096,7 @@ func (p *DropForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadow
 
 			return continuationError
 		} else {
-			return TypeErrorf("expected '%s' to have a weakenable type, but found the non-weakenable type '%s' instead", p.client_c.String(), clientType.StringWithOuterModality())
+			return TypeErrorf("unable to drop %s, which is in %s mode", p.client_c.String(), clientType.Modality().FullString())
 		}
 	} else {
 		// Wrongly dropping self
@@ -1232,7 +1232,7 @@ func (p *SplitForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShado
 	gammaNameTypesCtx[p.channel_two.Ident] = NamesType{Type: foundType} //todo not sure if i need to use CopyType
 
 	if !types.IsContractable(foundType) {
-		return TypeErrorf("expected '%s' to have a contractable type, but found the non-contractable type '%s' instead", p.from_c.String(), foundType.StringWithOuterModality())
+		return TypeErrorf("unable to split %s, which is in %s mode", p.from_c.String(), foundType.Modality().FullString())
 	}
 
 	// Set type

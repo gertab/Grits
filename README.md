@@ -175,7 +175,7 @@ Others:
 
 ## Development Details
 
-This project requires [Go](https://go.dev/doc/install) version 1.20 (or later).
+This project requires [Go](https://go.dev/doc/install) version 1.21 (or later).
 
 ### Building and Testing
 

@@ -1,0 +1,84 @@
+// Reducing a list to some final value
+
+// Types for natural numbers and a list of natural numbers
+type nat = lin +{zero : 1, succ : nat}
+type listNat = lin +{cons : nat * listNat, nil : 1}
+type reduceType = lin /\ rep ((nat * nat) -* nat)
+
+let reduce(l : listNat, f : reduceType) : nat =
+    case l (
+        cons<l'> => // Perform reduction, setting l' as the accumulator
+                    <head, tail> <- recv l';
+                    reduce_inner(tail, f, head)
+
+      | nil<l'>  => // Empty list, send 'zero'
+                    drop f;
+                    self.zero<l'>
+    )
+
+
+let reduce_inner(l : listNat, f : reduceType, a : nat) : nat =
+    case l (
+        cons<l'> => <head, tail> <- recv l';
+                    <f', f''> <- split f;       // Duplicate fs
+
+                    // Traverse the child nodes
+                    remaining <- new reduce_inner(tail, f', a);
+
+                    // Perform the reduction part
+                    p : nat * nat <- new send self<head, remaining>;
+                    fl : ((nat * nat) -* nat) <- new cast f''<self>;
+                    send fl<p, self>
+
+      | nil<l'> => drop f;
+                   wait l';
+                   fwd self a
+    )
+
+///////// Incomplete, but well-typed snippet /////////
+
+// Initialize each process individually
+assuming f : reduceType
+prc[l] : listNat = simpleList()
+prc[b] : nat = reduce(l, f) 
+
+///////// Natural number operations /////////
+
+// let reduceByAdding() : lin /\ rep ((nat * nat) -* nat) = 
+//   s <- shift self;
+//   <list, result> <- recv s;
+//   <left, right> <- recv list;
+//   currRes <- new addNats(left, right);
+//   fwd result currRes
+// 
+// // Adds two natural numbers
+// let addNats(x : nat, y : nat) : nat =
+//     case x (
+//           zero<x'> => wait x'; fwd self y
+//         | succ<x'> => y'' : nat <- new y''.succ<y>;
+//                       addNats(x', y'')
+//     )
+
+// 1 = S(0)
+let one() : nat =
+    n1''  : lin 1 <- new close self;
+    n1'   : nat   <- new self.zero<n1''>;
+    self.succ<n1'>
+
+// 2 = S(S(0))
+let two() : nat =
+    n2''' : lin 1 <- new close self;
+    n2''  : nat   <- new self.zero<n2'''>;
+    n2'   : nat   <- new self.succ<n2''>;
+    self.succ<n2'>
+
+let simpleList() : listNat =
+    n1 <- new one(); // succ(zero)
+    n2 <- new two(); // succ(succ(zero))
+
+    lnil' : lin 1         <- new close self;
+    lnil  : listNat       <- new self.nil<lnil'>;
+    l0'   : nat * listNat <- new send self<n1, lnil>;
+    l0    : listNat       <- new self.cons<l0'>;    
+    l1'   : nat * listNat <- new send self<n2, l0>;
+    self.cons<l1'>

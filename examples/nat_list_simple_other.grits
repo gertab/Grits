@@ -1,0 +1,63 @@
+// Simple natural number list (alternative version)
+
+// Types for natural numbers and a list of natural numbers
+type nat = lin +{zero : 1, succ : nat}
+type listNat = lin +{cons : nat * listNat, nil : 1}
+
+// Provide a list containing cons(2, cons(1, nil))
+// 1 = succ(zero)
+let one() : nat =
+    n1''  : lin 1 <- new close self;
+    n1'   : nat   <- new self.zero<n1''>;
+    self.succ<n1'>
+
+// 2 = succ(succ(zero))
+let two() : nat =
+    n2''' : lin 1 <- new close self;
+    n2''  : nat   <- new self.zero<n2'''>;
+    n2'   : nat   <- new self.succ<n2''>;
+    self.succ<n2'>
+
+let simpleList() : listNat =
+    n1 <- new one(); // succ(zero)
+    n2 <- new two(); // succ(succ(zero))
+
+    lnil' : lin 1         <- new close self;
+    lnil  : listNat       <- new self.nil<lnil'>;
+    l0'   : nat * listNat <- new send self<n1, lnil>;
+    l0    : listNat       <- new self.cons<l0'>;    
+    l1'   : nat * listNat <- new send self<n2, l0>;
+    self.cons<l1'>
+
+// Initialize each process individually
+prc[a] : listNat = simpleList()
+prc[b] : lin 1 = printListNat(a)
+
+///////// Printing Helpers /////////
+
+let printListNat(l : listNat) : lin 1 = 
+          y <- new consumeListNat(l); 
+          wait y;
+          close self
+
+let consumeListNat(l : listNat) : lin 1 = 
+        case l ( cons<c> => print _cons_;
+                            <element, remainingList> <- recv c;
+                            elementDone <- new consumeNat(element);
+                            wait elementDone;
+                            rightDone <- new consumeListNat(remainingList);
+                            wait rightDone;
+                            close self
+               | nil<c> =>  print _nil_;
+                            wait c; close self
+        )
+
+let consumeNat(n : nat) : lin 1 = 
+        case n ( zero<c> => print zero; wait c; close self
+               | succ<c> => print succ; consumeNat(c))
+
+let printNat(n : nat) : lin 1 = 
+          y <- new consumeNat(n); 
+          wait y;
+          close self
+

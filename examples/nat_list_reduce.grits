@@ -1,0 +1,178 @@
+// Reducing a list to some final value
+
+// Types for natural numbers and a list of natural numbers
+type nat = lin +{zero : 1, succ : nat}
+type listNat = lin +{cons : nat * listNat, nil : 1}
+type reduceType = lin /\ rep ((nat * nat) -* nat)
+
+let reduce(l : listNat, f : reduceType) : nat =
+    case l (
+        cons<l'> => // Perform reduction, setting l' as the accumulator
+                    <head, tail> <- recv l';
+                    reduce_inner(tail, f, head)
+
+      | nil<l'>  => // Empty list, send 'zero'
+                    drop f;
+                    self.zero<l'>
+    )
+
+let reduce_inner(l : listNat, f : reduceType, a : nat) : nat =
+    case l (
+        cons<l'> => <head, tail> <- recv l';
+                    <f', f''> <- split f;       // Duplicate f
+
+                    // Traverse the remain list elements
+                    remaining <- new reduce_inner(tail, f', a);
+
+                    // Perform the reduction part
+                    p : nat * nat <- new send self<head, remaining>;
+                    fl : ((nat * nat) -* nat) <- new cast f''<self>;
+                    send fl<p, self>
+
+      | nil<l'> => drop f;
+                   wait l';
+                   fwd self a
+    )
+
+///////// Start Execution /////////
+
+let main() : nat =
+    l : listNat <- new simpleList(); // contains cons(2, cons(2, nil))
+    f : reduceType <- new reduceByAdding();
+    reduce(l, f)
+
+// Execute main
+exec main()
+
+// Init with print function
+let main2() : lin 1 =
+    m : listNat <- new main();
+    printNat(m)
+
+// Execute main2
+exec main2()
+
+///////// Reduce Process Definition /////////
+
+// reduceType = lin /\ rep ((nat * nat) -* nat)
+let reduceByAdding() : reduceType = 
+  s <- shift self;
+  <list, result> <- recv s;
+  <left, right> <- recv list;
+  currRes <- new addNumbers(left, right);
+  fwd result currRes
+
+// Adds two natural numbers
+let addNumbers(x : nat, y : nat) : nat =
+    case x (
+          zero<x'> => wait x'; fwd self y
+        | succ<x'> => y'' : nat <- new y''.succ<y>;
+                      addNumbers(x', y'')
+    )
+
+///////// Printing Helpers /////////
+
+let printListNat(l : listNat) : lin 1 = 
+          y <- new consumeListNat(l); 
+          wait y;
+          close self
+
+let consumeListNat(l : listNat) : lin 1 = 
+        case l ( cons<c> => print _cons_;
+                            <element, remainingList> <- recv c;
+                            elementDone <- new consumeNat(element);
+                            wait elementDone;
+                            rightDone <- new consumeListNat(remainingList);
+                            wait rightDone;
+                            close self
+               | nil<c> =>  print _nil_;
+                            wait c; close self
+        )
+
+let consumeNat(n : nat) : lin 1 = 
+        case n ( zero<c> => print zero; wait c; close self
+               | succ<c> => print succ; consumeNat(c))
+
+let printNat(n : nat) : lin 1 = 
+          y <- new consumeNat(n); 
+          wait y;
+          close self
+
+
+// 0
+let zero() : nat =
+    n0  : lin 1 <- new close self;
+    self.zero<n0>
+
+// 1 = S(0)
+let one() : nat =
+    n1''  : lin 1 <- new close self;
+    n1'   : nat   <- new self.zero<n1''>;
+    self.succ<n1'>
+
+// 2 = S(S(0))
+let two() : nat =
+    n2''' : lin 1 <- new close self;
+    n2''  : nat   <- new self.zero<n2'''>;
+    n2'   : nat   <- new self.succ<n2''>;
+    self.succ<n2'>
+
+
+// 3 : S(S(S(0)))
+let three() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  fwd self s3
+
+// 4 : S(S(S(S(0))))
+let four() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  s4 : nat <- new s4.succ<s3>; 
+  fwd self s4
+
+// 5 : S(S(S(S(S(0)))))
+let five() : nat =
+  t : lin 1 <- new close t;
+  z  : nat <- new z.zero<t>;
+  s1 : nat <- new s1.succ<z>; 
+  s2 : nat <- new s2.succ<s1>; 
+  s3 : nat <- new s3.succ<s2>; 
+  s4 : nat <- new s4.succ<s3>; 
+  s5 : nat <- new s5.succ<s4>; 
+  fwd self s5
+
+// List containing: cons(2, cons(2, nil))
+let simpleList() : listNat =
+    n1 <- new one(); // succ(zero)
+    n2 <- new two(); // succ(succ(zero))
+
+    lnil' : lin 1         <- new close self;
+    lnil  : listNat       <- new self.nil<lnil'>;
+    l0'   : nat * listNat <- new send self<n1, lnil>;
+    l0    : listNat       <- new self.cons<l0'>;    
+    l1'   : nat * listNat <- new send self<n2, l0>;
+    self.cons<l1'>
+
+let extendedList() : listNat =
+    n4 <- new four();
+    n0 <- new zero(); 
+    n3 <- new three(); 
+
+
+    lnil' : lin 1         <- new close self;
+    lnil  : listNat       <- new self.nil<lnil'>;
+    l0'   : nat * listNat <- new send self<n4, lnil>;
+    l0    : listNat       <- new self.cons<l0'>;    
+    l1'   : nat * listNat <- new send self<n0, l0>;
+    l1    : listNat       <- new self.cons<l1'>;
+    l2'   : nat * listNat <- new send self<n3, l1>;
+    l2    : listNat       <- new self.cons<l2'>;
+    fwd self l2
+

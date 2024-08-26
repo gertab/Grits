@@ -24,10 +24,10 @@ let simpleList() : listNat =
 
     lnil' : lin 1         <- new close self;
     lnil  : listNat       <- new self.nil<lnil'>;
-    l0'   : nat * listNat <- new send self<n1, lnil>;
-    l0    : listNat       <- new self.cons<l0'>;    
-    l1'   : nat * listNat <- new send self<n2, l0>;
-    self.cons<l1'>
+    l1'   : nat * listNat <- new send self<n1, lnil>;
+    l1    : listNat       <- new self.cons<l1'>;
+    l2'   : nat * listNat <- new send self<n2, l1>;
+    self.cons<l2'>
 
 // Initialize each process individually
 prc[a] : listNat = simpleList()

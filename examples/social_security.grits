@@ -37,17 +37,18 @@ let main() : lin 1 =
 // Execute main
 exec main()
 
-// Initialize each process individually
-//assuming insurance : lin 1, hospital : lin +{found : 1, not_found : 1}
-//prc[ss1, ss2] : social_security_no = ssExample()
-//// prc[hospital] : lin +{found : 1, not_found : 1} = hospital_admission(ss2)
-//prc[h] : lin 1 =  wait insurance;
-//                  case hospital (
+// // Initialize each process individually
+// assuming ss : social_security_no, 
+//          h : lin +{found : 1, not_found : 1}
+// //prc[ss1, ss2] : social_security_no = ssExample()
+// // prc[h] : lin +{found : 1, not_found : 1} = hospital_admission(ss2)
+// prc[i] : lin 1 = insurance(ss)
+// prc[p] : lin 1 = wait i;
+//                  case h (
 //                      found<h'>     => print found_patient; wait h'; close self
 //                    | not_found<h'> => print not_found; wait h'; close self
 //                  )
-////prc[b] : lin 1 = printSS(a'')
-
+// //prc[b] : lin 1 = printSS(a'')
 
 ///////// Hospital /////////
 
@@ -120,6 +121,58 @@ let even_odd_digit(d : digit) : mul +{even : 1, odd : 1} =
                     self.odd<c'>
     )
 
+///////// Hospital (Alternative checks, using length of number) /////////
+
+let hospital_admission2(n : social_security_no) : lin +{found : 1, not_found : 1} =
+    ss_length_validation : mul +{even : 1, odd : 1} <- new length_validation(n);
+
+    case ss_length_validation (
+        ok<c> =>
+            wait c;
+            print _ss_length_ok;
+            c' : lin 1 <- new close self;
+            self.found<c'>
+      | not_ok<c> =>
+            wait c;
+            print _ss_length_not_ok;
+            c' : lin 1 <- new close self;
+            self.not_found<c'>
+    )
+
+// Ensure that the number is two or more digits long
+let length_validation(n : social_security_no) : mul +{ok : 1, not_ok : 1} =
+    case n (
+        cons<n'> => 
+            // length = 1+
+            <d, tail> <- recv n';
+            d <- shift d;
+            drop d;
+
+            case tail (
+                cons<n''> =>
+                    // length = 2+
+                    <d', tail'> <- recv n'';
+                    d' <- shift d';
+                    drop d';
+                    consume <- new consume_tail(tail');
+                    self.ok<consume>
+               | nil<n'> => 
+                    self.not_ok<n'>
+            )
+      | nil<n'> => 
+            self.not_ok<n'>
+    )
+
+let consume_tail(n : social_security_no) : mul 1 =
+    case n ( cons<n'> => <d, tail> <- recv n';
+                         d <- shift d;
+                         drop d;
+                         consume_tail(tail)
+           | nil<n'>  => wait n'; close self
+    )
+
+
+
 ///////// Insurance /////////
 let insurance(n : social_security_no) : lin 1 =
     n' <- new encrypt(n);
@@ -129,65 +182,68 @@ let insurance(n : social_security_no) : lin 1 =
     print end_of_encrypted_ss;
     close self
     
+type ss_cons = mul (rep \/ mul digit) * social_security_no
+
 // encryption by flipping each digit, e.g. 0 -> 9, 1 -> 8, ..., 8 -> 1, 9 -> 0
 let encrypt(n : social_security_no) : social_security_no =
-    case n ( cons<c> => <element, remainingList> <- recv c;
-                        element' <- shift element;
-                        case element' (
-                            _0<c>  => inverted : digit <- new self._9<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _1<c>   => inverted : digit <- new self._8<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _2<c>   => inverted : digit <- new self._7<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _3<c> => inverted : digit <- new self._6<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _4<c>  => inverted : digit <- new self._5<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _5<c>  => inverted : digit <- new self._4<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _6<c>   => inverted : digit <- new self._3<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _7<c> => inverted : digit <- new self._2<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _8<c> => inverted : digit <- new self._1<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                          | _9<c>  => inverted : digit <- new self._0<c>; 
-                                        inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                                        remaining_inverted : social_security_no <- new encrypt(remainingList);
-                                        remaining : (rep \/ mul digit) * social_security_no <- new send self<inverted_rep, remaining_inverted>;
-                                        self.cons<remaining>
-                        )
-                            
-               | nil<c> => self.nil<c>
+    case n ( cons<c> => 
+        <curr_digit, remaining_number> <- recv c;
+        curr_digit' <- shift curr_digit;
+        case curr_digit' (
+            _0<c> => inverted : digit <- new self._9<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _1<c> => inverted : digit <- new self._8<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _2<c> => inverted : digit <- new self._7<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _3<c> => inverted : digit <- new self._6<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _4<c> => inverted : digit <- new self._5<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _5<c> => inverted : digit <- new self._4<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _6<c> => inverted : digit <- new self._3<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _7<c> => inverted : digit <- new self._2<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _8<c> => inverted : digit <- new self._1<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
+          | _9<c> => inverted : digit <- new self._0<c>; 
+                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
+                     remaining_inverted : social_security_no <- new encrypt(remaining_number);
+                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
+                     self.cons<remaining>
         )
+            
+       | nil<c> => self.nil<c>
+    )
 
 // decrypt by encrypting again
 let decrypt(n : social_security_no) : social_security_no =

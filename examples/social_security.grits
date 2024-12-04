@@ -53,38 +53,61 @@ exec main()
 ///////// Hospital /////////
 
 let hospital_admission(n : social_security_no) : lin +{found : 1, not_found : 1} =
-    ss_even_odd : mul +{even : 1, odd : 1} <- new even_odd(n);
 
-    case ss_even_odd (
-        even<c> =>
+    <n1, n2> <- split n;
+
+    // Ensure that the number is longer than 2 digits
+    ss_length_validation : mul +{even : 1, odd : 1} <- new length_validation(n1);
+
+    // Ensure that number is even
+    ss_even_odd : mul +{even : 1, odd : 1} <- new even_odd(n2);
+
+    c' : lin 1 <- new close self;
+
+    case ss_length_validation (
+        ok<c> =>
             wait c;
-            print even;
-            c' : lin 1 <- new close self;
-            self.found<c'>
-      | odd<c> =>
+            print _ss_length_ok;
+
+            case ss_even_odd (
+                even<c> =>
+                    wait c;
+                    print even;
+                    self.found<c'>
+              | odd<c> =>
+                    wait c;
+                    print odd;
+                    self.not_found<c'>
+            )
+
+      | not_ok<c> =>
             wait c;
-            print odd;
-            c' : lin 1 <- new close self;
-            self.not_found<c'>
+            print _ss_length_not_ok;
+
+            case ss_even_odd (
+                even<c> => wait c;
+                           self.not_found<c'>
+              | odd<c>  => wait c;
+                           self.not_found<c'>
+            )
     )
 
+// Check whether the ssn is even or odd
 let even_odd(n : social_security_no) : mul +{even : 1, odd : 1} =
+    c : rep 1 <- new close self;
+    d : digit <- new self._0<c>; // dummy digit
+    even_odd_inner(n, d)
+
+let even_odd_inner(n : social_security_no, result : digit) : mul +{even : 1, odd : 1} =
     case n (
         cons<n'> => 
             <d, tail> <- recv n';
-            case tail (
-                cons<n''> => d' <- shift d;
-                             drop d'; // can be dropped due to the replicable mode
-                             c : social_security_no <- new self.cons<n''>;
-                             even_odd(c)
-              | nil<n''> => 
-                    wait n'';
-                    d' <- shift d;
-                    even_odd_digit(d')
-            )
-      | nil<n'> => 
-            // invalid ss number
-            self.even<n'>
+            d' <- shift d;
+            drop result;
+            even_odd_inner(tail, d')
+      | nil<n'> =>
+            wait n';
+            even_odd_digit(result)
     )
 
 let even_odd_digit(d : digit) : mul +{even : 1, odd : 1} =
@@ -119,24 +142,6 @@ let even_odd_digit(d : digit) : mul +{even : 1, odd : 1} =
       | _9<c>  => wait c; 
                     c' : mul 1 <- new close self;
                     self.odd<c'>
-    )
-
-///////// Hospital (Alternative checks, using length of number) /////////
-
-let hospital_admission2(n : social_security_no) : lin +{found : 1, not_found : 1} =
-    ss_length_validation : mul +{even : 1, odd : 1} <- new length_validation(n);
-
-    case ss_length_validation (
-        ok<c> =>
-            wait c;
-            print _ss_length_ok;
-            c' : lin 1 <- new close self;
-            self.found<c'>
-      | not_ok<c> =>
-            wait c;
-            print _ss_length_not_ok;
-            c' : lin 1 <- new close self;
-            self.not_found<c'>
     )
 
 // Ensure that the number is two or more digits long
@@ -269,6 +274,20 @@ let ssExample() : social_security_no =
     n0 <- new zero();
     l0' : (rep \/ mul digit) * social_security_no <- new send self<n0, l1>;
     self.cons<l0'>
+
+// Social Security example: 13 = cons(1, cons(3, nil))
+let ssExample2() : social_security_no =
+    // nil
+    lnil' : mul 1              <- new close self;
+    lnil  : social_security_no <- new self.nil<lnil'>;
+    // 3
+    n3 <- new three();
+    l3' : (rep \/ mul digit) * social_security_no <- new send self<n3, lnil>;
+    l3  : social_security_no   <- new self.cons<l3'>;
+    // 1
+    n1 <- new one();
+    l1' : (rep \/ mul digit) * social_security_no <- new send self<n1, l3>;
+    self.cons<l1'>
 
 // 0
 let zero() : rep \/ mul digit =

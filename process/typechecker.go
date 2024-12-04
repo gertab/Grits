@@ -589,7 +589,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			}
 
 			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
-				return TypeErrorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+				return TypeErrorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.StringWithOuterModality(), continuationType.StringWithOuterModality())
 			}
 
 			p.to_c.Type = providerSelectLabelType
@@ -627,7 +627,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 			}
 
 			if !types.EqualType(continuationType, foundContinuationType, labelledTypesEnv) {
-				return TypeErrorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.String(), continuationType.String())
+				return TypeErrorf("type of '%s' is '%s'. Expected type to be '%s'", p.continuation_c.String(), foundContinuationType.StringWithOuterModality(), continuationType.StringWithOuterModality())
 			}
 
 			// Type ok

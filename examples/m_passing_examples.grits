@@ -95,8 +95,8 @@ type after = (lin /\ aff A) -* (lin /\ aff B)
 let upDist(f : before) : after = 
     <x, y> <- recv self;
     y' <- shift self;
-    x' : A <- new cast x<x'>;
-    f' : A -* B <- new cast f<f'>;
+    x' : A <- new cast x<self>;
+    f' : A -* B <- new cast f<self>;
     send f'<x',self>
 
 // Example 6

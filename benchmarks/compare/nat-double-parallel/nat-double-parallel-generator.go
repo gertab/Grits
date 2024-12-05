@@ -65,7 +65,7 @@ let double(x : nat) : nat =
 case x (
 		zero<x'> => self.zero<x'>
 	| succ<x'> => h <- new double(x');
-					d : nat <- new d.succ<h>;
+					d : nat <- new self.succ<h>;
 					self.succ<d>
 )
 
@@ -115,7 +115,7 @@ let runTests() : listNat =
 	buffer.WriteString(testPart3)
 
 	for i := 1; i <= parallelThreads; i += 1 {
-		testPart4 := fmt.Sprintf("    instance%dresult : nat <- new instance%d.start<instance%dresult>;\n", i, i, i)
+		testPart4 := fmt.Sprintf("    instance%dresult : nat <- new instance%d.start<self>;\n", i, i)
 		buffer.WriteString(testPart4)
 	}
 
@@ -143,9 +143,9 @@ let runTests() : listNat =
 
 // 1 : S(0)
 let nat1() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s0 : nat <- new s0.succ<z>;
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s0 : nat <- new self.succ<z>;
   fwd self s0
 
 ///////// Printing Helpers /////////

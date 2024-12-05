@@ -332,9 +332,9 @@ func TestCopy(t *testing.T) {
 	input5 := NewNew(cont_c, end, end)
 	copy5 := CopyForm(input5)
 	copyWithType5 := copy5.(*NewForm)
-	copyWithType5.continuation_c.Ident = "cont_c"
+	copyWithType5.new_name_c.Ident = "cont_c"
 	assertEqual(t, input5, copy5)
-	copyWithType5.continuation_c.Ident = "cont_c_edited"
+	copyWithType5.new_name_c.Ident = "cont_c_edited"
 	assertNotEqual(t, input5, copy5)
 
 	// Close
@@ -422,7 +422,7 @@ func TestFreeNames(t *testing.T) {
 	assertEqualNames(t, input5.FreeNames(), []Name{})
 
 	input5other := NewNew(cont_c, input3, end)
-	assertEqualNames(t, input5other.FreeNames(), []Name{from_c, to_c})
+	assertEqualNames(t, input5other.FreeNames(), []Name{from_c, to_c, cont_c})
 
 	// Close
 	input6 := NewClose(from_c)

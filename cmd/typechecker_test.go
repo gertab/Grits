@@ -483,7 +483,7 @@ func TestTypecheckCorrectCut(t *testing.T) {
 
 	cases := []string{
 		// Cut
-		`prc[pid1] : 1 = x : 1 <- new ( close x ); wait x; close self
+		`prc[pid1] : 1 = x : 1 <- new ( close self ); wait x; close self
 		 prc[pid2] : 1 = x : 1 <- new ( close self ); wait x; close self`,
 		// Cut [call]
 		`let f() : 1 = close self
@@ -497,7 +497,7 @@ func TestTypecheckCorrectCut(t *testing.T) {
 					case xy (labelok<b> => print b; wait b; close self)
 		 prc[ff] : 1 = close self`,
 		`let f() : 1 = close self
-		 prc[pid1] : 1 = x : 1 <- new f(x); wait x; close self`,
+		 prc[pid1] : 1 = x : 1 <- new f(self); wait x; close self`,
 		`type A = &{label : 1}
 		 type B = 1 -* 1
 		 let f(a : A, b : B) : A * B = send self<a, b>
@@ -516,6 +516,9 @@ func TestTypecheckIncorrectCut(t *testing.T) {
 		 assuming pid2 : +{labelok : 1}
 		 prc[pid1] : 1 = x <- new (f(pid2)); drop x; close self
 		 prc[pid2] : &{labelok : 1} = case self (labelok<b> => close b)`,
+
+		// Not using 'self'
+		`prc[pid1] : 1 = x : 1 <- new ( close x ); wait x; close self`,
 
 		// Cut [axiomatic version]
 		`assuming pid2 : &{labelok : 1}
@@ -712,22 +715,66 @@ func TestExecCorrect(t *testing.T) {
 	cases := []string{
 		`type A = 1
 
-		let f() : A = x : A <- new close x; 
+		let f() : A = x : A <- new close self; 
 						  wait x; 
 						  close self
 		
 		exec f()`,
 		`type A = 1
 
-		let f[w : A] = x : A <- new close x; 
+		let f[w : A] = x : A <- new close self; 
 						  wait x; 
 						  close w
 		
 		exec f()
 		exec f()`,
+		`
+		type A = lin 1 
+
+		let simpleWait(a : A) : A = 
+			wait a; 
+			close self
+
+		let hello() : A = 
+			a : A <- new close self;
+			a <- new simpleWait(a);  // a is reused multiple times
+			a <- new simpleWait(a);  // ^
+			a <- new simpleWait(a);  // ^
+			wait a;                
+			print hello;           
+			close self`,
 	}
 
 	runThroughTypechecker(t, cases, true)
+}
+
+func TestSelfIncorrect(t *testing.T) {
+
+	cases := []string{
+		`type A = 1
+
+		let f() : A = x : A <- new close x; 
+						  wait x; 
+						  close self`,
+		`type A = 1
+
+		let f[w : A] = x : A <- new close x; 
+						  wait x; 
+						  close w`,
+		`
+		let ff() : 1 =
+			close self
+		prc[a] : 1 =  
+			f1 <- new ff();
+			f1 <- new ff();
+			f1 <- new ff();
+			f1 <- new ff();
+			wait f1; 
+			print ok;
+			close self`,
+	}
+
+	runThroughTypechecker(t, cases, false)
 }
 
 // Polarities
@@ -844,9 +891,9 @@ func TestTypecheckCorrectCastShifting(t *testing.T) {
 		 prc[a] : affine \/ linear 1 = cast self<u>`,
 		`assuming u : affine 1
 		 prc[a] : affine \/ affine 1 = cast self<u>`,
-		`let f() : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>
-		 let f2[w : affine \/ linear 1] = x : affine 1 <- new (close x); cast w<x>
-		 prc[a] : affine \/ linear 1 = x : affine 1 <- new (close x); cast self<x>`,
+		`let f() : affine \/ linear 1 = x : affine 1 <- new (close self); cast self<x>
+		 let f2[w : affine \/ linear 1] = x : affine 1 <- new (close self); cast w<x>
+		 prc[a] : affine \/ linear 1 = x : affine 1 <- new (close self); cast self<x>`,
 		//  Upshift:  /\
 		`assuming u : linear /\ affine 1 
 		 prc[a] : linear 1 = cast u<self>`,

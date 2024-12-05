@@ -265,22 +265,22 @@ func (f *NewForm) TransitionNP(process *Process, re *RuntimeEnvironment) {
 	newRule := func() {
 		// This name is indicative only (for debugging), since there shouldn't be more than one process with the same channel name
 		// Although channels may have an ID, processes (i.e. goroutines) are anonymous
-		newChannelIdent := f.continuation_c.Ident
+		newChannelIdent := f.new_name_c.Ident
 		// newChannelIdent := ""
 
 		// First create fresh channel (with fake identity of the continuation_c name) to link both processes
 		newChannel := re.CreateFreshChannel(newChannelIdent)
-		newChannel.Type = types.CopyType(f.continuation_c.Type)
-		newChannel.ExplicitPolarity = f.continuation_c.ExplicitPolarity
+		newChannel.Type = types.CopyType(f.new_name_c.Type)
+		newChannel.ExplicitPolarity = f.new_name_c.ExplicitPolarity
 
 		// Substitute reference to this new channel by the actual channel in the current process and new process
 		currentProcessBody := f.continuation_e
-		currentProcessBody.Substitute(f.continuation_c, newChannel)
+		currentProcessBody.Substitute(f.new_name_c, newChannel)
 		process.Body = currentProcessBody
 
 		// Create structure of new process
 		newProcessBody := f.body
-		newProcessBody.Substitute(f.continuation_c, Name{IsSelf: true})
+		// newProcessBody.Substitute(f.new_name_c, Name{IsSelf: true})
 		newProcess := NewProcess(newProcessBody, []Name{newChannel}, nil, LINEAR, process.Position)
 
 		re.logProcessf(LOGRULEDETAILS, process, "[new] will create new process with channel %s\n", newChannel.String())

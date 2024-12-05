@@ -42,13 +42,13 @@ let double(x : nat) : nat =
     case x (
           zero<x'> => self.zero<x'>
         | succ<x'> => h <- new double(x');
-                      d : nat <- new d.succ<h>;
+                      d : nat <- new self.succ<h>;
                       self.succ<d>
     )
 
 let plus1(y : nat) : nat = 
     case y (
-          zero<x'> => x'' : nat <- new x''.zero<x'>;
+          zero<x'> => x'' : nat <- new self.zero<x'>;
                       self.succ<x''>
         | succ<x'> => x'' <- new plus1(x');
                       self.succ<x''>
@@ -86,8 +86,8 @@ let consumeNat(n : nat) : 1 =
 
 	const processPart1 = `// Initiate execution
 prc[d0] : nat =
-    t : 1 <- new close t;
-    z  : nat <- new z.zero<t>;
+    t : 1 <- new close self;
+    z  : nat <- new self.zero<t>;
     self.succ<z>
 prc[b] : nat = 
 `

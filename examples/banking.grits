@@ -29,8 +29,8 @@ let authService() : lin /\ aff transaction =
 //prc[user1] : lin 1 = drop bankService; 
 //                     close self
 
-prc[bankService] : bankType = bank()
-prc[user2] : lin 1 = 
+//prc[bankService] : bankType = bank()
+let user(bankService : bankType) : lin 1 =
     print _attempt_login_;
     b : authType <- new bankService.login<self>; 
     case b (
@@ -46,3 +46,12 @@ prc[user2] : lin 1 =
 
        | not_auth<b'> => drop b'; close self
     )
+
+// let main() : lin 1 =    // main process
+//     b : bankType <- new bank();
+//     user(b) 
+//   
+// exec main() // launch main process
+
+assuming bankService : bankType
+prc[user1] : lin 1 = user(bankService)

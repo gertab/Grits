@@ -1,0 +1,32 @@
+// Continuation passing style name reuse
+
+type A = lin 1 
+type B = lin +{label1 : 1}
+
+let simpleWait(a : A) : A = 
+    wait a; 
+    print _a_stopped_;
+    close self
+
+let hello() : A = 
+    a : A <- new close self;
+    a <- new simpleWait(a);    // a is reused multiple times
+    a <- new simpleWait(a);    // ^
+    a <- new makeChoice(a);    // ^
+    a <- new consumeChoice(a); // ^
+    a <- new simpleWait(a);    // ^
+    wait a;
+    print hello;
+    close self             
+
+exec hello()                  // Executes the hello() procedure
+
+let makeChoice(a : A) : B = 
+    wait a;
+    w : lin 1 <- new close self;
+    self.label1<w>
+
+let consumeChoice(a : B) : A = 
+    case a (
+        label1<a> => print _received_label1_; fwd self a
+    ) 

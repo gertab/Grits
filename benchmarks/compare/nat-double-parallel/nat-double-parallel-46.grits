@@ -13,7 +13,7 @@ let double(x : nat) : nat =
 case x (
 		zero<x'> => self.zero<x'>
 	| succ<x'> => h <- new double(x');
-					d : nat <- new d.succ<h>;
+					d : nat <- new self.succ<h>;
 					self.succ<d>
 )
 
@@ -91,52 +91,52 @@ let runTests() : listNat =
     instance46 <- new performSomeDoubling();
 
     // Ask all instances to start
-    instance1result : nat <- new instance1.start<instance1result>;
-    instance2result : nat <- new instance2.start<instance2result>;
-    instance3result : nat <- new instance3.start<instance3result>;
-    instance4result : nat <- new instance4.start<instance4result>;
-    instance5result : nat <- new instance5.start<instance5result>;
-    instance6result : nat <- new instance6.start<instance6result>;
-    instance7result : nat <- new instance7.start<instance7result>;
-    instance8result : nat <- new instance8.start<instance8result>;
-    instance9result : nat <- new instance9.start<instance9result>;
-    instance10result : nat <- new instance10.start<instance10result>;
-    instance11result : nat <- new instance11.start<instance11result>;
-    instance12result : nat <- new instance12.start<instance12result>;
-    instance13result : nat <- new instance13.start<instance13result>;
-    instance14result : nat <- new instance14.start<instance14result>;
-    instance15result : nat <- new instance15.start<instance15result>;
-    instance16result : nat <- new instance16.start<instance16result>;
-    instance17result : nat <- new instance17.start<instance17result>;
-    instance18result : nat <- new instance18.start<instance18result>;
-    instance19result : nat <- new instance19.start<instance19result>;
-    instance20result : nat <- new instance20.start<instance20result>;
-    instance21result : nat <- new instance21.start<instance21result>;
-    instance22result : nat <- new instance22.start<instance22result>;
-    instance23result : nat <- new instance23.start<instance23result>;
-    instance24result : nat <- new instance24.start<instance24result>;
-    instance25result : nat <- new instance25.start<instance25result>;
-    instance26result : nat <- new instance26.start<instance26result>;
-    instance27result : nat <- new instance27.start<instance27result>;
-    instance28result : nat <- new instance28.start<instance28result>;
-    instance29result : nat <- new instance29.start<instance29result>;
-    instance30result : nat <- new instance30.start<instance30result>;
-    instance31result : nat <- new instance31.start<instance31result>;
-    instance32result : nat <- new instance32.start<instance32result>;
-    instance33result : nat <- new instance33.start<instance33result>;
-    instance34result : nat <- new instance34.start<instance34result>;
-    instance35result : nat <- new instance35.start<instance35result>;
-    instance36result : nat <- new instance36.start<instance36result>;
-    instance37result : nat <- new instance37.start<instance37result>;
-    instance38result : nat <- new instance38.start<instance38result>;
-    instance39result : nat <- new instance39.start<instance39result>;
-    instance40result : nat <- new instance40.start<instance40result>;
-    instance41result : nat <- new instance41.start<instance41result>;
-    instance42result : nat <- new instance42.start<instance42result>;
-    instance43result : nat <- new instance43.start<instance43result>;
-    instance44result : nat <- new instance44.start<instance44result>;
-    instance45result : nat <- new instance45.start<instance45result>;
-    instance46result : nat <- new instance46.start<instance46result>;
+    instance1result : nat <- new instance1.start<self>;
+    instance2result : nat <- new instance2.start<self>;
+    instance3result : nat <- new instance3.start<self>;
+    instance4result : nat <- new instance4.start<self>;
+    instance5result : nat <- new instance5.start<self>;
+    instance6result : nat <- new instance6.start<self>;
+    instance7result : nat <- new instance7.start<self>;
+    instance8result : nat <- new instance8.start<self>;
+    instance9result : nat <- new instance9.start<self>;
+    instance10result : nat <- new instance10.start<self>;
+    instance11result : nat <- new instance11.start<self>;
+    instance12result : nat <- new instance12.start<self>;
+    instance13result : nat <- new instance13.start<self>;
+    instance14result : nat <- new instance14.start<self>;
+    instance15result : nat <- new instance15.start<self>;
+    instance16result : nat <- new instance16.start<self>;
+    instance17result : nat <- new instance17.start<self>;
+    instance18result : nat <- new instance18.start<self>;
+    instance19result : nat <- new instance19.start<self>;
+    instance20result : nat <- new instance20.start<self>;
+    instance21result : nat <- new instance21.start<self>;
+    instance22result : nat <- new instance22.start<self>;
+    instance23result : nat <- new instance23.start<self>;
+    instance24result : nat <- new instance24.start<self>;
+    instance25result : nat <- new instance25.start<self>;
+    instance26result : nat <- new instance26.start<self>;
+    instance27result : nat <- new instance27.start<self>;
+    instance28result : nat <- new instance28.start<self>;
+    instance29result : nat <- new instance29.start<self>;
+    instance30result : nat <- new instance30.start<self>;
+    instance31result : nat <- new instance31.start<self>;
+    instance32result : nat <- new instance32.start<self>;
+    instance33result : nat <- new instance33.start<self>;
+    instance34result : nat <- new instance34.start<self>;
+    instance35result : nat <- new instance35.start<self>;
+    instance36result : nat <- new instance36.start<self>;
+    instance37result : nat <- new instance37.start<self>;
+    instance38result : nat <- new instance38.start<self>;
+    instance39result : nat <- new instance39.start<self>;
+    instance40result : nat <- new instance40.start<self>;
+    instance41result : nat <- new instance41.start<self>;
+    instance42result : nat <- new instance42.start<self>;
+    instance43result : nat <- new instance43.start<self>;
+    instance44result : nat <- new instance44.start<self>;
+    instance45result : nat <- new instance45.start<self>;
+    instance46result : nat <- new instance46.start<self>;
 
     // Collect all results in one list
     list0  <- new emptyList();
@@ -194,9 +194,9 @@ let runTests() : listNat =
 
 // 1 : S(0)
 let nat1() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s0 : nat <- new s0.succ<z>;
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s0 : nat <- new self.succ<z>;
   fwd self s0
 
 ///////// Printing Helpers /////////

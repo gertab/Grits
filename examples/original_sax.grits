@@ -5,7 +5,7 @@ type B1 = 1
 type C1 = 1
 let eg1(x : A1 -* B1, y : B1 -* C1) : A1 -* C1 =
     <u, w> <- recv self; 
-    b : B1 <- new send x<u, b>;
+    b : B1 <- new send x<u, self>;
     send y<b, w>
 
 
@@ -33,8 +33,8 @@ type C4 = 1 * 1
 let eg4(p : &{left : A4 -* C4, right : B4 -* C4}) : +{left : A4, right : B4} -* C4 = 
     <s, z> <- recv self;
     case s (
-        left<x>  => r : A4 -* C4 <- new p.left<r>;
+        left<x>  => r : A4 -* C4 <- new p.left<self>;
                     send r<x, z>  // z is self
-      | right<y> => t : B4 -* C4 <- new p.right<t>;
+      | right<y> => t : B4 -* C4 <- new p.right<self>;
                     send t<y, z>
     )

@@ -84,7 +84,7 @@ func (n *Name) String() string {
 
 func NewSelf(Ident string) Name {
 	return Name{
-		Ident:  Ident,
+		Ident:  Ident, // technically, this should now be "" (except when using an explicit provider name)
 		IsSelf: true,
 		// todo add polarity (?)
 	}

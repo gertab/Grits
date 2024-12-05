@@ -13,7 +13,7 @@ let double(x : nat) : nat =
 case x (
 		zero<x'> => self.zero<x'>
 	| succ<x'> => h <- new double(x');
-					d : nat <- new d.succ<h>;
+					d : nat <- new self.succ<h>;
 					self.succ<d>
 )
 
@@ -49,10 +49,10 @@ let runTests() : listNat =
     instance4 <- new performSomeDoubling();
 
     // Ask all instances to start
-    instance1result : nat <- new instance1.start<instance1result>;
-    instance2result : nat <- new instance2.start<instance2result>;
-    instance3result : nat <- new instance3.start<instance3result>;
-    instance4result : nat <- new instance4.start<instance4result>;
+    instance1result : nat <- new instance1.start<self>;
+    instance2result : nat <- new instance2.start<self>;
+    instance3result : nat <- new instance3.start<self>;
+    instance4result : nat <- new instance4.start<self>;
 
     // Collect all results in one list
     list0  <- new emptyList();
@@ -68,9 +68,9 @@ let runTests() : listNat =
 
 // 1 : S(0)
 let nat1() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s0 : nat <- new s0.succ<z>;
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s0 : nat <- new self.succ<z>;
   fwd self s0
 
 ///////// Printing Helpers /////////

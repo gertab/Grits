@@ -15,7 +15,7 @@ const timeout = 50 * time.Millisecond
 
 // Invalidate all cache
 // go clean -testcache
-// go test -timeout 30s -run ^TestSimpleToken$ phi/cmd
+// go test -timeout 30s -run ^TestSimpleToken$ grits/cmd
 
 // We compare only the process names and rules (i.e. the steps) without comparing the order
 func TestSimpleFWDRCV(t *testing.T) {
@@ -82,13 +82,15 @@ func TestSimpleCUTSNDFWDRCV(t *testing.T) {
 	input := `   /* CUT + inner blocking SND + FWD + RCV rule */
 			prc[pid1] = send pid2<pid5, self>
 			prc[pid2] = fwd self -pid3
-			prc[pid3] = ff <- new (send ff<pid5, ff>); <a, b> <- recv self; close self`
+			prc[pid3] = ff <- new (close self); wait ff; <a, b> <- recv self; close self`
 
 	expected := []traceOption{
-		{steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CUT}}},
-
+		{steps{{"pid2", process.RCV}, {"pid2", process.FWD}, {"pid3", process.CLS}, {"pid3", process.CUT}}},
+		{steps{{"pid2", process.RCV}, {"pid2", process.CLS}, {"pid3", process.FWD}, {"pid3", process.CUT}}},
+		{steps{{"pid2", process.RCV}, {"pid2", process.CLS}, {"pid2", process.FWD}, {"pid3", process.CUT}}},
+		{steps{{"pid2", process.RCV}, {"pid2", process.CLS}, {"pid2", process.CUT}, {"pid2", process.FWD}}},
 		// non polarized
-		{steps{{"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}}},
+		{steps{{"pid2", process.RCV}, {"pid2", process.CUT}, {"pid2", process.FWD}, {"pid3", process.CLS}}},
 	}
 
 	typecheck := false
@@ -395,7 +397,7 @@ func TestExec(t *testing.T) {
 	input := ` 
 	type A = 1
 
-	let f() : A = x : A <- new close x; 
+	let f() : A = x : A <- new close self; 
 				  wait x; 
 				  close self
 	

@@ -798,9 +798,18 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 	// Cut
 	globalEnv.log(LOGRULEDETAILS, "rule CUT")
 
-	if isProvider(p.continuation_c, providerShadowName) || nameTypeExists(gammaNameTypesCtx, p.continuation_c.Ident) {
-		// Names are not fresh
-		return TypeErrorf("the cut rule requires a new variable; %s is already assigned", p.continuation_c.String())
+	//	if isProvider(p.new_name_c, providerShadowName) || nameTypeExists(gammaNameTypesCtx, p.new_name_c.Ident) {
+	//		// Names are not fresh
+	//		return TypeErrorf("the cut rule requires a new variable; %s is already assigned", p.new_name_c.String())
+	//	}
+	_, new_name_reused := gammaNameTypesCtx[p.new_name_c.Ident]
+
+	if !new_name_reused && nameInNames(p.new_name_c, p.body.FreeNames()...) {
+		return TypeErrorf("cannot use '%s' in spawned process (%s). Try using 'self' instead.", p.new_name_c.String(), p.body.StringShort())
+	}
+
+	if new_name_reused && !nameInNames(p.new_name_c, p.body.FreeNames()...) {
+		return TypeErrorf("name '%s' is reassigned before being used in the spawned process (%s).", p.new_name_c.String(), p.body.StringShort())
 	}
 
 	// When 'new' is used directly (i.e. not derived from a macro expansion), then we need to ensure
@@ -818,7 +827,12 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			callForm := p.body.(*CallForm)
 
 			// first split gamma (take parameters from gamma)
-			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, callForm.parameters, &p.continuation_c, labelledTypesEnv)
+			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, callForm.parameters, nil, labelledTypesEnv)
+
+			if new_name_reused {
+				// re-add new name after context splitting
+				gammaRightNameTypesCtx[p.new_name_c.Ident] = NamesType{Type: p.new_name_c.Type}
+			}
 
 			if gammaErr != nil {
 				return TypeErrorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
@@ -840,14 +854,14 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			}
 
 			// Typecheck the call function
-			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, functionSignatureType, labelledTypesEnv, sigma, globalEnv)
+			callBodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.new_name_c, functionSignatureType, labelledTypesEnv, sigma, globalEnv)
 
 			if callBodyError != nil {
 				return callBodyError
 			}
 
 			// Add new channel name to gamma
-			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: functionSignatureType}
+			gammaRightNameTypesCtx[p.new_name_c.Ident] = NamesType{Type: functionSignatureType}
 
 			// typecheck the continuation body
 			continuationError := p.continuation_e.typecheckForm(gammaRightNameTypesCtx, providerShadowName, providerType, labelledTypesEnv, sigma, globalEnv)
@@ -857,16 +871,16 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			}
 
 			// Set type
-			p.continuation_c.Type = functionSignatureType
+			p.new_name_c.Type = functionSignatureType
 
 			// Check for declaration of independence: (m ⪰ n)
 			// m (type of p.continuation_c) ⪰ p (providerType)
-			err = declationOfIndependenceOne(p.continuation_c, providerType)
+			err = declationOfIndependenceOne(p.new_name_c, providerType)
 			if err != nil {
 				return TypeErrorE(err)
 			}
 
-			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
+			polarityError := checkExplicitPolarityValidity(p, p.new_name_c)
 			if polarityError != nil {
 				return TypeErrorE(polarityError)
 			}
@@ -874,52 +888,57 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 			// The type of p.continuation_c has to be provided by the user
 
 			// Split gamma
-			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, p.body.FreeNames(), &p.continuation_c, labelledTypesEnv)
+			gammaLeftNameTypesCtx, gammaRightNameTypesCtx, gammaErr := splitGammaCtx(gammaNameTypesCtx, p.body.FreeNames(), nil, labelledTypesEnv)
+
+			if new_name_reused {
+				// re-add new name after context splitting
+				gammaRightNameTypesCtx[p.new_name_c.Ident] = NamesType{Type: p.new_name_c.Type}
+			}
 
 			if gammaErr != nil {
 				return TypeErrorf("error when splitting variable context in '%s': %s", p.StringShort(), gammaErr)
 			}
 
-			if p.continuation_c.Type == nil {
-				return TypeErrorf("expected '%s' to have an explicit type in %s", p.continuation_c.String(), p.StringShort())
+			if p.new_name_c.Type == nil {
+				return TypeErrorf("expected '%s' to have an explicit type in %s", p.new_name_c.String(), p.StringShort())
 			}
 
 			// Modify the type of p.continuation_c to set its modalities
-			types.AddMissingModalities(&p.continuation_c.Type, labelledTypesEnv)
+			types.AddMissingModalities(&p.new_name_c.Type, labelledTypesEnv)
 
 			// Get type of inner provider
-			err := checkNameType(p.continuation_c, labelledTypesEnv)
+			err := checkNameType(p.new_name_c, labelledTypesEnv)
 			if err != nil {
-				return TypeErrorf("invalid type for %s in %s: %s", p.continuation_c.String(), p.StringShort(), err)
+				return TypeErrorf("invalid type for %s in %s: %s", p.new_name_c.String(), p.StringShort(), err)
 			}
 
 			// Unfold if needed
-			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
+			p.new_name_c.Type = types.Unfold(p.new_name_c.Type, labelledTypesEnv)
 
 			// Check for declaration of independence: Γ ⪰ m ⪰ n
-			err = declationOfIndependence(gammaLeftNameTypesCtx.getNames(), p.continuation_c.Type)
+			err = declationOfIndependence(gammaLeftNameTypesCtx.getNames(), p.new_name_c.Type)
 			if err != nil {
 				return TypeErrorE(err)
 			}
 
 			// m (type of p.continuation_c) ⪰ p (providerType)
-			err = declationOfIndependenceOne(p.continuation_c, providerType)
+			err = declationOfIndependenceOne(p.new_name_c, providerType)
 			if err != nil {
 				return TypeErrorE(err)
 			}
 
 			// typecheck the body of the process being spawned
-			bodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.continuation_c, p.continuation_c.Type, labelledTypesEnv, sigma, globalEnv)
+			bodyError := p.body.typecheckForm(gammaLeftNameTypesCtx, &p.new_name_c, p.new_name_c.Type, labelledTypesEnv, sigma, globalEnv)
 
 			if bodyError != nil {
 				return bodyError
 			}
 
 			// Add new channel name to gamma
-			p.continuation_c.Type = types.Unfold(p.continuation_c.Type, labelledTypesEnv)
-			gammaRightNameTypesCtx[p.continuation_c.Ident] = NamesType{Type: p.continuation_c.Type}
+			p.new_name_c.Type = types.Unfold(p.new_name_c.Type, labelledTypesEnv)
+			gammaRightNameTypesCtx[p.new_name_c.Ident] = NamesType{Type: p.new_name_c.Type}
 
-			polarityError := checkExplicitPolarityValidity(p, p.continuation_c)
+			polarityError := checkExplicitPolarityValidity(p, p.new_name_c)
 			if polarityError != nil {
 				return TypeErrorE(polarityError)
 			}
@@ -934,7 +953,7 @@ func (p *NewForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShadowN
 
 	} else {
 		// Since it is derived from a macro, then we assume that the continuation_e is an axiomatic rule (e.g. send) instead of the body -- no macros are currently being used
-		panic("todo need to handle macros")
+		panic("todo need to handle macros -- not implemented")
 	}
 
 	return nil
@@ -1738,6 +1757,16 @@ func getFreeNameTypes(process *Process, processes []*Process, assumedFreeNames [
 	}
 
 	return result
+}
+
+func nameInNames(check Name, names ...Name) bool {
+	for _, curr := range names {
+		if check.Equal(curr) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Compare annotated polarity to the (more precise) polarities inferred from the type

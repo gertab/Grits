@@ -6,14 +6,14 @@ let double(x : nat) : nat =
     case x (
           zero<x'> => self.zero<x'>
         | succ<x'> => h <- new double(x');
-                      d : nat <- new d.succ<h>;
+                      d : nat <- new self.succ<h>;
                       self.succ<d>
     )
 
 // Initiate execution
 prc[d0] : nat = // produces the natural number one, i.e. succ(zero)
-    t : 1 <- new close t;
-    z  : nat <- new z.zero<t>;
+    t : 1 <- new close self;
+    z  : nat <- new self.zero<t>;
     self.succ<z>
 prc[b] : nat = 
     d1 <- new double(d0);

@@ -13,7 +13,7 @@ let double(x : nat) : nat =
 case x (
 		zero<x'> => self.zero<x'>
 	| succ<x'> => h <- new double(x');
-					d : nat <- new d.succ<h>;
+					d : nat <- new self.succ<h>;
 					self.succ<d>
 )
 
@@ -57,18 +57,18 @@ let runTests() : listNat =
     instance12 <- new performSomeDoubling();
 
     // Ask all instances to start
-    instance1result : nat <- new instance1.start<instance1result>;
-    instance2result : nat <- new instance2.start<instance2result>;
-    instance3result : nat <- new instance3.start<instance3result>;
-    instance4result : nat <- new instance4.start<instance4result>;
-    instance5result : nat <- new instance5.start<instance5result>;
-    instance6result : nat <- new instance6.start<instance6result>;
-    instance7result : nat <- new instance7.start<instance7result>;
-    instance8result : nat <- new instance8.start<instance8result>;
-    instance9result : nat <- new instance9.start<instance9result>;
-    instance10result : nat <- new instance10.start<instance10result>;
-    instance11result : nat <- new instance11.start<instance11result>;
-    instance12result : nat <- new instance12.start<instance12result>;
+    instance1result : nat <- new instance1.start<self>;
+    instance2result : nat <- new instance2.start<self>;
+    instance3result : nat <- new instance3.start<self>;
+    instance4result : nat <- new instance4.start<self>;
+    instance5result : nat <- new instance5.start<self>;
+    instance6result : nat <- new instance6.start<self>;
+    instance7result : nat <- new instance7.start<self>;
+    instance8result : nat <- new instance8.start<self>;
+    instance9result : nat <- new instance9.start<self>;
+    instance10result : nat <- new instance10.start<self>;
+    instance11result : nat <- new instance11.start<self>;
+    instance12result : nat <- new instance12.start<self>;
 
     // Collect all results in one list
     list0  <- new emptyList();
@@ -92,9 +92,9 @@ let runTests() : listNat =
 
 // 1 : S(0)
 let nat1() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s0 : nat <- new s0.succ<z>;
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s0 : nat <- new self.succ<z>;
   fwd self s0
 
 ///////// Printing Helpers /////////

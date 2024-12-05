@@ -5,7 +5,7 @@ let double(x : nat) : nat =
     case x (
           zero<x'> => self.zero<x'>
         | succ<x'> => h <- new double(x');
-                      d : nat <- new d.succ<h>;
+                      d : nat <- new self.succ<h>;
                       self.succ<d>
     )
 
@@ -15,7 +15,7 @@ let half(x : nat) : nat =
     | succ<x'> => 
             case x' (
                 zero<x''> => self.zero<x''>
-              | succ<x''> => h <- new half(h, x'');
+              | succ<x''> => h <- new half(self, x'');
                              self.succ<h>
             )
   )
@@ -49,62 +49,62 @@ let printNat(n : nat) : 1 =
 
 // 1 : S(0)
 let nat1() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s1 : nat <- new s1.succ<z>; 
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s1 : nat <- new self.succ<z>; 
   fwd self s1
 
 // 2 : S(S(0))
 let nat2() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s1 : nat <- new s1.succ<z>; 
-  s2 : nat <- new s2.succ<s1>; 
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s1 : nat <- new self.succ<z>; 
+  s2 : nat <- new self.succ<s1>; 
   fwd self s2
 
 // 3 : S(S(S(0)))
 let nat3() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s1 : nat <- new s1.succ<z>; 
-  s2 : nat <- new s2.succ<s1>; 
-  s3 : nat <- new s3.succ<s2>; 
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s1 : nat <- new self.succ<z>; 
+  s2 : nat <- new self.succ<s1>; 
+  s3 : nat <- new self.succ<s2>; 
   fwd self s3
 
 // 4 : S(S(S(S(0))))
 let nat4() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s1 : nat <- new s1.succ<z>; 
-  s2 : nat <- new s2.succ<s1>; 
-  s3 : nat <- new s3.succ<s2>; 
-  s4 : nat <- new s4.succ<s3>; 
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s1 : nat <- new self.succ<z>; 
+  s2 : nat <- new self.succ<s1>; 
+  s3 : nat <- new self.succ<s2>; 
+  s4 : nat <- new self.succ<s3>; 
   fwd self s4
 
 // 5 : S(S(S(S(S(0)))))
 let nat5() : nat =
-  t : 1 <- new close t;
-  z  : nat <- new z.zero<t>;
-  s1 : nat <- new s1.succ<z>; 
-  s2 : nat <- new s2.succ<s1>; 
-  s3 : nat <- new s3.succ<s2>; 
-  s4 : nat <- new s4.succ<s3>; 
-  s5 : nat <- new s5.succ<s4>; 
+  t : 1 <- new close self;
+  z  : nat <- new self.zero<t>;
+  s1 : nat <- new self.succ<z>; 
+  s2 : nat <- new self.succ<s1>; 
+  s3 : nat <- new self.succ<s2>; 
+  s4 : nat <- new self.succ<s3>; 
+  s5 : nat <- new self.succ<s4>; 
   fwd self s5
 
 
 // 10 : S(S(S(S(S(S(S(S(S(S(0))))))))))
 let nat10() : nat =
-  t   : 1   <- new close t;
-  z   : nat <- new z.zero<t>;
-  s1  : nat <- new s1.succ<z>; 
-  s2  : nat <- new s2.succ<s1>; 
-  s3  : nat <- new s3.succ<s2>; 
-  s4  : nat <- new s4.succ<s3>; 
-  s5  : nat <- new s5.succ<s4>;
-  s6  : nat <- new s6.succ<s5>;
-  s7  : nat <- new s7.succ<s6>;
-  s8  : nat <- new s8.succ<s7>;
-  s9  : nat <- new s9.succ<s8>;
-  s10 : nat <- new s10.succ<s9>;
+  t   : 1   <- new close self;
+  z   : nat <- new self.zero<t>;
+  s1  : nat <- new self.succ<z>; 
+  s2  : nat <- new self.succ<s1>; 
+  s3  : nat <- new self.succ<s2>; 
+  s4  : nat <- new self.succ<s3>; 
+  s5  : nat <- new self.succ<s4>;
+  s6  : nat <- new self.succ<s5>;
+  s7  : nat <- new self.succ<s6>;
+  s8  : nat <- new self.succ<s7>;
+  s9  : nat <- new self.succ<s8>;
+  s10 : nat <- new self.succ<s9>;
   fwd self s10

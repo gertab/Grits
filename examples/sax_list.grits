@@ -17,7 +17,7 @@ let append2(L : list, K : list) : list =
   case L ( cons<p> => 
                 <x, L2> <- recv p;
                 R2 <- new append2(L2, K);
-                p2 : bin * list <- new send p2<x, R2>;
+                p2 : bin * list <- new send self<x, R2>;
                 self.cons<p2>  
          | nil<u> => 
                 wait u; 

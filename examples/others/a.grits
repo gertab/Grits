@@ -1,7 +1,7 @@
 
 type A = lin 1
 
-let f() : A = x : A <- new close x; 
+let f() : A = x : A <- new close self; 
                   wait x;
                   print ok;
                   close self

@@ -369,17 +369,17 @@ func (p *CaseForm) Polarity(fromTypes bool, globalEnvironment *GlobalEnvironment
 	return polarity
 }
 
-// New: continuation_c <- new (body); continuation_e
+// New: new_name_c <- new (body); continuation_e
 type NewForm struct {
-	continuation_c   Name
+	new_name_c       Name
 	body             Form
 	continuation_e   Form
 	derivedFromMacro bool
 }
 
-func NewNew(continuation_c Name, body, continuation_e Form) *NewForm {
+func NewNew(new_name_c Name, body, continuation_e Form) *NewForm {
 	return &NewForm{
-		continuation_c:   continuation_c,
+		new_name_c:       new_name_c,
 		body:             body,
 		continuation_e:   continuation_e,
 		derivedFromMacro: false,
@@ -388,7 +388,7 @@ func NewNew(continuation_c Name, body, continuation_e Form) *NewForm {
 
 func (p *NewForm) String() string {
 	var buf bytes.Buffer
-	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(p.new_name_c.String())
 	buf.WriteString(" <- new (")
 	buf.WriteString(p.body.String())
 	buf.WriteString("); ")
@@ -398,25 +398,29 @@ func (p *NewForm) String() string {
 
 func (p *NewForm) StringShort() string {
 	var buf bytes.Buffer
-	buf.WriteString(p.continuation_c.String())
+	buf.WriteString(p.new_name_c.String())
 	buf.WriteString(" <- new ...; ...")
 	return buf.String()
 }
 
 func (p *NewForm) Substitute(old, new Name) {
 
-	// continuation_c is a bound variable
-	if !p.continuation_c.Equal(old) {
-		p.body.Substitute(old, new)
+	p.body.Substitute(old, new)
+
+	// new_name_c is a bound variable only in the continuation (undefined otherwise)
+	if !p.new_name_c.Equal(old) {
 		p.continuation_e.Substitute(old, new)
 	}
 }
 
+// given x <- new (body); continuation_e,
+// x is a free name in body, but bound in continuation_e
+
 func (p *NewForm) FreeNames() []Name {
 	var fn []Name
-	body_excluding_bound_names := removeBoundName(p.body.FreeNames(), p.continuation_c)
-	fn = mergeTwoNamesList(fn, body_excluding_bound_names)
-	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.continuation_c)
+	body_free_names := p.body.FreeNames()
+	fn = mergeTwoNamesList(fn, body_free_names)
+	continuation_e_excluding_bound_names := removeBoundName(p.continuation_e.FreeNames(), p.new_name_c)
 	fn = mergeTwoNamesList(fn, continuation_e_excluding_bound_names)
 	return fn
 }
@@ -960,7 +964,7 @@ func EqualForm(form1, form2 Form) bool {
 		f2, ok2 := form2.(*NewForm)
 
 		if ok1 && ok2 {
-			return f1.continuation_c.Equal(f2.continuation_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e)
+			return f1.new_name_c.Equal(f2.new_name_c) && EqualForm(f1.body, f2.body) && EqualForm(f1.continuation_e, f2.continuation_e)
 		}
 	case *ForwardForm:
 		f1, ok1 := form1.(*ForwardForm)
@@ -1087,7 +1091,7 @@ func CopyForm(orig Form) Form {
 		if ok {
 			body := CopyForm(p.body)
 			cont := CopyForm(p.continuation_e)
-			return NewNew(*p.continuation_c.Copy(), body, cont)
+			return NewNew(*p.new_name_c.Copy(), body, cont)
 		}
 	case *ForwardForm:
 		p, ok := orig.(*ForwardForm)

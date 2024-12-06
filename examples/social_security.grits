@@ -18,20 +18,17 @@ type ssn = mul +{cons : (rep \/ mul digit) * ssn, nil : 1}
 ///////// Start Execution /////////
 
 let main() : lin 1 =
-    ss : ssn <- new ssExample(); // contains social security number 012
+    ss : ssn <- new ssExample(); // contains social security number 43210
     <ss1, ss2> <- split ss;
 
-    // Used by insurance agency
-    print _insurance_;
-    i <- new insurance(ss1);
+   
+    i <- new insurance(ss1);  // SS used by insurance agency
     wait i;
 
-    // Used by hospital admission
-    print _hospital_admission_;
-    h <- new hospital_admission(ss2);
+    h <- new hospital_admission(ss2); // SS used by hospital admission
     case h (
-        found<h'>     => print found_patient; wait h'; close self
-      | not_found<h'> => print not_found; wait h'; close self
+        valid<h'>     => print found_patient; wait h'; close self
+      | not_valid<h'> => print not_found;     wait h'; close self
     )
 
 // Execute main
@@ -39,37 +36,37 @@ exec main()
 
 // // Initialize each process individually
 // assuming ss : ssn, 
-//          h : lin +{found : 1, not_found : 1}
-// //prc[ss1, ss2] : ssn = ssExample()
-// // prc[h] : lin +{found : 1, not_found : 1} = hospital_admission(ss2)
+//          h : lin +{valid : 1, not_valid : 1}
+// //prc[ssn1, ssn2] : ssn = ssExample()
+// // prc[h] : lin +{valid : 1, not_valid : 1} = hospital_admission(ssn2)
 // prc[i] : lin 1 = insurance(ss)
 // prc[p] : lin 1 = wait i;
 //                  case h (
-//                      found<h'>     => print found_patient; wait h'; close self
-//                    | not_found<h'> => print not_found; wait h'; close self
+//                      valid<h'>     => print found_patient; wait h'; close self
+//                    | not_valid<h'> => print not_found; wait h'; close self
 //                  )
 // //prc[b] : lin 1 = printSS(a'')
 
+
 ///////// Hospital /////////
 
+let hospital_admission(n : ssn) : lin +{valid : 1, not_valid : 1} =
+    res : mul +{even : 1, odd : 1} <- new even_odd(n); // check if n is even
 
-let hospital_admission(n : ssn) : lin +{found : 1, not_found : 1} =
-    ss_even_odd : mul +{even : 1, odd : 1} <- new even_odd(n);
-
-    case ss_even_odd (
+    case res (
         even<c> =>
             wait c;
             print even;
             c' : lin 1 <- new close self;
-            self.found<c'>
+            self.valid<c'>
       | odd<c> =>
             wait c;
             print odd;
             c' : lin 1 <- new close self;
-            self.not_found<c'>
+            self.not_valid<c'>
     )
 
-// Check whether the ssn is even or odd
+// check if n is even or odd
 let even_odd(n : ssn) : mul +{even : 1, odd : 1} =
     c : rep 1 <- new close self;
     d : digit <- new self._0<c>; // dummy digit
@@ -78,82 +75,48 @@ let even_odd(n : ssn) : mul +{even : 1, odd : 1} =
 let even_odd_inner(n : ssn, result : digit) : mul +{even : 1, odd : 1} =
     case n (
         cons<n'> => 
-            <d, tail> <- recv n';
-            d' <- shift d;
-            drop result;
+            <curr, tail> <- recv n';
+            d' <- shift curr;
+            drop result;  // may be discarded in replicable mode
             even_odd_inner(tail, d')
       | nil<n'> =>
             wait n';
-            even_odd_digit(result)
+            even_odd_digit(result) // check the last digit
     )
 
 let even_odd_digit(d : digit) : mul +{even : 1, odd : 1} =
     case d (
-        _0<c>  => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.even<c'>
-      | _1<c>   => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.odd<c'>
-      | _2<c>   => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.even<c'>
+        _0<c> => wait c; 
+                 c' : mul 1 <- new close self;
+                 self.even<c'> // select even branch
+      | _1<c> => wait c; 
+                 c' : mul 1 <- new close self;
+                 self.odd<c'> // select odd branch
+      | _2<c> => wait c; 
+                 c' : mul 1 <- new close self;
+                 self.even<c'>
       | _3<c> => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.odd<c'>
-      | _4<c>  => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.even<c'>
-      | _5<c>  => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.odd<c'>
-      | _6<c>   => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.even<c'>
+                 c' : mul 1 <- new close self;
+                 self.odd<c'>
+      | _4<c> => wait c; 
+                 c' : mul 1 <- new close self;
+                 self.even<c'>
+      | _5<c> => wait c; 
+                 c' : mul 1 <- new close self;
+                 self.odd<c'>
+      | _6<c> => wait c; 
+                 c' : mul 1 <- new close self;
+                 self.even<c'>
       | _7<c> => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.odd<c'>
+                 c' : mul 1 <- new close self;
+                 self.odd<c'>
       | _8<c> => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.even<c'>
-      | _9<c>  => wait c; 
-                    c' : mul 1 <- new close self;
-                    self.odd<c'>
+                 c' : mul 1 <- new close self;
+                 self.even<c'>
+      | _9<c> => wait c; 
+                 c' : mul 1 <- new close self;
+                 self.odd<c'>
     )
-
-// Ensure that the number is two or more digits long
-let length_validation(n : ssn) : mul +{ok : 1, not_ok : 1} =
-    case n (
-        cons<n'> => 
-            // length = 1+
-            <d, tail> <- recv n';
-            d <- shift d;
-            drop d;
-
-            case tail (
-                cons<n''> =>
-                    // length = 2+
-                    <d', tail'> <- recv n'';
-                    d' <- shift d';
-                    drop d';
-                    consume <- new consume_tail(tail');
-                    self.ok<consume>
-               | nil<n'> => 
-                    self.not_ok<n'>
-            )
-      | nil<n'> => 
-            self.not_ok<n'>
-    )
-
-let consume_tail(n : ssn) : mul 1 =
-    case n ( cons<n'> => <d, tail> <- recv n';
-                         d <- shift d;
-                         drop d;
-                         consume_tail(tail)
-           | nil<n'>  => wait n'; close self
-    )
-
-
 
 ///////// Insurance /////////
 let insurance(n : ssn) : lin 1 =
@@ -169,59 +132,59 @@ type ss_cons = mul (rep \/ mul digit) * ssn
 // encryption by flipping each digit, e.g. 0 -> 9, 1 -> 8, ..., 8 -> 1, 9 -> 0
 let encrypt(n : ssn) : ssn =
     case n ( cons<c> => 
-        <curr_digit, remaining_number> <- recv c;
-        curr_digit' <- shift curr_digit;
-        case curr_digit' (
-            _0<c> => inverted : digit <- new self._9<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _1<c> => inverted : digit <- new self._8<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _2<c> => inverted : digit <- new self._7<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _3<c> => inverted : digit <- new self._6<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _4<c> => inverted : digit <- new self._5<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _5<c> => inverted : digit <- new self._4<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _6<c> => inverted : digit <- new self._3<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _7<c> => inverted : digit <- new self._2<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _8<c> => inverted : digit <- new self._1<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
-          | _9<c> => inverted : digit <- new self._0<c>; 
-                     inverted_rep : rep \/ mul digit <- new cast self<inverted>;
-                     remaining_inverted : ssn <- new encrypt(remaining_number);
-                     remaining : ss_cons <- new send self<inverted_rep, remaining_inverted>;
-                     self.cons<remaining>
+        <curr_dgt, remaining_number> <- recv c;
+        curr_rep <- shift curr_dgt;
+        case curr_rep (
+            _0<c> => inv_dgt : digit <- new self._9<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _1<c> => inv_dgt : digit <- new self._8<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _2<c> => inv_dgt : digit <- new self._7<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _3<c> => inv_dgt : digit <- new self._6<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _4<c> => inv_dgt : digit <- new self._5<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _5<c> => inv_dgt : digit <- new self._4<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _6<c> => inv_dgt : digit <- new self._3<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _7<c> => inv_dgt : digit <- new self._2<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _8<c> => inv_dgt : digit <- new self._1<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
+          | _9<c> => inv_dgt : digit <- new self._0<c>; 
+                     inv_mul : rep \/ mul digit <- new cast self<inv_dgt>;
+                     rem_inv : ssn <- new encrypt(remaining_number);
+                     inv : ss_cons <- new send self<inv_mul, rem_inv>;
+                     self.cons<inv>
         )
             
        | nil<c> => self.nil<c>
@@ -234,23 +197,36 @@ let decrypt(n : ssn) : ssn =
 
 ///////// Social Security Sample /////////
 
-// Social Security example: 012 = cons(0, cons(1, cons(2, nil)))
+// Social Security example: 43210 012 = cons(0, cons(1, cons(2, nil)))
 let ssExample() : ssn =
     // nil
-    lnil' : mul 1              <- new close self;
-    lnil  : ssn <- new self.nil<lnil'>;
-    // 2
-    n2 <- new two();
-    l2' : (rep \/ mul digit) * ssn <- new send self<n2, lnil>;
-    l2  : ssn         <- new self.cons<l2'>;
-    // 1
-    n1 <- new one();
-    l1' : (rep \/ mul digit) * ssn <- new send self<n1, l2>;
-    l1  : ssn         <- new self.cons<l1'>;
+    lnil' : mul 1 <- new close self;
+    lnil  : ssn   <- new self.nil<lnil'>;
+
     // 0
     n0 <- new zero();
-    l0' : (rep \/ mul digit) * ssn <- new send self<n0, l1>;
-    self.cons<l0'>
+    l0' : (rep \/ mul digit) * ssn <- new send self<n0, lnil>;
+    l0  : ssn <- new self.cons<l0'>;
+
+    // 1
+    n1 <- new one();
+    l1' : (rep \/ mul digit) * ssn <- new send self<n1, l0>;
+    l1  : ssn <- new self.cons<l1'>;
+
+    // 2
+    n2 <- new two();
+    l2' : (rep \/ mul digit) * ssn <- new send self<n2, l1>;
+    l2  : ssn <- new self.cons<l2'>;
+
+    // 3
+    n3 <- new three();
+    l3' : (rep \/ mul digit) * ssn <- new send self<n3, l2>;
+    l3  : ssn <- new self.cons<l3'>;
+
+    // 4
+    n4 <- new four();
+    l4' : (rep \/ mul digit) * ssn <- new send self<n4, l3>;
+    self.cons<l4'>
 
 // Social Security example: 13 = cons(1, cons(3, nil))
 let ssExample2() : ssn =
@@ -266,61 +242,61 @@ let ssExample2() : ssn =
     l1' : (rep \/ mul digit) * ssn <- new send self<n1, l3>;
     self.cons<l1'>
 
-// 0
+// Multicast digit 0
 let zero() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._0<c>;
     cast self<n>
 
-// 1
+// Multicast digit 1
 let one() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._1<c>;
     cast self<n>
 
-// 2
+// Multicast digit 2
 let two() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._2<c>;
     cast self<n>
 
-// 3
+// Multicast digit 3
 let three() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._3<c>;
     cast self<n>
 
-// 4
+// Multicast digit 4
 let four() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._4<c>;
     cast self<n>
 
-// 5
+// Multicast digit 5
 let five() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._5<c>;
     cast self<n>
 
-// 6
+// Multicast digit 6
 let six() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._6<c>;
     cast self<n>
 
-// 7
+// Multicast digit 7
 let seven() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._7<c>;
     cast self<n>
 
-// 8
+// Multicast digit 8
 let eight() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._8<c>;
     cast self<n>
 
-// 9
+// Multicast digit 9
 let nine() : rep \/ mul digit =
     c : rep 1 <- new close self;
     n : digit <- new self._9<c>;
@@ -348,16 +324,16 @@ let consumeSocialSecurityNo(l : ssn) : mul 1 =
 
 let consumeDigit(n : rep \/ mul digit) : mul 1 = 
     n <- shift n;
-    case n (  _0<c>  => print '0; wait c; close self
-            | _1<c>   => print _1; wait c; close self
-            | _2<c>   => print _2; wait c; close self
+    case n (  _0<c> => print '0; wait c; close self
+            | _1<c> => print _1; wait c; close self
+            | _2<c> => print _2; wait c; close self
             | _3<c> => print _3; wait c; close self
-            | _4<c>  => print _4; wait c; close self
-            | _5<c>  => print _5; wait c; close self
-            | _6<c>   => print _6; wait c; close self
+            | _4<c> => print _4; wait c; close self
+            | _5<c> => print _5; wait c; close self
+            | _6<c> => print _6; wait c; close self
             | _7<c> => print _7; wait c; close self
             | _8<c> => print _8; wait c; close self
-            | _9<c>  => print _9; wait c; close self)
+            | _9<c> => print _9; wait c; close self)
 
 //let printNat(n : digit) : lin 1 = 
 //          y <- new consumeDigit(n); 

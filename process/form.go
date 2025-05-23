@@ -278,6 +278,11 @@ func StringifyBranchesShort(branches []*BranchForm) string {
 		if i < len(branches)-1 {
 			buf.WriteString(" | ")
 		}
+
+		if i >= 1 && len(branches) > 1 {
+			buf.WriteString("...")
+			break
+		}
 	}
 	return buf.String()
 }

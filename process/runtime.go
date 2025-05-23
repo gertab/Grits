@@ -278,7 +278,7 @@ func (re *RuntimeEnvironment) StopMonitor() ([]Process, []MonitorRulesLog) {
 	return re.monitor.deadProcesses, re.monitor.rulesLog
 }
 
-// Makes sure that the processes are progress. If there is a timeout after the last process
+// Makes sure that the processes progress. If there is a timeout after the last process
 // update, then the Heartbeat stops, records the time elapsed, and finally calls the
 // ctx cancel function to garbage collect any remaining processes.
 func (re *RuntimeEnvironment) HeartbeatReceiver(timeout time.Duration, cancel context.CancelFunc) {

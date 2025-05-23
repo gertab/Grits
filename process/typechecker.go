@@ -575,7 +575,7 @@ func (p *SelectForm) typecheckForm(gammaNameTypesCtx NamesTypesCtx, providerShad
 
 		if !selectLabelTypeOk {
 			// wrong type, expected +{...}
-			return TypeErrorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.String(), providerType.String())
+			return TypeErrorf("expected '%s' to have a select type (+{...}), but found type '%s' instead", p.StringShort(), providerType.String())
 		}
 
 		// Match branch by label
